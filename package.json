@@ -16,7 +16,8 @@
     "db:studio": "prisma studio",
     "docker:db": "docker compose up -d db",
     "docker:app": "docker compose --profile app up --build",
-    "curriculum:import": "tsx scripts/import-curriculum.ts"
+    "curriculum:import": "tsx scripts/import-curriculum.ts",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -58,7 +59,8 @@
     "playwright": "^1.61.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   },
   "allowScripts": {
     "@prisma/engines@7.9.0": true,

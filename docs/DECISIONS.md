@@ -170,8 +170,56 @@ proteger ainda. O campo entra no schema junto com o CRUD administrativo.
 **Decisão**: a Fase 2 grava `LessonCompletion` (por usuário/aula) mas não cria a entidade
 `Progress` agregada (percentual por programa/fase/módulo) descrita em `docs/DATA_MODEL.md`.
 **Motivo**: com apenas 2 aulas de demonstração existentes, uma tabela de agregação não tem o que
-agregar de forma significativa ainda; ela é criada na Fase 3 junto com o dashboard de progresso
-real (horas estudadas, sequência de estudo) que de fato a consome.
+agregar de forma significativa ainda.
+**Atualização (Fase 3)**: a decisão final foi **não criar** a tabela `Progress` — o dashboard
+calcula os agregados sob demanda via `COUNT`/`SUM` (aulas concluídas, minutos estudados,
+sequência de dias) em `src/app/(app)/dashboard/page.tsx`. Uma tabela de cache/agregação só se
+justifica quando o volume de dados tornar as queries lentas; até lá, manter dois lugares de
+verdade (linhas de origem + tabela agregada) seria complexidade sem benefício mensurável.
+
+## 2026-07-23 — Fase 3: schema mínimo mantido (Progress, Attempt.answers em JSON, sem Track/Module ainda)
+
+**Decisão**: além do ponto acima, a Fase 3 também: (a) usa `Json` em
+`AssessmentAttempt.answers` (mapa `questionId -> optionId`) em vez de uma tabela relacional de
+respostas — justificado porque o formato varia por tipo de pergunta e nunca é consultado
+individualmente, só lido de volta inteiro para exibir o resultado; (b) `Question.type` inclui
+`SHORT_ANSWER` no schema, mas nenhuma pergunta desse tipo é usada na avaliação de demonstração
+nem entra no cálculo de nota (não há correção automática possível sem revisão humana/IA) — ela
+fica disponível para quando a Fase 5 (tutor de IA) ou uma revisão manual puderem avaliá-la.
+**Motivo**: manter a mesma disciplina de "schema mínimo por entrega vertical" das fases
+anteriores.
+
+## 2026-07-23 — Anotações: sem página de detalhe, vínculo só com aula
+
+**Decisão**: `Note` suporta `scopeType` (`LESSON`/`WEEK`/`GENERAL`) no schema, mas a interface
+(`/notes`) só oferece vínculo com **aula** (`LESSON`) via um seletor opcional; não há seletor de
+semana/módulo/projeto/tecnologia, nem uma página de detalhe por anotação (edição é feita inline
+via modal na própria listagem).
+**Motivo**: as demais entidades vinculáveis (`Week`, `Project`, `Technology`, `Skill`) ou ainda
+não existem no schema (`Technology`/`Skill` — Fase 4) ou o vínculo não agregaria valor real com
+apenas 2 aulas de demonstração no sistema. Uma página de detalhe dedicada não se justifica
+enquanto a edição inline resolve o mesmo caso de uso com menos código.
+
+## 2026-07-23 — Planejador: estimativa simples, sem motor de reagendamento automático
+
+**Decisão**: `/planner` calcula uma estimativa de término (`totalWeeks * weeklyDays /
+availableDays.length`, a partir da data de início) como texto informativo, mas não implementa
+um motor de "redistribuição automática de atividades" nem cria/move tarefas sozinho. Férias e
+indisponibilidades são um campo de texto livre (`StudyPlan.notes`), não datas estruturadas
+consideradas no cálculo.
+**Motivo**: o prompt original pede "planejamento automático **básico**" — um motor de
+redistribuição de atividades pressupõe que existam atividades/aulas reais o suficiente para
+redistribuir, o que ainda não é o caso (grade de 104 semanas majoritariamente `PLANNED`). A
+estimativa simples já comunica o essencial (ritmo atual vs. carga prevista) sem construir uma
+funcionalidade que não teria dado real para operar sobre.
+
+## 2026-07-23 — Busca de anotações via `contains`/`insensitive`, sem `tsvector`
+
+**Decisão**: a busca em `/notes` usa `db.note.findMany` com `contains`/`mode: "insensitive"` do
+Prisma (equivalente a `ILIKE`), não `tsvector`/`to_tsquery` do PostgreSQL.
+**Motivo**: mesma decisão já registrada para o MVP ("Busca", Fase 1) — `ILIKE` é suficiente para
+o volume atual de dados e evita adicionar migrations com índices GIN/`tsvector` antes de haver
+necessidade real (poucas anotações por usuário).
 
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

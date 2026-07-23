@@ -94,6 +94,7 @@ banco (`npm run db:migrate` / `npm run db:seed` do host, apontando `DATABASE_URL
 | `npm run docker:db` | Sobe só o Postgres via Docker Compose |
 | `npm run docker:app` | Builda e sobe app + banco via Docker Compose |
 | `npm run curriculum:import` | Importa/reimporta o currículo a partir de `Curso.md` |
+| `npm run test:unit` | Testes unitários (Vitest) — hoje cobre o algoritmo SM-2 dos flashcards |
 
 ## Configuração de IA (opcional)
 
@@ -127,9 +128,11 @@ docs/              documentação do produto/arquitetura/decisões
 ## Limitações atuais
 
 Este é um projeto em construção, entregue em fases verticais (ver
-`docs/IMPLEMENTATION_PLAN.md`). Concluídas: **Fase 1** (fundação — auth, layout, design system) e
+`docs/IMPLEMENTATION_PLAN.md`). Concluídas: **Fase 1** (fundação — auth, layout, design system),
 **Fase 2** (currículo — roadmap real, Semana 0 interativa, página de aula, importador de
-`Curso.md`). As demais áreas (planejador, sessões, projetos, laboratórios, competências,
+`Curso.md`) e **Fase 3** (aprendizagem — sessões de estudo com cronômetro persistente,
+planejador + metas, calendário mensal, anotações com busca, avaliações com correção automática,
+flashcards com repetição espaçada). As demais áreas (projetos, laboratórios, competências,
 portfólio, AI Labs, gamificação, tutor de IA, administração além da importação) ainda estão com
 páginas de placeholder (`"Planejado para a Fase N"`) em vez de dados reais — isso é intencional,
 não um bug. A grade semanal (semanas 1–104) está estruturada mas vazia (`"a definir"`), porque

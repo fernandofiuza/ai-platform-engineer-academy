@@ -27,13 +27,14 @@ Legenda: `[ ]` não iniciado · `[~]` em andamento · `[x]` concluído
 - [x] Página de aula (Markdown seguro, confiança, "o que aprendi/não entendi", concluir)
 
 ## Fase 3 — Aprendizagem
-- [ ] Progresso (LessonCompletion, Progress agregada)
-- [ ] Sessões de estudo (cronômetro persistente)
-- [ ] Metas (StudyGoal)
-- [ ] Planejador semanal + calendário
-- [ ] Anotações (templates + busca)
-- [ ] Avaliações (quiz/checkpoint)
-- [ ] Flashcards (SM-2 simplificado)
+- [x] Progresso (LessonCompletion já existia; agregados calculados sob demanda via query,
+      sem tabela `Progress` própria — ver DECISIONS.md)
+- [x] Sessões de estudo (cronômetro persistente — sobrevive a refresh — com pausa/retomada)
+- [x] Metas (StudyGoal: criar, reagendar, concluir/cancelar, excluir; destaque de atrasadas)
+- [x] Planejador semanal (disponibilidade + estimativa básica) + calendário mensal
+- [x] Anotações (7 modelos, tags, busca por texto, favoritos, vínculo opcional com aula)
+- [x] Avaliações (quiz de múltipla escolha, correção automática, explicações)
+- [x] Flashcards (SM-2 simplificado, com testes unitários em `tests/unit/sm2.test.ts`)
 
 ## Fase 4 — Prática profissional
 - [ ] Projetos
@@ -105,3 +106,35 @@ Legenda: `[ ]` não iniciado · `[~]` em andamento · `[x]` concluído
   administrativo de reimportação — 16/16 checks. Decisões (distribuição de semanas por semestre,
   escopo reduzido do schema, adiamento de `isManuallyEdited`) registradas em `docs/DECISIONS.md`.
   Próximo: Fase 3 — Aprendizagem.
+- Commit inicial criado (`26e07b0`) cobrindo Fases 1 e 2, 132 arquivos (excluindo os reference
+  docs de IA gerados pelo `prisma init` em `.agents/.claude/.windsurf`, que ficaram fora do
+  versionamento — ver `docs/DECISIONS.md`).
+- **Fase 3 concluída.** Novo schema (`StudyPlan`, `StudyGoal`, `StudySession`, `Note`,
+  `Assessment`/`Question`/`AnswerOption`/`AssessmentAttempt`, `Flashcard`/`FlashcardReview`),
+  uma migration puramente aditiva. Sessões de estudo com cronômetro que sobrevive a refresh
+  (estado — `startedAt`/`pausedAt`/`totalPausedSeconds` — vive no banco, não no cliente),
+  com pausar/retomar/finalizar (ratings de foco/dificuldade, reflexão, "concluí o conteúdo")
+  e descartar. Planejador (`/planner`): disponibilidade semanal + estimativa automática básica
+  de término (dias disponíveis vs. carga do programa) e metas (criar, reagendar, concluir,
+  cancelar, excluir; atrasadas marcadas sem bloquear nada). Calendário mensal (`/calendar`)
+  com navegação por mês, minutos estudados por dia e destaque dos dias planejados. Anotações
+  (`/notes`): 7 modelos, tags livres, busca por título/conteúdo (`ILIKE` via Prisma
+  `contains`/`insensitive`), favoritos, vínculo opcional com uma aula. Avaliações (`/assessments`,
+  `/assessments/[id]`): quiz de múltipla escolha com correção automática e explicações; nota
+  automática. Flashcards (`/flashcards`): fila de revisão por `nextReviewAt`, algoritmo SM-2
+  simplificado em `src/modules/flashcards/sm2.ts`, coberto por 6 testes unitários (Vitest,
+  `npm run test:unit`). Dashboard atualizado para mostrar dados reais (aulas concluídas, horas
+  estudadas, sequência de dias, metas em aberto). Durante a implementação, o ESLint (com as
+  regras do React Compiler) pegou 3 problemas reais antes de irem para produção: `Date.now()`
+  chamado durante a renderização (impuro), e dois componentes sincronizando `props` para
+  `state` dentro de `useEffect` (`setState` síncrono em efeito) — corrigidos com o padrão
+  recomendado pelo React de comparar e ajustar o estado durante a própria renderização.
+  Verificado ao vivo: `npm run typecheck`/`lint`/`build` sem erros nem avisos; `npm run
+  test:unit` (6/6); smoke test Playwright cobrindo sessão completa (iniciar → pausar →
+  retomar → finalizar → aparece no histórico), planejador (salvar disponibilidade → ver
+  estimativa; criar meta → concluir), calendário, anotações (criar → buscar → favoritar),
+  quiz (responder → nota 100%) e flashcards (revisar um cartão) — 16/16 checks, sem erros no
+  console do navegador nem nos logs do servidor; `docker compose --profile app up --build`
+  confirmado contra o mesmo Postgres. Decisões (schema mínimo por entrega vertical mantido,
+  escopo de anotações, estimativa simples do planejador) registradas em `docs/DECISIONS.md`.
+  Próximo: Fase 4 — Prática profissional.

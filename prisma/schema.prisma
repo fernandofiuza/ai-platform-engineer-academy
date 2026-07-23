@@ -31,6 +31,12 @@ model User {
   passwordResetTokens   PasswordResetToken[]
   checklistItemProgress ChecklistItemProgress[]
   lessonCompletions     LessonCompletion[]
+  studyPlan             StudyPlan?
+  studyGoals            StudyGoal[]
+  studySessions         StudySession[]
+  notes                 Note[]
+  assessmentAttempts    AssessmentAttempt[]
+  flashcardReviews      FlashcardReview[]
 
   @@map("users")
 }
@@ -137,6 +143,7 @@ model Week {
   phase          Phase?          @relation(fields: [phaseId], references: [id], onDelete: SetNull)
   lessons        Lesson[]
   checklistItems ChecklistItem[]
+  studyGoals     StudyGoal[]
 
   @@unique([programId, number])
   @@index([phaseId])
@@ -194,6 +201,9 @@ model Lesson {
   week        Week               @relation(fields: [weekId], references: [id], onDelete: Cascade)
   resources   Resource[]
   completions LessonCompletion[]
+  sessions    StudySession[]
+  assessments Assessment[]
+  flashcards  Flashcard[]
 
   @@unique([weekId, order])
   @@map("lessons")
@@ -262,4 +272,204 @@ model ImportWarning {
 
   @@index([importJobId])
   @@map("import_warnings")
+}
+
+// ---------------------------------------------------------------------------
+// Aprendizagem (Fase 3): planejamento, sessões, metas, anotações, avaliações,
+// flashcards. Progresso agregado é calculado sob demanda via queries (COUNT),
+// sem tabela `Progress` própria — ver docs/DECISIONS.md.
+// ---------------------------------------------------------------------------
+
+enum GoalStatus {
+  OPEN
+  DONE
+  CANCELLED
+}
+
+model StudyPlan {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  availableDays Int[]    @default([1, 2, 3, 4, 5])
+  preferredTime String?
+  dailyHours    Float    @default(3.5)
+  startDate     DateTime @default(now())
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("study_plans")
+}
+
+model StudyGoal {
+  id            String     @id @default(cuid())
+  userId        String
+  title         String
+  targetDate    DateTime?
+  relatedWeekId String?
+  status        GoalStatus @default(OPEN)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  user        User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedWeek Week? @relation(fields: [relatedWeekId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("study_goals")
+}
+
+model StudySession {
+  id                 String    @id @default(cuid())
+  userId             String
+  lessonId           String?
+  startedAt          DateTime  @default(now())
+  pausedAt           DateTime?
+  totalPausedSeconds Int       @default(0)
+  endedAt            DateTime?
+  durationMinutes    Int?
+  focusRating        Int?
+  difficultyRating   Int?
+  notes              String?
+  completedContent   Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("study_sessions")
+}
+
+enum NoteScope {
+  LESSON
+  WEEK
+  GENERAL
+}
+
+enum NoteTemplate {
+  SUMMARY
+  QUESTION
+  DECISION
+  TROUBLESHOOTING
+  RETROSPECTIVE
+  CONCEPT
+  COMMAND
+}
+
+model Note {
+  id              String       @id @default(cuid())
+  userId          String
+  scopeType       NoteScope    @default(GENERAL)
+  scopeId         String?
+  template        NoteTemplate @default(SUMMARY)
+  title           String
+  contentMarkdown String
+  tags            String[]     @default([])
+  isFavorite      Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notes")
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+}
+
+model Assessment {
+  id        String        @id @default(cuid())
+  lessonId  String?
+  title     String
+  status    ContentStatus @default(AVAILABLE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  lesson    Lesson?             @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  questions Question[]
+  attempts  AssessmentAttempt[]
+
+  @@map("assessments")
+}
+
+model Question {
+  id           String       @id @default(cuid())
+  assessmentId String
+  order        Int
+  prompt       String
+  type         QuestionType
+  explanation  String?
+
+  assessment Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  options    AnswerOption[]
+
+  @@unique([assessmentId, order])
+  @@map("questions")
+}
+
+model AnswerOption {
+  id         String  @id @default(cuid())
+  questionId String
+  order      Int
+  text       String
+  isCorrect  Boolean @default(false)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, order])
+  @@map("answer_options")
+}
+
+model AssessmentAttempt {
+  id               String    @id @default(cuid())
+  userId           String
+  assessmentId     String
+  startedAt        DateTime  @default(now())
+  submittedAt      DateTime?
+  score            Float?
+  answers          Json?
+  timeSpentSeconds Int?
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, assessmentId])
+  @@map("assessment_attempts")
+}
+
+model Flashcard {
+  id         String   @id @default(cuid())
+  lessonId   String?
+  question   String
+  answer     String
+  difficulty Int      @default(2)
+  tags       String[] @default([])
+  createdAt  DateTime @default(now())
+
+  lesson  Lesson?           @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  reviews FlashcardReview[]
+
+  @@map("flashcards")
+}
+
+model FlashcardReview {
+  id           String   @id @default(cuid())
+  userId       String
+  flashcardId  String
+  reviewedAt   DateTime @default(now())
+  quality      Int
+  nextReviewAt DateTime
+  intervalDays Int      @default(1)
+  easeFactor   Float    @default(2.5)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+
+  @@index([userId, nextReviewAt])
+  @@map("flashcard_reviews")
 }

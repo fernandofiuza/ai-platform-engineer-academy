@@ -7,37 +7,67 @@ import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getTotalStudyMinutes } from "@/modules/study-sessions/queries";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 const NEXT_STEPS = [
   {
-    title: "Semana 0 — Preparação do Ambiente",
-    description: "Checklist interativo de ferramentas e ambiente de estudo.",
-    phase: "Fase 2",
+    title: "Projetos e laboratórios práticos",
+    description: "Projetos conectados ao currículo, com critérios de aceite e evidências.",
+    phase: "Fase 4",
   },
   {
-    title: "Roadmap das 104 semanas",
-    description: "Estrutura completa da formação, com o que já está definido em Curso.md.",
-    phase: "Fase 2",
+    title: "Mapa de competências e portfólio",
+    description: "Evolução das suas competências técnicas e checklist de qualidade do GitHub.",
+    phase: "Fase 4",
   },
   {
-    title: "Primeira sessão de estudo",
-    description: "Cronômetro de sessão e registro de progresso.",
-    phase: "Fase 3",
+    title: "Tutor de IA (nível 1)",
+    description: "Explicações, resumos e sugestões de próxima atividade — funciona sem chave de IA.",
+    phase: "Fase 5",
   },
 ];
+
+function computeStreak(sessionDates: Date[]) {
+  const uniqueDays = new Set(
+    sessionDates.map((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime())
+  );
+  let streak = 0;
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  // Se não estudou hoje, a sequência ainda conta a partir de ontem.
+  if (!uniqueDays.has(cursor.getTime())) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  while (uniqueDays.has(cursor.getTime())) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
 
 export default async function DashboardPage() {
   const session = await auth();
   const user = session!.user;
 
-  const dbUser = await db.user.findUnique({
-    where: { id: user.id },
-    select: { name: true, createdAt: true },
-  });
+  const [dbUser, totalLessons, completedLessons, totalMinutes, sessionsForStreak, openGoals] =
+    await Promise.all([
+      db.user.findUnique({ where: { id: user.id }, select: { name: true, createdAt: true } }),
+      db.lesson.count({ where: { status: "AVAILABLE" } }),
+      db.lessonCompletion.count({ where: { userId: user.id } }),
+      getTotalStudyMinutes(user.id),
+      db.studySession.findMany({
+        where: { userId: user.id, endedAt: { not: null } },
+        select: { startedAt: true },
+      }),
+      db.studyGoal.count({ where: { userId: user.id, status: "OPEN" } }),
+    ]);
 
   const firstName = (dbUser?.name ?? user.name ?? "").split(" ")[0];
+  const streak = computeStreak(sessionsForStreak.map((s) => s.startedAt));
+  const progressPercent =
+    totalLessons > 0 ? Math.round((Math.min(completedLessons, totalLessons) / totalLessons) * 100) : 0;
 
   return (
     <div className="space-y-8">
@@ -53,12 +83,12 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
-              <ListChecks className="size-4" /> Progresso geral
+              <ListChecks className="size-4" /> Aulas concluídas
             </CardDescription>
-            <CardTitle className="text-3xl">—</CardTitle>
+            <CardTitle className="text-3xl">{progressPercent}%</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
-            Disponível a partir da Fase 2, quando o currículo for importado de Curso.md.
+            {completedLessons} de {totalLessons} aulas disponíveis concluídas.
           </CardContent>
         </Card>
         <Card>
@@ -66,10 +96,14 @@ export default async function DashboardPage() {
             <CardDescription className="flex items-center gap-2">
               <Timer className="size-4" /> Horas estudadas
             </CardDescription>
-            <CardTitle className="text-3xl">—</CardTitle>
+            <CardTitle className="text-3xl">{(totalMinutes / 60).toFixed(1)}h</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
-            As sessões de estudo chegam na Fase 3.
+            {totalMinutes} minutos registrados em{" "}
+            <Link href="/sessions" className="underline">
+              sessões de estudo
+            </Link>
+            .
           </CardContent>
         </Card>
         <Card>
@@ -77,10 +111,16 @@ export default async function DashboardPage() {
             <CardDescription className="flex items-center gap-2">
               <CalendarCheck className="size-4" /> Sequência de estudo
             </CardDescription>
-            <CardTitle className="text-3xl">—</CardTitle>
+            <CardTitle className="text-3xl">{streak} {streak === 1 ? "dia" : "dias"}</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
-            A gamificação chega na Fase 4.
+            {openGoals > 0 ? (
+              <Link href="/planner" className="underline">
+                {openGoals} meta(s) em aberto
+              </Link>
+            ) : (
+              "Nenhuma meta em aberto — crie uma no planejador."
+            )}
           </CardContent>
         </Card>
       </div>
@@ -88,12 +128,11 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="size-4 text-primary" /> Este ainda é o início
+            <Sparkles className="size-4 text-primary" /> Próximas entregas
           </CardTitle>
           <CardDescription>
-            Você concluiu a Fase 1 (fundação): conta, autenticação, layout e design system estão
-            no ar. As próximas entregas verticais trazem o currículo real e o acompanhamento de
-            estudo.
+            Fases 1 (Fundação), 2 (Currículo) e 3 (Aprendizagem — sessões, metas, planejador,
+            calendário, anotações, avaliações e flashcards) já estão no ar.
           </CardDescription>
         </CardHeader>
         <CardContent>

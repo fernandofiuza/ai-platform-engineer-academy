@@ -47,14 +47,14 @@ async function seedCurriculum() {
 
 async function seedDemoLessons() {
   const program = await db.program.findUnique({ where: { slug: PROGRAM_SLUG } });
-  if (!program) return;
+  if (!program) return null;
 
   const weekZero = await db.week.findUnique({
     where: { programId_number: { programId: program.id, number: 0 } },
   });
-  if (!weekZero) return;
+  if (!weekZero) return null;
 
-  await db.lesson.upsert({
+  const welcomeLesson = await db.lesson.upsert({
     where: { weekId_order: { weekId: weekZero.id, order: 0 } },
     update: {},
     create: {
@@ -69,7 +69,7 @@ async function seedDemoLessons() {
     },
   });
 
-  await db.lesson.upsert({
+  const principleLesson = await db.lesson.upsert({
     where: { weekId_order: { weekId: weekZero.id, order: 1 } },
     update: {},
     create: {
@@ -83,12 +83,114 @@ async function seedDemoLessons() {
       contentMarkdown: `## "Nunca estudar uma tecnologia sem aplicá-la em um projeto real."\n\nEsse é o princípio central da formação.\n\n- Se aprendermos Redis, ele entra na plataforma.\n- Se aprendermos Docker, fazemos o deploy da plataforma.\n- Se aprendermos observabilidade, monitoramos a aplicação.\n\nCada tecnologia estudada precisa aparecer, de forma verificável, na mesma plataforma que evolui com você ao longo dos 6 semestres.\n\n> Conteúdo de demonstração (aula de exemplo), extraído de \`Curso.md\`.`,
     },
   });
+
+  return { welcomeLesson, principleLesson, program };
+}
+
+async function seedAssessment(welcomeLessonId: string, programName: string) {
+  const existing = await db.assessment.findFirst({
+    where: { lessonId: welcomeLessonId, title: "Quiz: conhecendo a formação" },
+  });
+  if (existing) return;
+
+  await db.assessment.create({
+    data: {
+      lessonId: welcomeLessonId,
+      title: "Quiz: conhecendo a formação",
+      status: "AVAILABLE",
+      questions: {
+        create: [
+          {
+            order: 0,
+            prompt: "Qual é o nome da formação?",
+            type: "MULTIPLE_CHOICE",
+            explanation: `O nome oficial é "${programName}".`,
+            options: {
+              create: [
+                { order: 0, text: programName, isCorrect: true },
+                { order: 1, text: "APEX Academy", isCorrect: false },
+                { order: 2, text: "AI Agent Bootcamp", isCorrect: false },
+              ],
+            },
+          },
+          {
+            order: 1,
+            prompt: "Aproximadamente quantas semanas tem a formação?",
+            type: "MULTIPLE_CHOICE",
+            explanation: "24 meses ÷ carga semanal ≈ 104 semanas.",
+            options: {
+              create: [
+                { order: 0, text: "52 semanas", isCorrect: false },
+                { order: 1, text: "104 semanas", isCorrect: true },
+                { order: 2, text: "12 semanas", isCorrect: false },
+              ],
+            },
+          },
+          {
+            order: 2,
+            prompt: 'Qual princípio guia a metodologia da formação?',
+            type: "MULTIPLE_CHOICE",
+            explanation:
+              'Ver a aula "O princípio da formação: aprender aplicando".',
+            options: {
+              create: [
+                { order: 0, text: "Estudar teoria antes de qualquer prática", isCorrect: false },
+                {
+                  order: 1,
+                  text: "Nunca estudar uma tecnologia sem aplicá-la em um projeto real",
+                  isCorrect: true,
+                },
+                { order: 2, text: "Priorizar certificações externas", isCorrect: false },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+}
+
+async function seedFlashcards(lessonIds: { welcomeLessonId: string; principleLessonId: string }) {
+  const cards = [
+    {
+      lessonId: lessonIds.welcomeLessonId,
+      question: "Quantos meses dura a AI Platform Engineer Academy?",
+      answer: "Aproximadamente 24 meses (104 semanas).",
+      tags: ["formação"],
+    },
+    {
+      lessonId: lessonIds.welcomeLessonId,
+      question: "Quantas horas de estudo por dia a formação prevê?",
+      answer: "3h30 por dia, 5 dias por semana.",
+      tags: ["formação"],
+    },
+    {
+      lessonId: lessonIds.principleLessonId,
+      question: 'Complete: "Nunca estudar uma tecnologia sem ___"',
+      answer: "aplicá-la em um projeto real.",
+      tags: ["metodologia"],
+    },
+  ];
+
+  for (const card of cards) {
+    const existing = await db.flashcard.findFirst({ where: { question: card.question } });
+    if (existing) continue;
+    await db.flashcard.create({ data: card });
+  }
 }
 
 async function main() {
   const { admin, student } = await seedUsers();
   const importResult = await seedCurriculum();
-  await seedDemoLessons();
+  const lessons = await seedDemoLessons();
+
+  if (lessons) {
+    await seedAssessment(lessons.welcomeLesson.id, lessons.program.name);
+    await seedFlashcards({
+      welcomeLessonId: lessons.welcomeLesson.id,
+      principleLessonId: lessons.principleLesson.id,
+    });
+  }
 
   console.log("\nSeed concluído.");
   console.log("\nUsuários de demonstração (apenas para desenvolvimento local):");

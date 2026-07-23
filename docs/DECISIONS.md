@@ -810,5 +810,23 @@ geração de conteúdo de aula em segundo plano (módulo Fundamentos da Computa�
 rodando contra o mesmo servidor — o lote foi retomado do ponto exato em que parou depois do
 reinício, sem perda de nenhuma aula já gerada.
 
+## 2026-07-23 — Bug real: as 35 aulas diárias de Preparação ficaram em DRAFT sem aprovação
+
+**O que aconteceu**: ao regenerar Preparação do formato semanal (1 aula/semana, já aprovada) para
+o formato diário (5 aulas/semana), a regeneração recria as aulas do zero — o aprofundamento por
+IA (`generateLessonContentAction`) sempre grava `status = DRAFT`, corretamente. O usuário
+confirmou a aprovação do conteúdo revisado, mas a ação de aprovar (`approveLessonContentAction`)
+nunca foi de fato executada para essas 35 aulas novas antes de seguir para a próxima tarefa —
+diferente do módulo Fundamentos da Computação (semanas 8–19), onde a aprovação em lote foi
+explicitamente rodada depois da revisão. Resultado: as semanas 1–7 sumiram de `/learn` (a
+consulta já filtra por `status = "AVAILABLE"`, como esperado — não era um bug na query, era
+conteúdo genuinamente não aprovado ainda).
+**Correção**: as 35 aulas foram aprovadas (`status = AVAILABLE`); confirmado por varredura
+completa que **nenhuma** aula no banco ficou presa em `DRAFT` depois disso.
+**Lição registrada**: sempre que uma regeneração de conteúdo (template → aprofundamento por IA)
+terminar, rodar explicitamente a aprovação em lote como parte do mesmo fluxo de trabalho — não
+tratar "aprovar o conteúdo" (confirmação do usuário) como equivalente a "já rodei a ação de
+aprovação no sistema".
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

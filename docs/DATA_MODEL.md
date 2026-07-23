@@ -93,6 +93,11 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 - **ProjectSubmission**(userId, projectId, repoUrl?, deployUrl?, decisions?, retrospective?,
   status: `OPEN|DONE|CANCELLED`) — `@@unique([userId, projectId])`; é a submissão do estudante,
   separada do template do projeto
+- **CodeReview**(submissionId, score? Float, feedback, provider, createdAt) — Etapa 6: revisão
+  de código assistida por IA (persona Tech Lead), vinculada a uma `ProjectSubmission`. Histórico
+  completo (nunca sobrescrito — cada solicitação cria uma linha nova); `score` é extraído por
+  regex da resposta em texto livre da IA (`"Nota: X.X"`), fica `null` se não for possível
+  extrair. Ver `docs/DECISIONS.md`.
 - **Laboratory**(title, objective?, environment?, prerequisites[], instructions?, commands?,
   expectedResult?, validation?, troubleshooting?, isDemo, status)
 - **LaboratoryCompletion**(userId, laboratoryId, completedAt, evidenceUrl?, notes?) —

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CodeReviewPanel } from "@/modules/projects/components/code-review-panel";
 import { SubmissionForm } from "@/modules/projects/components/submission-form";
 import { getProjectById, getSubmissionForUser } from "@/modules/projects/queries";
 
@@ -97,6 +98,14 @@ export default async function ProjectDetailPage({
           <SubmissionForm projectId={project.id} initialSubmission={submission} />
         </CardContent>
       </Card>
+
+      {session?.user ? (
+        <CodeReviewPanel
+          projectId={project.id}
+          hasRepoUrl={Boolean(submission?.repoUrl)}
+          reviews={submission?.codeReviews ?? []}
+        />
+      ) : null}
     </div>
   );
 }

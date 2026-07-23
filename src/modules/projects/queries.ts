@@ -14,6 +14,7 @@ export async function getProjectById(id: string) {
 export async function getSubmissionForUser(userId: string, projectId: string) {
   return db.projectSubmission.findUnique({
     where: { userId_projectId: { userId, projectId } },
+    include: { codeReviews: { orderBy: { createdAt: "desc" } } },
   });
 }
 

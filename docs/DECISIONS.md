@@ -599,5 +599,29 @@ GitHub.
 as próximas etapas reais desta sessão (Etapa 6: code review por IA; Etapa 8: certificação), já
 que o cartão estava sendo tocado de qualquer forma nesta etapa.
 
+## 2026-07-23 — Etapa 6: Code Review com nota via IA
+
+**Decisão**: novo modelo `CodeReview` (submissionId, score? Float, feedback, provider,
+createdAt), vinculado a `ProjectSubmission`. `requestCodeReviewAction(projectId)` exige que a
+submissão já tenha `repoUrl` preenchido, chama `getProviderForPersona("TECH_LEAD")` (reaproveita
+o roteamento da Etapa 1/2 — Claude, ou Mock sem chave) e cria uma nova linha em `CodeReview` a
+cada solicitação (histórico completo, nunca sobrescrito). O `score` é extraído por regex
+(`/nota:?\s*(\d{1,2}(?:[.,]\d)?)/i`) da resposta em texto livre da persona — fica `null` se a IA
+não seguir o formato pedido, em vez de travar a revisão. Rate limit dedicado (5 revisões / 10 min
+por usuário) reaproveita `checkRateLimit` genérico.
+**Sem leitura real do código**: como a integração real com GitHub segue não implementada
+(`GitHubProvider`, Fase 4, interface pronta mas nunca chamada — buscar o conteúdo real de um
+repositório exigiria token de acesso e rate limit da API do GitHub, fora do escopo), a revisão é
+baseada nas informações que o estudante já forneceu (URL do repositório, decisões técnicas,
+retrospectiva) e nos requisitos do projeto — **não** em uma leitura linha a linha do código. Isso
+é comunicado explicitamente na UI (`CodeReviewPanel`), junto com o aviso de que é uma "avaliação
+assistida por IA, não uma nota oficial" (exigência explícita do usuário).
+**Por que não extrair a nota em JSON estruturado**: a Etapa 2 já usa `converse()` com resposta em
+texto livre para todas as personas; pedir um formato estruturado (JSON) só para o Tech Lead
+exigiria um método novo na interface `AIProvider` (`reviewCode`) implementado nos 4 adapters só
+para este caso. Regex simples sobre uma instrução de formato explícita no prompt ("comece com a
+linha 'Nota: X.X'") é suficiente e mais simples, com um fallback seguro (`score = null`) se
+falhar.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

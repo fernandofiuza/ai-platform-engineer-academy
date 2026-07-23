@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { getProviderForPersona } from "@/modules/artificial-intelligence/gateway";
 import { awardXp, checkAndAwardBadges } from "@/modules/gamification/service";
 import {
   saveProjectSchema,
@@ -100,4 +102,84 @@ export async function archiveProjectAction(projectId: string) {
   revalidatePath("/admin/projects");
   revalidatePath("/projects");
   return { error: null };
+}
+
+function extractReviewScore(feedback: string): number | null {
+  const match = feedback.match(/nota:?\s*(\d{1,2}(?:[.,]\d)?)/i);
+  if (!match) return null;
+  const score = Number(match[1].replace(",", "."));
+  if (Number.isNaN(score)) return null;
+  return Math.min(10, Math.max(0, score));
+}
+
+/**
+ * Solicita uma revisão de código assistida por IA (persona Tech Lead, Etapa 2/6) para a
+ * submissão do estudante. Como a integração real com GitHub segue não implementada (Fase 4,
+ * `GitHubProvider` nunca chamado), a revisão é baseada nas informações que o estudante já
+ * forneceu (URL do repositório, decisões técnicas, retrospectiva) e nos requisitos do projeto —
+ * não em uma leitura linha a linha do código. Cada solicitação cria uma nova linha em
+ * `CodeReview` (histórico completo, nunca sobrescrito).
+ */
+export async function requestCodeReviewAction(projectId: string) {
+  const session = await auth();
+  if (!session?.user) return { error: "Sessão expirada. Faça login novamente." };
+
+  const rateLimit = checkRateLimit(`code-review:${session.user.id}`, {
+    windowMs: 10 * 60 * 1000,
+    maxRequests: 5,
+  });
+  if (!rateLimit.allowed) {
+    return { error: `Muitas solicitações de revisão. Tente novamente em ${rateLimit.retryAfterSeconds}s.` };
+  }
+
+  const [project, submission] = await Promise.all([
+    db.project.findUnique({ where: { id: projectId } }),
+    db.projectSubmission.findUnique({
+      where: { userId_projectId: { userId: session.user.id, projectId } },
+    }),
+  ]);
+  if (!project) return { error: "Projeto não encontrado." };
+  if (!submission?.repoUrl) {
+    return { error: "Vincule uma URL de repositório à sua submissão antes de pedir uma revisão." };
+  }
+
+  const provider = getProviderForPersona("TECH_LEAD");
+  const message = [
+    `Revise o projeto "${project.title}" submetido por um estudante.`,
+    `Repositório informado: ${submission.repoUrl}`,
+    submission.decisions ? `Decisões técnicas relatadas pelo estudante: ${submission.decisions}` : "",
+    submission.retrospective ? `Retrospectiva do estudante: ${submission.retrospective}` : "",
+    project.requirements.length > 0 ? `Requisitos do projeto: ${project.requirements.join("; ")}.` : "",
+    "Você não tem acesso direto ao código do repositório — baseie a revisão apenas nas informações acima e nas boas práticas esperadas para esse tipo de projeto.",
+    'Responda começando com a linha exata "Nota: X.X" (0 a 10, uma casa decimal) e depois liste as sugestões estruturadas em tópicos.',
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    const feedback = await provider.converse({
+      persona: "TECH_LEAD",
+      message,
+      context: {
+        completedLessonTitles: [],
+        openGoalTitles: [],
+        recentQuizScores: [],
+      },
+    });
+
+    await db.codeReview.create({
+      data: {
+        submissionId: submission.id,
+        score: extractReviewScore(feedback),
+        feedback,
+        provider: provider.name,
+      },
+    });
+
+    revalidatePath(`/projects/${projectId}`);
+    return { error: null };
+  } catch (error) {
+    logger.error("request_code_review failed", { projectId, error: String(error) });
+    return { error: "Não foi possível gerar a revisão agora. Tente novamente em instantes." };
+  }
 }

@@ -337,4 +337,15 @@ Com a Fase 6 concluída, todas as seis fases do fluxo de implementação origina
   cartões aparecem com os valores reais do estudante demo, e editar o campo de commits (42) e
   salvar atualiza o cartão imediatamente; `npm run typecheck`/`lint`/`test:unit` sem erros.
   Decisões registradas em `docs/DECISIONS.md`.
+- **Etapa 6: Code Review com nota via IA.** Novo modelo `CodeReview` (histórico completo,
+  vinculado a `ProjectSubmission`). `requestCodeReviewAction` usa a persona Tech Lead (Etapa 2,
+  roteada para Claude/Mock pelo Gateway) para revisar com base nas informações da submissão
+  (repoUrl, decisões, retrospectiva) e nos requisitos do projeto — não há leitura real do
+  repositório (integração com GitHub segue não implementada). Nota extraída por regex da
+  resposta em texto livre (`null` se não encontrada). Rate limit dedicado (5/10min). Novo
+  `CodeReviewPanel` em `/projects/[projectId]`: botão de solicitar revisão (desabilitado sem
+  `repoUrl`), aviso de "avaliação assistida por IA, não uma nota oficial", e histórico completo
+  de revisões anteriores. Verificado ao vivo: vinculada uma URL de repositório, solicitada uma
+  revisão, nota 7.0 extraída corretamente do mock, badge de provider e histórico exibidos;
+  `npm run typecheck`/`lint`/`test:unit` sem erros. Decisões registradas em `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

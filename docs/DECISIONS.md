@@ -647,5 +647,34 @@ padrão de fábrica.
 do rate limit em memória; a resposta é puramente exibida para avaliação humana, conforme
 exigência explícita do usuário.
 
+## 2026-07-23 — Etapa 8: certificação interna por semestre
+
+**Correção de premissa**: o prompt desta etapa afirmava que "`Certification` existe no schema,
+mas sem fluxo" — isso **não era verdade** neste projeto: nenhum modelo `Certification` havia
+sido criado em nenhuma fase anterior (só citado como aspiração em `docs/PRODUCT_SPEC.md`,
+"certificações internas nomeadas"). Não era um bloqueio real — a etapa foi executada criando o
+modelo do zero, já que a intenção (completar o fluxo de certificação) estava clara.
+**Decisão**: novo modelo `Certification` (userId, phaseId, code único, issuedAt —
+`@@unique([userId, phaseId])`, emitido uma vez por semestre por usuário). Os 3 requisitos do
+prompt ("todas as semanas obrigatórias" + "um projeto final do semestre" + "uma avaliação") não
+tinham vínculo direto com `Phase` no schema existente (`Project`/`Assessment` são entidades
+soltas, sem `phaseId`) — resolvido com o mesmo padrão já usado na Etapa 4 (Trilha Produto):
+`Phase.finalProjectId`/`finalAssessmentId`, FKs opcionais e únicas, definidas pela área
+administrativa (`/admin/curriculum`, novo `PhaseRequirementsForm`) — sparse, sem inventar qual
+projeto/avaliação "é" o final de cada semestre. Se o admin não definir, o requisito
+correspondente nunca é satisfeito (mensagem explícita ao estudante: "ainda não definido pela
+área administrativa"), em vez de assumir um projeto/avaliação qualquer.
+**Requisito "semanas concluídas"**: como cada semana tem exatamente 1 `Lesson` real (Etapa 3),
+"semana concluída" = `LessonCompletion` para essa aula; só conta aulas com `status = AVAILABLE`
+(aulas ainda em `DRAFT`/`PLANNED` não são exigíveis). "Avaliação respondida" exige apenas 1
+`AssessmentAttempt` com `submittedAt` preenchido — não foi definida uma nota mínima de
+aprovação (não pedida explicitamente, e introduziria uma configuração extra sem necessidade
+comprovada).
+**Verificação ao vivo**: como não havia estudante real com um semestre inteiro concluído, os
+pré-requisitos foram forçados temporariamente via script (18 aulas do Semestre 1 marcadas
+concluídas, submissão do projeto demo marcada `DONE`, uma tentativa de avaliação criada) só para
+confirmar o fluxo ponta a ponta (elegibilidade → emissão → página de visualização) e depois
+revertidos — nenhum dado de teste permanente ficou no banco.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

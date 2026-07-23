@@ -44,6 +44,7 @@ model User {
   projectSubmissions    ProjectSubmission[]
   laboratoryCompletions LaboratoryCompletion[]
   aiConversations       AIConversation[]
+  certifications        Certification[]
 
   @@map("users")
 }
@@ -119,20 +120,43 @@ model Program {
 }
 
 model Phase {
-  id        String        @id @default(cuid())
-  programId String
-  order     Int
-  name      String
-  label     String
-  status    ContentStatus @default(PLANNED)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id                String        @id @default(cuid())
+  programId         String
+  order             Int
+  name              String
+  label             String
+  status            ContentStatus @default(PLANNED)
+  finalProjectId    String?       @unique
+  finalAssessmentId String?       @unique
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
-  weeks   Week[]
+  program         Program         @relation(fields: [programId], references: [id], onDelete: Cascade)
+  weeks           Week[]
+  finalProject    Project?        @relation(fields: [finalProjectId], references: [id], onDelete: SetNull)
+  finalAssessment Assessment?     @relation(fields: [finalAssessmentId], references: [id], onDelete: SetNull)
+  certifications  Certification[]
 
   @@unique([programId, order])
   @@map("phases")
+}
+
+// Etapa 8: certificação interna por semestre (não é uma certificação de mercado). Emitida quando
+// o estudante conclui todas as semanas obrigatórias do semestre + o projeto final do semestre +
+// a avaliação final do semestre (ambos definidos pela área administrativa via `Phase.finalProject`/
+// `finalAssessment` — ver docs/DECISIONS.md).
+model Certification {
+  id       String   @id @default(cuid())
+  userId   String
+  phaseId  String
+  code     String   @unique
+  issuedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phase Phase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, phaseId])
+  @@map("certifications")
 }
 
 model Week {
@@ -403,9 +427,10 @@ model Assessment {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  lesson    Lesson?             @relation(fields: [lessonId], references: [id], onDelete: SetNull)
-  questions Question[]
-  attempts  AssessmentAttempt[]
+  lesson        Lesson?             @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  questions     Question[]
+  attempts      AssessmentAttempt[]
+  finalForPhase Phase?
 
   @@map("assessments")
 }
@@ -561,6 +586,7 @@ model Project {
 
   submissions    ProjectSubmission[]
   portfolioItems PortfolioItem[]
+  finalForPhase  Phase?
 
   @@map("projects")
 }

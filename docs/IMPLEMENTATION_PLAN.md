@@ -359,4 +359,21 @@ Com a Fase 6 concluída, todas as seis fases do fluxo de implementação origina
   problema ("integrar Firebird com IA"), gerados 5 componentes com justificativa, renderizados
   como diagrama esquemático; `npm run typecheck`/`lint`/`test:unit` sem erros. Decisões
   registradas em `docs/DECISIONS.md`.
+- **Etapa 8: certificação interna por semestre.** Novo modelo `Certification` (o prompt afirmava
+  que já existia no schema — não era verdade neste projeto; criado do zero, ver
+  `docs/DECISIONS.md`). `Phase.finalProjectId`/`finalAssessmentId` (FKs opcionais únicas, mesmo
+  padrão da Trilha Produto da Etapa 4) marcam qual projeto/avaliação conta como "final do
+  semestre", definidos pela área administrativa em `/admin/curriculum` (novo
+  `PhaseRequirementsForm`). `requestCertificationAction` verifica os 3 requisitos (semanas
+  obrigatórias concluídas, projeto final `DONE`, avaliação final com tentativa enviada) e emite
+  um certificado idempotente por usuário/semestre. Novas páginas `/certifications` (visão geral
+  dos 6 semestres com requisitos e botão de emissão) e `/certifications/[id]` (certificado,
+  deixando claro que é interno, não uma certificação de mercado). Verificado ao vivo: forçados
+  temporariamente os pré-requisitos do Semestre 1 para o estudante demo, confirmado o fluxo
+  completo (elegibilidade → emissão → visualização do certificado) e revertido depois — nenhum
+  dado de teste ficou no banco; `npm run typecheck`/`lint`/`test:unit` sem erros. Decisões
+  registradas em `docs/DECISIONS.md`.
+
+Com isso, as Etapas 1 a 8 do prompt de evolução de IA multi-provider e funcionalidades de
+produto foram entregues.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

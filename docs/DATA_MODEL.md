@@ -33,7 +33,11 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 ```
 
 - **Program**(slug, name, subtitle, durationMonths, totalWeeks, weeklyDays, dailyHours, status)
-- **Phase**(programId, order, name, label /* "Semestre N" */, status)
+- **Phase**(programId, order, name, label /* "Semestre N" */, status, finalProjectId? único,
+  finalAssessmentId? único) — os dois campos opcionais (Etapa 8) marcam qual `Project`/
+  `Assessment` conta como "final do semestre" para a certificação; definidos pela área
+  administrativa em `/admin/curriculum`, sparse (só existem quando definidos) — ver
+  `docs/DECISIONS.md`.
 - **Track**(phaseId, order, name, status) — trilha dentro do semestre (ex.: Backend, Infra) — **ainda não implementado**
 - **Module**(trackId, order, name, status) — **ainda não implementado**
 - **Week**(programId, phaseId?, number 0–104, title, objective?, isEnvironmentSetup bool,
@@ -205,6 +209,17 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 - **ImportJob**(sourceFile, contentHash, startedAt, finishedAt, createdCount, updatedCount,
   skippedCount, report JSON)
 - **ImportWarning**(importJobId, excerpt, reason, targetEntityHint, needsReview bool)
+
+## 12. Certificação (Etapa 8)
+
+> Certificado **interno** da formação — não é uma certificação de mercado. Emitido só quando os
+> 3 requisitos do semestre são cumpridos (checados sob demanda, sem cache): todas as semanas
+> obrigatórias do semestre com `Lesson` `AVAILABLE` concluídas (`LessonCompletion`), o projeto
+> final do semestre (`Phase.finalProject`) com `ProjectSubmission.status = DONE`, e a avaliação
+> final do semestre (`Phase.finalAssessment`) com ao menos um `AssessmentAttempt` enviado.
+
+- **Certification**(userId, phaseId, code único, issuedAt) — `@@unique([userId, phaseId])`,
+  emitido uma única vez por usuário/semestre; `code` gerado como `APEA-S{order}-{uuid curto}`.
 
 ## Índices e constraints (mínimo)
 

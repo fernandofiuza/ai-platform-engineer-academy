@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Layers,
+  Award,
   BookOpen,
   Boxes,
   Briefcase,
@@ -56,6 +57,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { title: "Competências", href: "/skills", icon: Target },
       { title: "Portfólio", href: "/portfolio", icon: Briefcase },
+      { title: "Certificações", href: "/certifications", icon: Award },
       { title: "AI Labs", href: "/ai-labs", icon: Building2 },
     ],
   },

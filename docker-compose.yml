@@ -1,0 +1,43 @@
+name: ai-platform-engineer-academy
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-apea}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apea_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-apea}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-apea} -d ${POSTGRES_DB:-apea}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-apea}:${POSTGRES_PASSWORD:-apea_dev_password}@db:5432/${POSTGRES_DB:-apea}?schema=public
+      AUTH_SECRET: ${AUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    profiles:
+      - app
+
+volumes:
+  db_data:

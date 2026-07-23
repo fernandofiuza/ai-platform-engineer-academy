@@ -377,6 +377,7 @@ export async function importModuleGrid(options: {
           objective: range.module.projectDescription
             ? `Projeto do módulo: ${range.module.projectDescription}`
             : undefined,
+          status: "AVAILABLE",
         },
       });
       updatedCount++;

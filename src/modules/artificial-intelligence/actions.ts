@@ -6,14 +6,17 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { buildContextForUser } from "./context";
-import { getProviderForTask } from "./gateway";
+import { getProviderForPersona, getProviderForTask } from "./gateway";
+import { PERSONA_LABELS } from "./personas";
 import { checkRateLimit } from "./rate-limit";
 import {
   askQuestionSchema,
+  converseSchema,
   explainConceptSchema,
   generateQuizSchema,
   summarizeLessonSchema,
   type AskQuestionInput,
+  type ConverseInput,
   type ExplainConceptInput,
   type GenerateQuizInput,
   type SummarizeLessonInput,
@@ -162,5 +165,31 @@ export async function explainConceptAction(input: ExplainConceptInput) {
 
     revalidatePath("/ai-tutor");
     return { explanation, provider: provider.name };
+  });
+}
+
+export async function converseAction(input: ConverseInput) {
+  return withAIGuardrails("converse", async () => {
+    const session = await auth();
+    const parsed = converseSchema.parse(input);
+    const provider = getProviderForPersona(parsed.persona);
+    const context = await buildContextForUser(session!.user.id, parsed.lessonId);
+
+    const response = await provider.converse({
+      persona: parsed.persona,
+      message: parsed.message,
+      context,
+    });
+
+    const conversation = await getOrCreateConversation(session!.user.id);
+    await logExchange(
+      conversation.id,
+      `[${PERSONA_LABELS[parsed.persona]}] ${parsed.message}`,
+      response,
+      provider.name
+    );
+
+    revalidatePath("/ai-tutor");
+    return { response, provider: provider.name };
   });
 }

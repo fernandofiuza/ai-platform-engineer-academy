@@ -20,16 +20,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Markdown } from "@/components/markdown";
 import {
   askQuestionAction,
+  converseAction,
   explainConceptAction,
   generateQuizAction,
   suggestNextActivityAction,
   summarizeLessonAction,
 } from "@/modules/artificial-intelligence/actions";
-import { AI_DISCLAIMER } from "@/modules/artificial-intelligence/types";
+import { AI_DISCLAIMER, type AIPersona } from "@/modules/artificial-intelligence/types";
+import { PERSONA_DESCRIPTIONS, PERSONA_LABELS } from "@/modules/artificial-intelligence/personas";
 import type { AITaskType } from "@/modules/artificial-intelligence/gateway";
 
 type LessonOption = { id: string; title: string };
 type Message = { id: string; role: "USER" | "ASSISTANT"; content: string; provider: string };
+
+const PERSONA_OPTIONS = Object.keys(PERSONA_LABELS) as AIPersona[];
 
 export function AiTutorPanel({
   lessonOptions,
@@ -50,6 +54,10 @@ export function AiTutorPanel({
   const [quizLessonId, setQuizLessonId] = React.useState("");
   const [explainLessonId, setExplainLessonId] = React.useState("");
   const [explainQuestion, setExplainQuestion] = React.useState("");
+
+  const [persona, setPersona] = React.useState<AIPersona>("PROFESSOR");
+  const [personaLessonId, setPersonaLessonId] = React.useState("");
+  const [personaMessage, setPersonaMessage] = React.useState("");
 
   function run(fn: () => Promise<{ error: string | null; result: unknown }>, extract: (r: unknown) => string) {
     setOutput(null);
@@ -74,14 +82,78 @@ export function AiTutorPanel({
         </AlertDescription>
       </Alert>
 
-      <Tabs defaultValue="ask">
+      <Tabs defaultValue="persona">
         <TabsList className="flex-wrap">
+          <TabsTrigger value="persona">Conversar com uma persona</TabsTrigger>
           <TabsTrigger value="ask">Perguntar</TabsTrigger>
           <TabsTrigger value="summarize">Resumir aula</TabsTrigger>
           <TabsTrigger value="quiz">Gerar quiz</TabsTrigger>
           <TabsTrigger value="explain">Explicar de outro jeito</TabsTrigger>
           <TabsTrigger value="suggest">Próxima atividade</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="persona" className="mt-4 space-y-3">
+          <Select value={persona} onValueChange={(value) => setPersona(value as AIPersona)}>
+            <SelectTrigger className="w-full sm:w-72">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PERSONA_OPTIONS.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {PERSONA_LABELS[p]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">{PERSONA_DESCRIPTIONS[persona]}</p>
+
+          <Select value={personaLessonId} onValueChange={setPersonaLessonId}>
+            <SelectTrigger className="w-full sm:w-72">
+              <SelectValue placeholder="Contexto: nenhuma aula específica" />
+            </SelectTrigger>
+            <SelectContent>
+              {lessonOptions.map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Textarea
+            value={personaMessage}
+            onChange={(e) => setPersonaMessage(e.target.value)}
+            placeholder={
+              persona === "TECH_LEAD"
+                ? "Cole um trecho de código ou descreva o que quer revisar..."
+                : persona === "ARQUITETO"
+                  ? "Descreva o problema que quer arquitetar..."
+                  : persona === "ENTREVISTADOR"
+                    ? "Informe o tema da entrevista técnica..."
+                    : persona === "CLIENTE"
+                      ? "Informe o tema do sistema que o cliente vai descrever..."
+                      : "Faça uma pergunta ou peça uma explicação..."
+            }
+            rows={4}
+          />
+          <Button
+            disabled={isPending || !personaMessage.trim()}
+            onClick={() =>
+              run(
+                () =>
+                  converseAction({
+                    persona,
+                    message: personaMessage,
+                    lessonId: personaLessonId || undefined,
+                  }),
+                (r) => (r as { response: string }).response
+              )
+            }
+          >
+            {isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+            Conversar como {PERSONA_LABELS[persona]}
+          </Button>
+        </TabsContent>
 
         <TabsContent value="ask" className="mt-4 space-y-3">
           <Select value={questionLessonId} onValueChange={setQuestionLessonId}>

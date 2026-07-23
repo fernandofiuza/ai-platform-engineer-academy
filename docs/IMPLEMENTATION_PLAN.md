@@ -289,4 +289,16 @@ Com a Fase 6 concluída, todas as seis fases do fluxo de implementação origina
   navegador (login como estudante, `/ai-tutor` mostra "ensino: mock, resumo: mock, revisão de
   código: mock" sem nenhuma chave configurada, e as 5 ações do tutor continuam funcionando);
   `npm run typecheck`/`lint`/`test:unit` sem erros. Decisões registradas em `docs/DECISIONS.md`.
+- **Etapa 2 (IA multi-provider): Personas do Mentor de IA.** Adicionado `converse()` à
+  interface `AIProvider` e um módulo `personas.ts` com 5 personas (Professor, Tech Lead,
+  Arquiteto, Entrevistador, Cliente) — cada uma um prompt de sistema especializado, sem
+  orquestração de agentes. Nova aba "Conversar com uma persona" em `/ai-tutor`: o aluno escolhe
+  a persona antes de enviar a mensagem; `getProviderForPersona()` reaproveita o roteamento por
+  tarefa da Etapa 1 (Tech Lead → CODE_REVIEW/Claude; demais → TEACH). `MockAIProvider` dá uma
+  resposta heurística própria por persona, sempre identificada como mock. Verificado ao vivo no
+  navegador (login como estudante, trocar para persona Tech Lead, enviar um trecho de código e
+  receber nota + sugestões + aviso de "avaliação assistida por IA"); `npm run
+  typecheck`/`lint`/`test:unit` sem erros. Decisões (escopo — Tech Lead/Arquiteto aqui são só
+  conversa; os fluxos estruturados com histórico persistido e diagrama vêm nas Etapas 6 e 7)
+  registradas em `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

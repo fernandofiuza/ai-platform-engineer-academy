@@ -17,6 +17,13 @@ export type GeneratedQuizItem = {
   answer: string;
 };
 
+/**
+ * Personas do Mentor de IA (Etapa 2): cada uma é apenas um prompt de sistema especializado,
+ * roteado pelo mesmo AI Gateway da Etapa 1 — não são agentes independentes nem multiagentes de
+ * verdade (isso fica para uma fase futura). Ver `personas.ts` e `docs/DECISIONS.md`.
+ */
+export type AIPersona = "PROFESSOR" | "TECH_LEAD" | "ARQUITETO" | "ENTREVISTADOR" | "CLIENTE";
+
 export interface AIProvider {
   readonly name: string;
   generateAnswer(input: { question: string; context: AIContext }): Promise<string>;
@@ -24,6 +31,7 @@ export interface AIProvider {
   generateQuiz(input: { content: string }): Promise<GeneratedQuizItem[]>;
   suggestNextActivity(input: { context: AIContext }): Promise<string>;
   explainConcept(input: { content: string; question?: string }): Promise<string>;
+  converse(input: { persona: AIPersona; message: string; context: AIContext }): Promise<string>;
 }
 
 export const MAX_INPUT_LENGTH = 4000;

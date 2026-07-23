@@ -3,7 +3,7 @@ import { MockAIProvider } from "./mock-provider";
 import { OpenAIProvider } from "./openai-provider";
 import { ClaudeProvider } from "./claude-provider";
 import { GeminiProvider } from "./gemini-provider";
-import type { AIProvider } from "./types";
+import type { AIPersona, AIProvider } from "./types";
 
 /**
  * AI Gateway: centraliza o acesso a múltiplos providers (OpenAI, Claude, Gemini, Mock) e decide
@@ -72,6 +72,16 @@ export function getProviderForTask(taskType: AITaskType): AIProvider {
   }
 
   return getReal(kind);
+}
+
+/**
+ * Personas (Etapa 2) reaproveitam o mesmo roteamento por tarefa: Tech Lead é uma revisão de
+ * código (CODE_REVIEW → Claude), as demais são conversas de ensino (TEACH). Isso é só troca de
+ * prompt de sistema (`buildPersonaSystemPrompt` em `personas.ts`) — não é uma tarefa nova nem
+ * multiagentes.
+ */
+export function getProviderForPersona(persona: AIPersona): AIProvider {
+  return getProviderForTask(persona === "TECH_LEAD" ? "CODE_REVIEW" : "TEACH");
 }
 
 /** Lista, para exibição/depuração, qual provider seria usado em cada tipo de tarefa hoje. */

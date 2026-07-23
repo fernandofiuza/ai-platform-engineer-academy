@@ -498,5 +498,25 @@ aviso de que respostas podem conter erros).
 custo de performance na máquina local do aluno) — a interface `AIProvider` já é genérica o
 suficiente para receber um `OllamaProvider` no futuro sem mudar o Gateway.
 
+## 2026-07-23 — Etapa 2: Personas do Mentor de IA
+
+**Decisão**: adicionado `converse()` à interface `AIProvider` (implementado pelos 4 adapters) e
+um módulo `personas.ts` com 5 personas (`AIPersona`: `PROFESSOR`, `TECH_LEAD`, `ARQUITETO`,
+`ENTREVISTADOR`, `CLIENTE`), cada uma só um prompt de sistema especializado
+(`buildPersonaSystemPrompt`) — não são agentes independentes nem multiagentes de verdade. O
+aluno escolhe a persona em um seletor na nova aba "Conversar com uma persona" do Tutor de IA,
+antes de enviar a mensagem. `getProviderForPersona()` (`gateway.ts`) reaproveita o roteamento por
+tarefa da Etapa 1: `TECH_LEAD` → `CODE_REVIEW` (Claude); as demais 4 → `TEACH` (OpenAI/Claude,
+conforme `AI_TEACHING_PROVIDER`). `MockAIProvider.converse()` dá uma resposta heurística
+diferente por persona (nunca uma simulação real de raciocínio), sempre identificada como
+resposta do provider mock.
+**Motivo**: instrução explícita do usuário — personas como troca de contexto/instrução roteada
+pelo Gateway já existente, sem introduzir orquestração de agentes (isso fica para quando o aluno
+já tiver estudado n8n/MCP/agentes, fase futura). Reaproveitar o roteamento por tarefa da Etapa 1
+em vez de criar um novo mecanismo de seleção de provider evita duplicar lógica.
+**Nota de escopo**: a persona Tech Lead aqui é só a conversa (com nota heurística de exemplo); o
+fluxo real de revisão de código vinculado a um projeto, com histórico persistido, é a Etapa 6. A
+persona Arquiteto aqui também é só conversa; a tela dedicada com diagrama Mermaid é a Etapa 7.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

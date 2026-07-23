@@ -1,4 +1,5 @@
-import type { AIContext, AIProvider, GeneratedQuizItem } from "./types";
+import type { AIContext, AIPersona, AIProvider, GeneratedQuizItem } from "./types";
+import { PERSONA_LABELS } from "./personas";
 
 function stripMarkdown(content: string) {
   return content
@@ -99,5 +100,41 @@ export class MockAIProvider implements AIProvider {
       ? `Explicando "${question}" de outro jeito:`
       : "Explicando de outro jeito, em tópicos:";
     return `${intro}\n${bullets}`;
+  }
+
+  async converse({
+    persona,
+    message,
+    context,
+  }: {
+    persona: AIPersona;
+    message: string;
+    context: AIContext;
+  }): Promise<string> {
+    const label = PERSONA_LABELS[persona];
+    const mockNote = "(resposta heurística do provider mock — configure uma chave real para uma resposta genuína)";
+
+    switch (persona) {
+      case "PROFESSOR": {
+        const source = context.currentLessonContent ?? message;
+        const sentences = splitSentences(source).slice(0, 3);
+        const bullets = sentences.length > 0 ? sentences.map((s) => `- ${s}`).join("\n") : `- ${message}`;
+        return `[${label}] Focando nos 20% que mais importam sobre "${message}":\n${bullets}\n\n${mockNote}`;
+      }
+      case "TECH_LEAD": {
+        return `[${label}] Nota: 7.0 (revisão heurística — sem chave de IA real configurada).\nSugestões genéricas: separar Service/Repository/Controller, adicionar testes automatizados, revisar nomes de variáveis para maior clareza.\n\nEsta é uma avaliação assistida por IA, não uma nota oficial. ${mockNote}`;
+      }
+      case "ARQUITETO": {
+        return `[${label}] Arquitetura sugerida (esqueleto genérico) para "${message}":\n- API (camada de entrada)\n- Serviço de domínio\n- Banco de dados\n- Cache (se necessário)\n- Observabilidade (logs/métricas)\n\n${mockNote}`;
+      }
+      case "ENTREVISTADOR": {
+        return `[${label}] Pergunta 1 sobre "${message}": explique os principais conceitos envolvidos e descreva um caso de uso real onde você já aplicou (ou aplicaria) isso.\n\n${mockNote}`;
+      }
+      case "CLIENTE": {
+        return `[${label}] Preciso de uma solução relacionada a "${message}" para o meu negócio. Não sou técnico — me explique as opções em termos simples e me diga o que você recomendaria.\n\n${mockNote}`;
+      }
+      default:
+        return `[${label}] ${mockNote}`;
+    }
   }
 }

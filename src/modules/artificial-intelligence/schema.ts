@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { MAX_INPUT_LENGTH } from "./types";
 
+export const personaSchema = z.enum(["PROFESSOR", "TECH_LEAD", "ARQUITETO", "ENTREVISTADOR", "CLIENTE"]);
+
+export const converseSchema = z.object({
+  persona: personaSchema,
+  message: z.string().trim().min(1).max(MAX_INPUT_LENGTH),
+  lessonId: z.string().optional(),
+});
+
 export const askQuestionSchema = z.object({
   question: z.string().trim().min(1).max(MAX_INPUT_LENGTH),
   lessonId: z.string().optional(),
@@ -23,3 +31,4 @@ export type AskQuestionInput = z.infer<typeof askQuestionSchema>;
 export type SummarizeLessonInput = z.infer<typeof summarizeLessonSchema>;
 export type GenerateQuizInput = z.infer<typeof generateQuizSchema>;
 export type ExplainConceptInput = z.infer<typeof explainConceptSchema>;
+export type ConverseInput = z.infer<typeof converseSchema>;

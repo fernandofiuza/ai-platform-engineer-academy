@@ -43,6 +43,7 @@ model User {
   experienceEvents      ExperienceEvent[]
   projectSubmissions    ProjectSubmission[]
   laboratoryCompletions LaboratoryCompletion[]
+  aiConversations       AIConversation[]
 
   @@map("users")
 }
@@ -693,4 +694,43 @@ model ExperienceEvent {
 
   @@index([userId])
   @@map("experience_events")
+}
+
+// ---------------------------------------------------------------------------
+// Inteligência Artificial (Fase 5): tutor de IA nível 1.
+// AIConversation/AIMessage guardam apenas o histórico de conversa + qual
+// provider respondeu, para exibir na UI e para auditoria básica de uso.
+// ---------------------------------------------------------------------------
+
+enum AIMessageRole {
+  USER
+  ASSISTANT
+}
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  context   Json?
+  createdAt DateTime @default(now())
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AIMessage[]
+
+  @@index([userId])
+  @@map("ai_conversations")
+}
+
+model AIMessage {
+  id             String        @id @default(cuid())
+  conversationId String
+  role           AIMessageRole
+  content        String
+  provider       String
+  tokensApprox   Int?
+  createdAt      DateTime      @default(now())
+
+  conversation AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("ai_messages")
 }

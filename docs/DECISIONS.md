@@ -271,5 +271,42 @@ adicionar a biblioteca `mermaid` (ou equivalente) só para esta página — peso
 para um único caso de uso que uma lista ordenada já comunica com clareza equivalente. Fica
 registrado como possível melhoria visual futura, não uma lacuna funcional.
 
+## 2026-07-23 — Fallback automático para o mock quando `AI_PROVIDER=openai` sem chave
+
+**Decisão**: se `AI_PROVIDER=openai` estiver definido mas `AI_API_KEY` não, o factory
+(`getAIProvider()`) usa `MockAIProvider` em vez de lançar erro, registrando um `warn` no logger.
+**Motivo**: o limite explícito do prompt diz que o sistema principal deve funcionar sem chave de
+IA — um provider mal configurado quebrando a página do tutor violaria isso. Falhar de forma
+silenciosa para uma experiência degradada (mas funcional) é mais seguro que expor um erro de
+configuração ao estudante.
+
+## 2026-07-23 — Rate limit da IA em memória, não distribuído
+
+**Decisão**: `checkRateLimit()` usa um `Map` em memória do processo Node (15 requisições / 5 min
+por usuário), não Redis nem outro store compartilhado.
+**Motivo**: suficiente para uma instância única (o modo de deploy do MVP — `docker compose
+--profile app up`, sem múltiplas réplicas). Documentado no próprio código que precisa migrar
+para um store compartilhado se o app rodar com mais de uma instância em produção.
+
+## 2026-07-23 — Contexto do tutor de IA: só o mínimo, sem perfil persistido
+
+**Decisão**: `buildContextForUser()` monta o contexto (aula atual, aulas concluídas, metas em
+aberto, notas recentes) a cada chamada, direto do banco — não existe um "perfil de estudo" ou
+memória comportamental persistida entre conversas além do histórico de mensagens em si.
+**Motivo**: limite explícito do prompt ("memória comportamental invasiva" e "perfil
+psicológico" estão na lista do que não implementar na Etapa 19). O histórico de
+`AIConversation`/`AIMessage` existe só para exibição e auditoria, não é usado como entrada para
+os providers.
+
+## 2026-07-23 — `MockAIProvider`: heurísticas de texto simples, não um modelo local
+
+**Decisão**: o provider mock usa manipulação de string (dividir em frases, correspondência de
+palavras-chave, truncamento) para gerar respostas — não roda nenhum modelo de linguagem local
+(ex.: Ollama).
+**Motivo**: o objetivo do mock é permitir que o produto funcione e seja demonstrável sem
+qualquer dependência externa nem custo computacional relevante; um modelo local adicionaria uma
+dependência de infraestrutura pesada (download de pesos, GPU/CPU) desproporcional ao que a
+Etapa 19 pede de um "nível 1".
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

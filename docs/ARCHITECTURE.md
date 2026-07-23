@@ -100,6 +100,10 @@ console/arquivo em vez de enviar e-mail real — documentado no README.
 
 ## 6. IA
 
+> **Implementado na Fase 5** em `src/modules/artificial-intelligence/`, exatamente como descrito
+> abaixo. Rate limit (15 req/5min por usuário) em memória; `MockAIProvider` não usa nenhum
+> modelo local, só heurísticas de texto. Ver `docs/DECISIONS.md`.
+
 ```ts
 interface AIProvider {
   generateAnswer(input): Promise<...>

@@ -96,12 +96,22 @@ banco (`npm run db:migrate` / `npm run db:seed` do host, apontando `DATABASE_URL
 | `npm run curriculum:import` | Importa/reimporta o currículo a partir de `Curso.md` |
 | `npm run test:unit` | Testes unitários (Vitest) — hoje cobre o algoritmo SM-2 dos flashcards |
 
-## Configuração de IA (opcional)
+## Configuração de IA (tutor em /ai-tutor)
 
-O tutor de IA (Fase 5) é opcional e desligado por padrão (`AI_PROVIDER=mock` em `.env.example`):
-o sistema funciona 100% sem nenhuma chave configurada. Para ativar um provider real, defina
-`AI_PROVIDER=openai` e `AI_API_KEY` no `.env` — as chamadas acontecem sempre no servidor, nunca
-no navegador.
+O tutor de IA já está implementado (Fase 5) e funciona 100% sem nenhuma chave configurada —
+`AI_PROVIDER=mock` (padrão em `.env.example`) usa um provider heurístico local, sem chamadas
+externas. Para ativar um provider real:
+
+```bash
+AI_PROVIDER=openai
+AI_API_KEY=sk-...
+AI_MODEL=gpt-4o-mini   # opcional, esse é o padrão
+```
+
+As chamadas acontecem sempre no servidor (Server Actions), nunca no navegador. Se
+`AI_PROVIDER=openai` estiver definido sem `AI_API_KEY`, o sistema cai automaticamente para o
+mock (com aviso no log) em vez de quebrar. Há um limite de 15 solicitações a cada 5 minutos por
+usuário e um limite de tamanho de entrada (4.000 caracteres).
 
 ## Estrutura do projeto
 
@@ -132,11 +142,14 @@ Este é um projeto em construção, entregue em fases verticais (ver
 **Fase 2** (currículo — roadmap real, Semana 0 interativa, página de aula, importador de
 `Curso.md`), **Fase 3** (aprendizagem — sessões de estudo com cronômetro persistente,
 planejador + metas, calendário mensal, anotações com busca, avaliações com correção automática,
-flashcards com repetição espaçada) e **Fase 4** (prática profissional — 1 projeto e 1
+flashcards com repetição espaçada), **Fase 4** (prática profissional — 1 projeto e 1
 laboratório demonstrativos com submissão/conclusão real, mapa de competências com nível
 derivado de evidências reais, portfólio com checklist de qualidade, AI Labs com departamentos e
-linha do tempo de arquitetura importados de `Curso.md`, gamificação com XP/nível/badges). As
-demais áreas (tutor de IA, administração além da importação) ainda estão com páginas de
-placeholder (`"Planejado para a Fase N"`) em vez de dados reais — isso é intencional, não um
-bug. A grade semanal (semanas 1–104) está estruturada mas vazia (`"a definir"`), porque
-`Curso.md` não define conteúdo semana a semana — só os 6 semestres e a Semana 0.
+linha do tempo de arquitetura importados de `Curso.md`, gamificação com XP/nível/badges) e
+**Fase 5** (tutor de IA em `/ai-tutor` — perguntar, resumir, gerar quiz, explicar de outro
+jeito, sugerir próxima atividade — com provider mock por padrão e provider OpenAI opcional).
+A administração ainda é só a importação (`/admin/imports`) — CRUD completo do currículo,
+projetos, laboratórios, quizzes e flashcards fica para a Fase 6, junto com testes automatizados
+formais, acessibilidade revisada e segurança adicional (headers, auditoria). A grade semanal
+(semanas 1–104) está estruturada mas vazia (`"a definir"`), porque `Curso.md` não define
+conteúdo semana a semana — só os 6 semestres e a Semana 0.

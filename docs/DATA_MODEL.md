@@ -158,9 +158,16 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 
 ## 10. IA
 
-- **AIConversation**(userId, context JSON leve /* lessonId, moduleId atual */, createdAt)
-- **AIMessage**(conversationId, role: `USER|ASSISTANT`, content, provider, tokensApprox,
-  createdAt)
+> **Implementado na Fase 5.** `context` fica `null` na prática (o contexto é montado sob
+> demanda por `buildContextForUser()`, não persistido na conversa); o campo continua no schema
+> para permitir persistir contexto estruturado no futuro sem migration. Ver
+> `docs/ARCHITECTURE.md` e `docs/DECISIONS.md` para a interface `AIProvider` e as decisões de
+> escopo (mock heurístico, fallback automático, rate limit em memória).
+
+- **AIConversation**(userId, context Json?, createdAt) — uma conversa "contínua" por usuário
+  (todas as interações do tutor acumulam nela)
+- **AIMessage**(conversationId, role: `USER|ASSISTANT`, content, provider, tokensApprox?,
+  createdAt) — `provider` grava qual provider respondeu (`mock` ou `openai`)
 
 ## 11. Importação
 

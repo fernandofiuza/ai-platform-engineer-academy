@@ -50,11 +50,16 @@ Legenda: `[ ]` não iniciado · `[~]` em andamento · `[x]` concluído
       condições reais verificadas a cada ação relevante)
 
 ## Fase 5 — IA
-- [ ] Interface `AIProvider`
-- [ ] `MockAIProvider` (padrão)
-- [ ] `OpenAIProvider` opcional (env var)
-- [ ] Tutor contextual (aula/módulo atual, dúvidas, sugestão de próxima atividade)
-- [ ] Limites (tamanho de entrada, rate limit), logs de uso, aviso de erro possível
+- [x] Interface `AIProvider` (`generateAnswer`/`summarizeContent`/`generateQuiz`/
+      `suggestNextActivity`/`explainConcept`)
+- [x] `MockAIProvider` (padrão de fábrica — heurístico, determinístico, sem chamada externa)
+- [x] `OpenAIProvider` opcional (`AI_PROVIDER=openai` + `AI_API_KEY`; cai para o mock se a chave
+      faltar, em vez de quebrar)
+- [x] Tutor contextual (`/ai-tutor`): aula atual, aulas concluídas, metas em aberto, notas
+      recentes de avaliações
+- [x] Limites (tamanho de entrada via Zod, rate limit de 15 req/5min por usuário em memória),
+      logs de uso (`AIConversation`/`AIMessage` + logger estruturado), aviso de erro possível
+      na UI
 
 ## Fase 6 — Administração e qualidade
 - [ ] Área administrativa (CRUD do currículo, projetos, labs, quizzes, flashcards, etc.)
@@ -170,3 +175,25 @@ Legenda: `[ ]` não iniciado · `[~]` em andamento · `[x]` concluído
   (evidência de competência computada, não persistida como cache; sem ProjectEvidence/
   SkillEvidence polimórficas; GitHubProvider não integrado ainda) registradas em
   `docs/DECISIONS.md`. Próximo: Fase 5 — IA.
+- **Fase 5 concluída.** `src/modules/artificial-intelligence/`: interface `AIProvider` com 5
+  métodos; `MockAIProvider` heurístico (resume por extração de frases, gera quiz
+  verdadeiro/falso a partir do próprio conteúdo, sugere próxima atividade por regras usando
+  metas/aulas/notas reais, responde perguntas por correspondência de palavras-chave no
+  conteúdo da aula atual) — nenhuma chamada externa, funciona sem qualquer chave configurada;
+  `OpenAIProvider` real (Chat Completions, prompt com marcações anti-prompt-injection
+  delimitando conteúdo do estudante) ativado só com `AI_PROVIDER=openai` + `AI_API_KEY` — se a
+  chave faltar, cai para o mock automaticamente (logado como warning) em vez de quebrar.
+  Contexto (`buildContextForUser`) reúne aula atual, aulas concluídas, metas em aberto e notas
+  recentes — nada além disso, sem perfil comportamental. Rate limit em memória (15
+  requisições/5min por usuário) e limite de tamanho de entrada via Zod (4000 caracteres).
+  Cada chamada grava um par `AIMessage` (USER/ASSISTANT) em `AIConversation`, com o nome do
+  provider, para histórico e auditoria básica de uso. UI em `/ai-tutor` com 5 abas (perguntar,
+  resumir, gerar quiz, explicar de outro jeito, sugerir próxima atividade), aviso fixo de que
+  respostas podem conter erros e qual provider está ativo. Verificado ao vivo: `npm run
+  typecheck`/`lint`/`build` sem erros; smoke test Playwright cobrindo as 5 ações do tutor e
+  persistência do histórico após reload (7/7 checks); teste dedicado confirmando que o rate
+  limit dispara após 15 chamadas e que `AI_PROVIDER=openai` sem `AI_API_KEY` cai para o mock
+  sem quebrar a página (com warning no log); `docker compose --profile app up --build`
+  confirmado. Decisões (contexto mínimo, sem persistir perfil do estudante; rate limit em
+  memória, não distribuído) registradas em `docs/DECISIONS.md`. Próximo: Fase 6 —
+  Administração e qualidade.

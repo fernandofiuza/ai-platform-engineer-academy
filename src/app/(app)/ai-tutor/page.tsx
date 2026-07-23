@@ -1,23 +1,39 @@
 import type { Metadata } from "next";
-import { Sparkles } from "lucide-react";
 
-import { ComingSoon } from "@/components/layout/coming-soon";
+import { auth } from "@/lib/auth";
+import { AiTutorPanel } from "@/modules/artificial-intelligence/components/ai-tutor-panel";
+import { getRecentConversationMessages } from "@/modules/artificial-intelligence/queries";
+import { getAIProvider } from "@/modules/artificial-intelligence/factory";
+import { getLessonsForLearnPage } from "@/modules/curriculum/queries";
 
 export const metadata: Metadata = { title: "Tutor de IA" };
 
-export default function AiTutorPage() {
+export default async function AiTutorPage() {
+  const session = await auth();
+  const userId = session!.user.id;
+
+  const [lessons, messages] = await Promise.all([
+    getLessonsForLearnPage(),
+    getRecentConversationMessages(userId),
+  ]);
+
+  const provider = getAIProvider();
+
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Tutor de IA</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Tutor de IA nível 1 para apoiar seus estudos.</p>
-      <div className="mt-6">
-        <ComingSoon
-          title="Tutor de IA"
-          description="Tutor de IA nível 1 para apoiar seus estudos."
-          phase="Fase 5"
-          icon={Sparkles}
-        />
+    <div className="mx-auto max-w-2xl space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Tutor de IA</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Nível 1 — responde perguntas, resume aulas, gera quizzes, explica de outro jeito e
+          sugere a próxima atividade, sempre com base no que já está disponível na plataforma.
+        </p>
       </div>
+
+      <AiTutorPanel
+        lessonOptions={lessons.map((l) => ({ id: l.id, title: l.title }))}
+        initialMessages={messages}
+        providerName={provider.name}
+      />
     </div>
   );
 }

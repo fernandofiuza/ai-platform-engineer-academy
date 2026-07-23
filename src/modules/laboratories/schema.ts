@@ -12,6 +12,7 @@ const contentStatus = z.enum(["DRAFT", "PLANNED", "AVAILABLE", "IN_PROGRESS", "C
 
 export const saveLaboratorySchema = z.object({
   laboratoryId: z.string().optional(),
+  lessonId: z.string().optional(),
   title: z.string().trim().min(1).max(200),
   objective: z.string().max(2000).optional(),
   environment: z.string().max(1000).optional(),

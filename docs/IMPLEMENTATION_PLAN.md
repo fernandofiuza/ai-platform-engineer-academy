@@ -395,4 +395,23 @@ produto foram entregues.
   persona Professor via Claude real, revisadas e aprovadas. As demais 97 semanas continuam no
   formato legado (1 aula/semana) até serem regeneradas da mesma forma. Decisões registradas em
   `docs/DECISIONS.md`.
+- **Módulo Fundamentos da Computação regenerado no formato por dia (semanas 8–19).** Mesmo
+  processo do Preparação: `importGradeDailyLessons` substituiu as 12 aulas semanais por 60 aulas
+  diárias (5/semana), cada uma aprofundada individualmente pela persona Professor via Claude
+  real e aprovada. Durante o processo, uma migration (`laboratory_lesson_link`, ver item
+  seguinte) foi aplicada com o servidor de dev já rodando e interrompeu o lote no meio (Prisma
+  Client desatualizado) — corrigido reiniciando o servidor, o lote retomou exatamente de onde
+  parou sem perda de nenhuma aula já gerada. Verificado: 60/60 aulas com conteúdo real e
+  aprovadas (`status = AVAILABLE`).
+- **Laboratórios vinculados à aula que os originou.** `Laboratory` ganhou `lessonId` opcional +
+  `isManuallyEdited`/`aiGeneratedAt` (mesmo padrão de `Lesson`). Toda tela de laboratório agora
+  mostra "Referente à Semana N: <aula>" (`/labs`, `/labs/[labId]` com link de volta para a aula,
+  `/admin/labs`). Novo `generateLabContentAction` (persona Professor) gera um laboratório guiado
+  passo a passo completo — um único documento Markdown com comandos reais e resultado esperado
+  por passo — direto do editor da aula (`/admin/curriculum/[weekId]`, novo `LessonLabPanel`),
+  salvo em `DRAFT` até aprovação. `/labs/[labId]` passou a renderizar `instructions` com
+  `<Markdown>` em vez de texto puro. Verificado ao vivo: gerado e aprovado um laboratório para a
+  Semana 8/Dia 1 (Computação), com passos reais (`lscpu`, `free -h`, compilação em C, `objdump`,
+  comparação com Python) e o card de vínculo com a aula visível na página pública. Decisões
+  registradas em `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

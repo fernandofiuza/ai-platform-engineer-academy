@@ -779,5 +779,36 @@ corretamente sem nenhum ajuste de template.
 individualmente aprofundada pela persona Professor (mesmo processo da Etapa 3, aplicado a cada
 uma das 35 aulas em vez de 1 por semana), revisadas antes de aprovar.
 
+## 2026-07-23 — Laboratórios vinculados à aula que os originou
+
+**Decisão**: `Laboratory` ganhou `lessonId` opcional (FK simples, não única — uma aula pode, em
+tese, ter mais de um laboratório) e o mesmo par `isManuallyEdited`/`aiGeneratedAt` já usado em
+`Week`/`Lesson`. Toda superfície de UI que lista um laboratório agora mostra explicitamente a
+qual aula/semana ele se refere ("Referente à Semana N: <aula>") — `/labs`, `/labs/[labId]`
+(com link de volta para `/learn/[lessonId]`) e `/admin/labs`. Geração por IA
+(`generateLabContentAction`, `src/modules/laboratories/actions.ts`) reaproveita a persona
+Professor e o mesmo padrão de aprovação da Etapa 3 (salva `DRAFT`, recusa se só o Mock estiver
+disponível, exige confirmação para sobrescrever edição manual). O botão "Gerar laboratório com
+IA" fica dentro do próprio editor da aula (`/admin/curriculum/[weekId]`, novo
+`LessonLabPanel`) — não numa tela separada — porque o laboratório nasce a partir do contexto de
+uma aula específica, reforçando o vínculo.
+**Conteúdo como um blob rico, não campos fragmentados**: em vez de pedir à IA um objeto
+estruturado com 7 campos separados (objective/environment/instructions/commands/...), o gerador
+pede **um único documento Markdown com passo a passo numerado** (comandos reais, resultado
+esperado por passo), salvo inteiro em `instructions` — mesma filosofia já usada para o conteúdo
+de aula (Etapa 3) e para a arquitetura sugerida (Etapa 7): um blob coeso é mais simples de gerar
+e mais fácil de revisar do que tentar fatiar a resposta da IA em múltiplos campos de banco. A
+página de laboratório passou a renderizar `instructions` com o componente `<Markdown>` (antes
+era texto puro em `<pre>`); os campos antigos (`environment`/`commands`/etc.) continuam existindo
+no schema e na UI para labs criados manualmente, só ficam vazios nos gerados por IA.
+**Bug de infraestrutura encontrado durante a implementação**: a migration desse recurso
+(`laboratory_lesson_link`) foi aplicada com o servidor de desenvolvimento já rodando, e o
+Prisma Client em memória do processo não pegou o campo novo automaticamente — o mesmo problema
+já visto nas Etapas 4 e 8 (a correção é sempre reiniciar `next dev` depois de qualquer migration,
+nunca assumir que o Turbopack detecta a mudança sozinho). Isso interrompeu no meio um lote de
+geração de conteúdo de aula em segundo plano (módulo Fundamentos da Computação) que estava
+rodando contra o mesmo servidor — o lote foi retomado do ponto exato em que parou depois do
+reinício, sem perda de nenhuma aula já gerada.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

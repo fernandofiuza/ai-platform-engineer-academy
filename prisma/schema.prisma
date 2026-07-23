@@ -241,6 +241,7 @@ model Lesson {
   assessments  Assessment[]
   flashcards   Flashcard[]
   lessonSkills LessonSkill[]
+  laboratories Laboratory[]
 
   @@unique([weekId, order])
   @@map("lessons")
@@ -629,23 +630,28 @@ model CodeReview {
 }
 
 model Laboratory {
-  id              String        @id @default(cuid())
-  title           String
-  objective       String?
-  environment     String?
-  prerequisites   String[]      @default([])
-  instructions    String?
-  commands        String?
-  expectedResult  String?
-  validation      String?
-  troubleshooting String?
-  isDemo          Boolean       @default(false)
-  status          ContentStatus @default(PLANNED)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id               String        @id @default(cuid())
+  lessonId         String?
+  title            String
+  objective        String?
+  environment      String?
+  prerequisites    String[]      @default([])
+  instructions     String?
+  commands         String?
+  expectedResult   String?
+  validation       String?
+  troubleshooting  String?
+  isDemo           Boolean       @default(false)
+  isManuallyEdited Boolean       @default(false)
+  aiGeneratedAt    DateTime?
+  status           ContentStatus @default(PLANNED)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
+  lesson      Lesson?                @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   completions LaboratoryCompletion[]
 
+  @@index([lessonId])
   @@map("laboratories")
 }
 

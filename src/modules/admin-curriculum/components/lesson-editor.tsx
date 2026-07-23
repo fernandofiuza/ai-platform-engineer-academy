@@ -27,6 +27,7 @@ import {
   saveLessonAction,
 } from "@/modules/admin-curriculum/actions";
 import { STATUS_LABELS } from "@/modules/curriculum/status";
+import { LessonLabPanel } from "@/modules/laboratories/components/lesson-lab-panel";
 import type { ContentStatus } from "@/generated/prisma/enums";
 import { FlashcardManager } from "./flashcard-manager";
 import { QuizManager } from "./quiz-manager";
@@ -47,6 +48,7 @@ type Lesson = {
   assessments: {
     questions: { id: string; prompt: string; options: { id: string; text: string; isCorrect: boolean }[] }[];
   }[];
+  laboratories: { id: string; title: string; status: ContentStatus; aiGeneratedAt: Date | null }[];
 };
 
 export function LessonEditor({ weekId, lesson, nextOrder }: { weekId: string; lesson?: Lesson; nextOrder: number }) {
@@ -223,6 +225,12 @@ export function LessonEditor({ weekId, lesson, nextOrder }: { weekId: string; le
               ) : null}
             </div>
           </form>
+
+          {lesson ? (
+            <div className="border-t pt-4">
+              <LessonLabPanel lessonId={lesson.id} laboratories={lesson.laboratories} />
+            </div>
+          ) : null}
 
           {lesson ? (
             <div className="grid gap-4 border-t pt-4 sm:grid-cols-2">

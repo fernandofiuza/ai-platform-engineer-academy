@@ -50,7 +50,14 @@ export default async function LabsPage() {
                   </span>
                   <div>
                     <CardTitle className="text-base">{lab.title}</CardTitle>
-                    {lab.objective ? <CardDescription>{lab.objective}</CardDescription> : null}
+                    {lab.lesson ? (
+                      <CardDescription>
+                        Referente à Semana {lab.lesson.week.number}
+                        {lab.lesson.week.phase ? `, ${lab.lesson.week.phase.label}` : ""}: {lab.lesson.title}
+                      </CardDescription>
+                    ) : lab.objective ? (
+                      <CardDescription>{lab.objective}</CardDescription>
+                    ) : null}
                   </div>
                 </div>
               </CardHeader>

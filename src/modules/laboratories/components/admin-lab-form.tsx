@@ -37,6 +37,7 @@ type Laboratory = {
   validation: string | null;
   troubleshooting: string | null;
   status: ContentStatus;
+  lesson: { title: string; week: { number: number } } | null;
 };
 
 function toLines(value: string) {
@@ -100,6 +101,11 @@ export function AdminLabForm({ laboratory }: { laboratory?: Laboratory }) {
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{laboratory ? laboratory.title : "Novo laboratório"}</span>
           {laboratory ? <Badge variant="secondary">{STATUS_LABELS[laboratory.status]}</Badge> : null}
+          {laboratory?.lesson ? (
+            <span className="text-xs text-muted-foreground">
+              Semana {laboratory.lesson.week.number} — {laboratory.lesson.title}
+            </span>
+          ) : null}
         </div>
         <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
       </CardHeader>

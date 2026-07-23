@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight, BookOpen, Sparkles } from "lucide-react";
 
 import { auth } from "@/lib/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Markdown } from "@/components/markdown";
 import { CompleteLabForm } from "@/modules/laboratories/components/complete-lab-form";
 import { getCompletionForUser, getLaboratoryById } from "@/modules/laboratories/queries";
 
@@ -28,10 +32,8 @@ export default async function LaboratoryDetailPage({
 
   const completion = session?.user ? await getCompletionForUser(session.user.id, labId) : null;
 
-  const sections: { title: string; content: string | null }[] = [
-    { title: "Objetivo", content: lab.objective },
+  const plainSections: { title: string; content: string | null }[] = [
     { title: "Ambiente", content: lab.environment },
-    { title: "Instruções", content: lab.instructions },
     { title: "Comandos", content: lab.commands },
     { title: "Resultado esperado", content: lab.expectedResult },
     { title: "Validação", content: lab.validation },
@@ -42,7 +44,33 @@ export default async function LaboratoryDetailPage({
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{lab.title}</h1>
+        {lab.objective ? <p className="mt-1 text-sm text-muted-foreground">{lab.objective}</p> : null}
       </div>
+
+      {lab.lesson ? (
+        <Link href={`/learn/${lab.lesson.id}`}>
+          <Card className="transition-colors hover:bg-accent/50">
+            <CardContent className="flex items-center justify-between gap-3 py-4">
+              <span className="flex items-center gap-2 text-sm">
+                <BookOpen className="size-4 text-muted-foreground" />
+                Referente à Semana {lab.lesson.week.number}
+                {lab.lesson.week.phase ? `, ${lab.lesson.week.phase.label}` : ""}: {lab.lesson.title}
+              </span>
+              <ArrowRight className="size-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+      ) : null}
+
+      {lab.status === "DRAFT" ? (
+        <Alert>
+          <Sparkles className="size-4" />
+          <AlertDescription>
+            Este laboratório foi gerado por IA e ainda está aguardando revisão da área
+            administrativa — pode conter erros.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {lab.prerequisites.length > 0 ? (
         <Card>
@@ -59,7 +87,15 @@ export default async function LaboratoryDetailPage({
         </Card>
       ) : null}
 
-      {sections
+      {lab.instructions ? (
+        <Card>
+          <CardContent className="pt-6">
+            <Markdown content={lab.instructions} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {plainSections
         .filter((s) => s.content)
         .map((section) => (
           <Card key={section.title}>

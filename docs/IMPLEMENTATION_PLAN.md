@@ -420,4 +420,8 @@ produto foram entregues.
   precisa de shell interativo vs. linguagem de script); confirmado por varredura completa que
   não há nenhuma aula presa em `DRAFT` no banco (lição da correção anterior aplicada — aprovação
   em lote rodada logo após a revisão, antes de seguir para a próxima tarefa).
+- **Módulo Redes regenerado no formato por dia (semanas 26–31 — nota: a distribuição real tem
+  6 semanas para este módulo, não 7; confirmado consultando os títulos das semanas no banco
+  antes de aplicar).** 30 aulas diárias geradas, aprofundadas pela persona Professor via Claude
+  real e aprovadas. Confirmado por varredura completa: 0 aulas em `DRAFT` no banco.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

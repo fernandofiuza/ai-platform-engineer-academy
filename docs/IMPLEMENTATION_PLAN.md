@@ -348,4 +348,15 @@ Com a Fase 6 concluída, todas as seis fases do fluxo de implementação origina
   de revisões anteriores. Verificado ao vivo: vinculada uma URL de repositório, solicitada uma
   revisão, nota 7.0 extraída corretamente do mock, badge de provider e histórico exibidos;
   `npm run typecheck`/`lint`/`test:unit` sem erros. Decisões registradas em `docs/DECISIONS.md`.
+- **Etapa 7: IA de Arquitetura.** Nova página `/architecture` (módulo
+  `architecture-advisor`, sem tabela nova — ferramenta de exploração pontual, sem histórico).
+  `requestArchitectureSuggestionAction` usa a persona Arquiteto pedindo um formato parseável
+  (`"- **Componente**: justificativa"`); `parseArchitectureComponents()` extrai a lista por
+  regex, com fallback para texto bruto se a IA não seguir o formato. "Diagrama" renderizado como
+  cartões conectados por setas (sem adicionar a biblioteca `mermaid` — mesma decisão já tomada
+  para a AI Labs). `MockAIProvider` ajustado para responder no mesmo formato parseável, mantendo
+  a funcionalidade útil sem nenhuma chave de IA configurada. Verificado ao vivo: descrito um
+  problema ("integrar Firebird com IA"), gerados 5 componentes com justificativa, renderizados
+  como diagrama esquemático; `npm run typecheck`/`lint`/`test:unit` sem erros. Decisões
+  registradas em `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

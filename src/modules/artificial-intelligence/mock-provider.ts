@@ -125,7 +125,16 @@ export class MockAIProvider implements AIProvider {
         return `[${label}] Nota: 7.0 (revisão heurística — sem chave de IA real configurada).\nSugestões genéricas: separar Service/Repository/Controller, adicionar testes automatizados, revisar nomes de variáveis para maior clareza.\n\nEsta é uma avaliação assistida por IA, não uma nota oficial. ${mockNote}`;
       }
       case "ARQUITETO": {
-        return `[${label}] Arquitetura sugerida (esqueleto genérico) para "${message}":\n- API (camada de entrada)\n- Serviço de domínio\n- Banco de dados\n- Cache (se necessário)\n- Observabilidade (logs/métricas)\n\n${mockNote}`;
+        return [
+          `[${label}] Arquitetura sugerida (esqueleto genérico) para "${message}":`,
+          "- **API (camada de entrada)**: recebe as requisições e expõe os endpoints do sistema para quem consome.",
+          "- **Serviço de domínio**: concentra as regras de negócio, desacoplado do transporte HTTP.",
+          "- **Banco de dados**: persiste os dados de forma durável e consultável.",
+          "- **Cache**: reduz latência para leituras frequentes, quando necessário.",
+          "- **Observabilidade (logs/métricas)**: permite monitorar e depurar o sistema em produção.",
+          "",
+          mockNote,
+        ].join("\n");
       }
       case "ENTREVISTADOR": {
         return `[${label}] Pergunta 1 sobre "${message}": explique os principais conceitos envolvidos e descreva um caso de uso real onde você já aplicou (ou aplicaria) isso.\n\n${mockNote}`;

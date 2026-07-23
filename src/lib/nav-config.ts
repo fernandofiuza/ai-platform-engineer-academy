@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Layers,
   BookOpen,
+  Boxes,
   Briefcase,
   Building2,
   CalendarClock,
@@ -60,7 +61,10 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: "Inteligência Artificial",
-    items: [{ title: "Tutor de IA", href: "/ai-tutor", icon: Sparkles }],
+    items: [
+      { title: "Tutor de IA", href: "/ai-tutor", icon: Sparkles },
+      { title: "IA de Arquitetura", href: "/architecture", icon: Boxes },
+    ],
   },
 ];
 

@@ -623,5 +623,29 @@ para este caso. Regex simples sobre uma instrução de formato explícita no pro
 linha 'Nota: X.X'") é suficiente e mais simples, com um fallback seguro (`score = null`) se
 falhar.
 
+## 2026-07-23 — Etapa 7: IA de Arquitetura (persona Arquiteto)
+
+**Decisão**: nova página `/architecture` (módulo `architecture-advisor`, sem tabela nova no
+banco — é uma ferramenta de exploração pontual, sem histórico persistido, ao contrário da Etapa
+6 que explicitamente pedia salvar histórico). O aluno descreve um problema em texto livre;
+`requestArchitectureSuggestionAction` chama a persona Arquiteto (Gateway → TEACH, já que não há
+uma regra de roteamento específica de "arquitetura" definida na Etapa 1 — usa o mesmo caminho de
+OpenAI/Claude/Mock do ensino) pedindo explicitamente o formato
+`"- **Nome do componente**: justificativa"`, uma linha por componente, sem texto antes/depois.
+`parseArchitectureComponents()` extrai essa lista por regex; se a IA não seguir o formato, a UI
+cai para mostrar o texto bruto (nunca falha silenciosamente).
+**Sem Mermaid**: o "diagrama" é uma lista de cartões conectados por setas (mesmo padrão já usado
+em `MilestoneTimeline` da AI Labs) — decisão consistente com a já registrada para a AI Labs
+("sem diagrama Mermaid, timeline em componente próprio"): adicionar a biblioteca `mermaid` só
+para uma tela pesaria no bundle sem necessidade real, já que uma lista conectada comunica a
+mesma informação (componentes + ordem/relação) com clareza equivalente.
+**MockAIProvider.converse (persona ARQUITETO)** foi ajustado para responder no mesmo formato
+parseável (Etapa 2 usava um texto livre não estruturado) — assim a funcionalidade continua
+minimamente útil mesmo sem nenhuma chave de IA configurada, e não fica "quebrada" no caminho
+padrão de fábrica.
+**Tratamento como sugestão, nunca decisão aplicada**: nenhuma ação da IA aqui persiste nada além
+do rate limit em memória; a resposta é puramente exibida para avaliação humana, conforme
+exigência explícita do usuário.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

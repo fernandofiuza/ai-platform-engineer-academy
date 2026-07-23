@@ -518,5 +518,40 @@ em vez de criar um novo mecanismo de seleção de provider evita duplicar lógic
 fluxo real de revisão de código vinculado a um projeto, com histórico persistido, é a Etapa 6. A
 persona Arquiteto aqui também é só conversa; a tela dedicada com diagrama Mermaid é a Etapa 7.
 
+## 2026-07-23 — Etapa 3: geração e persistência do conteúdo das aulas via IA
+
+**Decisão**: adicionados `Lesson.isManuallyEdited` (mesma semântica de `Week.isManuallyEdited`,
+gravado `true` por `saveLessonAction` a cada edição manual do admin) e `Lesson.aiGeneratedAt`
+(nullable; gravado quando a IA gera conteúdo). Nova action `generateLessonContentAction(lessonId,
+confirmOverwrite?)`: usa a persona Professor via `getProviderForPersona("PROFESSOR")`, envia o
+conteúdo-base atual da aula (tópicos/checklist já existentes, criados pela importação da grade)
+como contexto, e pede uma reescrita completa e aprofundada — objetivo, explicação de cada
+conceito, analogias, seção 80/20, exemplos práticos, checklist de laboratório guiado e
+exercícios — mantendo os mesmos tópicos reais (sem inventar tecnologia fora do conteúdo-base).
+O resultado é salvo com `status = DRAFT` e nunca fica visível em `/learn` automaticamente
+(`getLessonsForLearnPage` já filtra por `status = AVAILABLE`). Nova action
+`approveLessonContentAction(lessonId)`: DRAFT → AVAILABLE, a única forma de publicar. Se
+`lesson.isManuallyEdited` for `true`, a geração exige `confirmOverwrite: true` explícito (a UI
+usa `window.confirm` — simples e suficiente para uma ação só de admin); sem essa confirmação, a
+action recusa e não sobrescreve nada.
+**Disparo**: **manual, via botão "Gerar conteúdo com IA"** em `/admin/curriculum/[weekId]` — não
+automático na primeira visita do estudante. Decisão explícita entre as duas opções oferecidas
+pelo prompt original.
+**Motivo do disparo manual**: (1) geração automática na primeira visita colocaria uma chamada de
+IA síncrona no carregamento da página do estudante (latência ruim, e com o Mock como padrão de
+fábrica seria uma chamada sem valor real); (2) um Server Component não deveria ter esse tipo de
+efeito colateral em uma requisição de leitura; (3) o botão manual já garante que um humano está
+"no circuito" no momento da geração, reforçando (não substituindo) a revisão via `DRAFT`.
+**Guarda contra regressão de qualidade com o Mock**: se `getProviderForPersona("PROFESSOR")`
+resolver para o Mock (nenhuma chave real configurada), a action **recusa** gerar em vez de
+substituir o conteúdo estruturado já existente (tópicos reais + checklist, da Etapa de
+importação da grade) por um resumo genérico de 3 frases do `MockAIProvider.converse` — isso
+seria uma regressão de qualidade, não uma geração de conteúdo. Mensagem explícita orienta a
+configurar `AI_OPENAI_API_KEY` ou `AI_CLAUDE_API_KEY`.
+**UI**: banner "conteúdo gerado por IA, aguardando revisão" tanto no editor administrativo
+(com botão "Aprovar e publicar") quanto na página pública da aula (`/learn/[lessonId]`), caso um
+estudante acesse uma aula em `DRAFT` por link direto — nunca apresentado como conteúdo oficial
+sem o aviso.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

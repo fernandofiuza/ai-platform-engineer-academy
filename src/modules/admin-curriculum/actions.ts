@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { getProviderForPersona } from "@/modules/artificial-intelligence/gateway";
 import {
   addFlashcardSchema,
   addQuestionSchema,
@@ -61,7 +62,7 @@ export async function saveLessonAction(input: SaveLessonInput) {
   const { lessonId, ...data } = parsed.data;
 
   if (lessonId) {
-    await db.lesson.update({ where: { id: lessonId }, data });
+    await db.lesson.update({ where: { id: lessonId }, data: { ...data, isManuallyEdited: true } });
   } else {
     await db.lesson.create({ data });
   }
@@ -173,5 +174,95 @@ export async function deleteQuestionAction(questionId: string, weekId: string) {
   auditLog(admin.id, "delete_question", { questionId });
   revalidatePath(`/admin/curriculum/${weekId}`);
   revalidatePath("/assessments");
+  return { error: null };
+}
+
+function buildLessonGenerationMessage(lesson: { title: string; objective: string | null }) {
+  return [
+    `Gere o conteúdo completo desta aula em Markdown, para o tema: "${lesson.title}"`,
+    `(objetivo: ${lesson.objective ?? "não informado"}).`,
+    "Use o conteúdo de referência (tópicos e checklist já definidos para esta semana) como base",
+    "e reescreva como uma aula completa e aprofundada, mantendo os mesmos tópicos reais — não",
+    "invente tecnologias que não estejam no conteúdo de referência.",
+    "A aula final deve ter, em seções Markdown separadas: objetivo da aula, explicação completa",
+    "de cada conceito, analogias que facilitem o entendimento, uma seção aplicando o princípio",
+    "80/20 (destacando os 20% do conteúdo que trazem 80% do entendimento prático), exemplos",
+    "práticos, um checklist de laboratório guiado, e exercícios.",
+  ].join(" ");
+}
+
+/**
+ * Gera conteúdo completo de aula via IA (persona Professor) e salva com `status = DRAFT` — nunca
+ * publicado automaticamente (ver Etapa 3 / docs/DECISIONS.md). Se a aula já foi editada
+ * manualmente (`isManuallyEdited`), exige `confirmOverwrite: true` explícito para prosseguir.
+ * Se nenhum provider real (OpenAI/Claude) estiver configurado, recusa em vez de substituir o
+ * conteúdo estruturado existente por um resumo genérico do Mock.
+ */
+export async function generateLessonContentAction(lessonId: string, confirmOverwrite = false) {
+  const admin = await assertAdmin();
+  if (!admin) return { error: "Apenas administradores podem editar o currículo." };
+
+  const lesson = await db.lesson.findUnique({ where: { id: lessonId } });
+  if (!lesson) return { error: "Aula não encontrada." };
+
+  if (lesson.isManuallyEdited && !confirmOverwrite) {
+    return {
+      error:
+        "Esta aula foi editada manualmente. Confirme explicitamente para gerar e substituir o conteúdo mesmo assim.",
+      needsConfirmation: true,
+    };
+  }
+
+  const provider = getProviderForPersona("PROFESSOR");
+  if (provider.name === "mock") {
+    return {
+      error:
+        "Nenhum provider de IA real configurado (AI_OPENAI_API_KEY ou AI_CLAUDE_API_KEY). O conteúdo estruturado atual não será substituído por um resumo genérico do provider mock.",
+    };
+  }
+
+  try {
+    const content = await provider.converse({
+      persona: "PROFESSOR",
+      message: buildLessonGenerationMessage(lesson),
+      context: {
+        currentLessonTitle: lesson.title,
+        currentLessonContent: lesson.contentMarkdown ?? undefined,
+        completedLessonTitles: [],
+        openGoalTitles: [],
+        recentQuizScores: [],
+      },
+    });
+
+    await db.lesson.update({
+      where: { id: lessonId },
+      data: { contentMarkdown: content, status: "DRAFT", aiGeneratedAt: new Date() },
+    });
+
+    auditLog(admin.id, "generate_lesson_content", { lessonId, provider: provider.name });
+    revalidatePath(`/admin/curriculum/${lesson.weekId}`);
+    revalidatePath(`/learn/${lessonId}`);
+    return { error: null };
+  } catch (error) {
+    logger.error("generate_lesson_content failed", { lessonId, error: String(error) });
+    return { error: "Não foi possível gerar o conteúdo agora. Tente novamente em instantes." };
+  }
+}
+
+/** Aprova conteúdo gerado por IA: DRAFT -> AVAILABLE. Nunca pula essa revisão humana. */
+export async function approveLessonContentAction(lessonId: string) {
+  const admin = await assertAdmin();
+  if (!admin) return { error: "Apenas administradores podem editar o currículo." };
+
+  const lesson = await db.lesson.findUnique({ where: { id: lessonId } });
+  if (!lesson) return { error: "Aula não encontrada." };
+  if (lesson.status !== "DRAFT") return { error: "Esta aula não está aguardando aprovação." };
+
+  await db.lesson.update({ where: { id: lessonId }, data: { status: "AVAILABLE" } });
+
+  auditLog(admin.id, "approve_lesson_content", { lessonId });
+  revalidatePath(`/admin/curriculum/${lesson.weekId}`);
+  revalidatePath("/learn");
+  revalidatePath(`/learn/${lessonId}`);
   return { error: null };
 }

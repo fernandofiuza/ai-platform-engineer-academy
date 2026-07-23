@@ -194,17 +194,19 @@ model ChecklistItemProgress {
 }
 
 model Lesson {
-  id              String        @id @default(cuid())
-  weekId          String
-  order           Int
-  title           String
-  objective       String?
-  durationMinutes Int?
-  contentMarkdown String?
-  isDemo          Boolean       @default(false)
-  status          ContentStatus @default(PLANNED)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id               String        @id @default(cuid())
+  weekId           String
+  order            Int
+  title            String
+  objective        String?
+  durationMinutes  Int?
+  contentMarkdown  String?
+  isDemo           Boolean       @default(false)
+  status           ContentStatus @default(PLANNED)
+  isManuallyEdited Boolean       @default(false)
+  aiGeneratedAt    DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   week         Week               @relation(fields: [weekId], references: [id], onDelete: Cascade)
   resources    Resource[]

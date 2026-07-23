@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Archive, ChevronDown, Loader2, Save } from "lucide-react";
+import { Archive, ChevronDown, Check, Loader2, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -19,7 +20,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { archiveLessonAction, saveLessonAction } from "@/modules/admin-curriculum/actions";
+import {
+  approveLessonContentAction,
+  archiveLessonAction,
+  generateLessonContentAction,
+  saveLessonAction,
+} from "@/modules/admin-curriculum/actions";
 import { STATUS_LABELS } from "@/modules/curriculum/status";
 import type { ContentStatus } from "@/generated/prisma/enums";
 import { FlashcardManager } from "./flashcard-manager";
@@ -35,6 +41,8 @@ type Lesson = {
   durationMinutes: number | null;
   contentMarkdown: string | null;
   status: ContentStatus;
+  isManuallyEdited: boolean;
+  aiGeneratedAt: Date | null;
   flashcards: { id: string; question: string; answer: string }[];
   assessments: {
     questions: { id: string; prompt: string; options: { id: string; text: string; isCorrect: boolean }[] }[];
@@ -87,6 +95,36 @@ export function LessonEditor({ weekId, lesson, nextOrder }: { weekId: string; le
     });
   }
 
+  function onGenerate(confirmOverwrite = false) {
+    if (!lesson) return;
+    startTransition(async () => {
+      const result = await generateLessonContentAction(lesson.id, confirmOverwrite);
+      if (result?.error) {
+        if (result.needsConfirmation && window.confirm(`${result.error}\n\nGerar mesmo assim?`)) {
+          onGenerate(true);
+          return;
+        }
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Conteúdo gerado por IA — revise e aprove abaixo.");
+      router.refresh();
+    });
+  }
+
+  function onApprove() {
+    if (!lesson) return;
+    startTransition(async () => {
+      const result = await approveLessonContentAction(lesson.id);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Conteúdo aprovado e publicado.");
+      router.refresh();
+    });
+  }
+
   const allQuestions = lesson?.assessments.flatMap((a) => a.questions) ?? [];
 
   return (
@@ -103,6 +141,34 @@ export function LessonEditor({ weekId, lesson, nextOrder }: { weekId: string; le
       </CardHeader>
       {expanded ? (
         <CardContent className="space-y-4" onClick={(e) => e.stopPropagation()}>
+          {lesson?.status === "DRAFT" && lesson.aiGeneratedAt ? (
+            <Alert>
+              <Sparkles className="size-4" />
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  Conteúdo gerado por IA em {lesson.aiGeneratedAt.toLocaleString("pt-BR")} —
+                  aguardando revisão. Não é publicado para os estudantes até ser aprovado.
+                </span>
+                <Button type="button" size="sm" onClick={onApprove} disabled={isPending}>
+                  <Check className="size-4" /> Aprovar e publicar
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {lesson ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onGenerate(false)}
+              disabled={isPending}
+            >
+              {isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              {lesson.aiGeneratedAt ? "Gerar novamente com IA" : "Gerar conteúdo com IA"}
+            </Button>
+          ) : null}
+
           <form onSubmit={onSubmit} className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1.5 sm:col-span-2">

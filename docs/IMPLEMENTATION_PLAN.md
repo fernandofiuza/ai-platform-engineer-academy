@@ -301,4 +301,19 @@ Com a Fase 6 concluída, todas as seis fases do fluxo de implementação origina
   typecheck`/`lint`/`test:unit` sem erros. Decisões (escopo — Tech Lead/Arquiteto aqui são só
   conversa; os fluxos estruturados com histórico persistido e diagrama vêm nas Etapas 6 e 7)
   registradas em `docs/DECISIONS.md`.
+- **Etapa 3 (IA multi-provider): geração e persistência do conteúdo das aulas.** Adicionados
+  `Lesson.isManuallyEdited` e `Lesson.aiGeneratedAt` (migration `lesson_ai_generation`).
+  `generateLessonContentAction` usa a persona Professor (Etapa 2) para reescrever o conteúdo já
+  existente da aula (tópicos/checklist da importação da grade) em uma aula completa e
+  aprofundada — objetivo, explicação, analogias, 80/20, exemplos, checklist, exercícios —
+  salvando com `status = DRAFT` (nunca publicado automaticamente). `approveLessonContentAction`
+  é o único caminho DRAFT → AVAILABLE. Se a aula já foi editada manualmente, exige confirmação
+  explícita antes de sobrescrever. Se nenhum provider real (OpenAI/Claude) estiver configurado, a
+  geração é recusada (evita substituir conteúdo estruturado real por um resumo genérico do
+  Mock). Disparo escolhido: **manual** (botão "Gerar conteúdo com IA" em
+  `/admin/curriculum/[weekId]`), não automático na primeira visita — motivo documentado em
+  `docs/DECISIONS.md`. Banners de "aguardando revisão" no editor admin e em `/learn/[lessonId]`
+  (caso um DRAFT seja acessado por link direto). Verificado ao vivo: sem chave configurada, o
+  botão mostra a recusa esperada em vez de degradar o conteúdo; `npm run
+  typecheck`/`lint`/`test:unit` sem erros.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

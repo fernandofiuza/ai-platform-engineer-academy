@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Clock } from "lucide-react";
+import { Clock, Sparkles } from "lucide-react";
 
 import { auth } from "@/lib/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Markdown } from "@/components/markdown";
@@ -61,6 +62,16 @@ export default async function LessonDetailPage({
           </p>
         ) : null}
       </div>
+
+      {lesson.status === "DRAFT" ? (
+        <Alert>
+          <Sparkles className="size-4" />
+          <AlertDescription>
+            Este conteúdo foi gerado por IA e ainda está aguardando revisão da área
+            administrativa — pode conter erros ou informações incompletas.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {lesson.contentMarkdown ? (
         <Card>

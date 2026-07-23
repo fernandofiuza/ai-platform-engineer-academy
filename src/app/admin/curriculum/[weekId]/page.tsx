@@ -52,7 +52,12 @@ export default async function AdminWeekDetailPage({
         </h2>
         <div className="mt-2 space-y-3">
           {week.lessons.map((lesson) => (
-            <LessonEditor key={lesson.id} weekId={week.id} lesson={lesson} nextOrder={0} />
+            <LessonEditor
+              key={`${lesson.id}-${lesson.updatedAt.getTime()}`}
+              weekId={week.id}
+              lesson={lesson}
+              nextOrder={0}
+            />
           ))}
           <LessonEditor weekId={week.id} nextOrder={week.lessons.length} />
         </div>

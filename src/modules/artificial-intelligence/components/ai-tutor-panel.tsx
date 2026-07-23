@@ -39,10 +39,12 @@ export function AiTutorPanel({
   lessonOptions,
   initialMessages,
   routing,
+  initialLessonId,
 }: {
   lessonOptions: LessonOption[];
   initialMessages: Message[];
   routing: Record<AITaskType, string>;
+  initialLessonId?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
@@ -56,7 +58,7 @@ export function AiTutorPanel({
   const [explainQuestion, setExplainQuestion] = React.useState("");
 
   const [persona, setPersona] = React.useState<AIPersona>("PROFESSOR");
-  const [personaLessonId, setPersonaLessonId] = React.useState("");
+  const [personaLessonId, setPersonaLessonId] = React.useState(initialLessonId ?? "");
   const [personaMessage, setPersonaMessage] = React.useState("");
 
   function run(fn: () => Promise<{ error: string | null; result: unknown }>, extract: (r: unknown) => string) {

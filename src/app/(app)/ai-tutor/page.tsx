@@ -8,9 +8,14 @@ import { getLessonsForLearnPage } from "@/modules/curriculum/queries";
 
 export const metadata: Metadata = { title: "Tutor de IA" };
 
-export default async function AiTutorPage() {
+export default async function AiTutorPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lessonId?: string }>;
+}) {
   const session = await auth();
   const userId = session!.user.id;
+  const { lessonId } = await searchParams;
 
   const [lessons, messages] = await Promise.all([
     getLessonsForLearnPage(),
@@ -34,6 +39,7 @@ export default async function AiTutorPage() {
         lessonOptions={lessons.map((l) => ({ id: l.id, title: l.title }))}
         initialMessages={messages}
         routing={routing}
+        initialLessonId={lessonId && lessons.some((l) => l.id === lessonId) ? lessonId : undefined}
       />
     </div>
   );

@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Clock, Sparkles } from "lucide-react";
+import { Clock, GraduationCap, Sparkles } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Markdown } from "@/components/markdown";
+import { AskProfessorDialog } from "@/modules/artificial-intelligence/components/ask-professor-dialog";
 import { LessonCompleteForm } from "@/modules/curriculum/components/lesson-complete-form";
 import { getLessonById, getLessonCompletion } from "@/modules/curriculum/queries";
 
@@ -80,6 +81,21 @@ export default async function LessonDetailPage({
           </CardContent>
         </Card>
       ) : null}
+
+      <Card className="border-dashed">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <GraduationCap className="size-4" /> Pergunte ao Professor
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Ficou com alguma dúvida sobre esta aula? Pergunte diretamente aqui, sem sair da
+            página.
+          </p>
+          <AskProfessorDialog lessonId={lesson.id} />
+        </CardContent>
+      </Card>
 
       {lesson.resources.length > 0 ? (
         <div>

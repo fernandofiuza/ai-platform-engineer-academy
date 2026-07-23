@@ -208,16 +208,46 @@ demonstração da Semana 0), existe uma segunda função, `importGradeLessons()`
 - Idempotência: mesmo padrão de `ImportJob.contentHash`, mas com `sourceFile` distinto
   (`"Grade_Curricular.md#lessons"`) do usado por `importModuleGrid`, para os relatórios não se
   confundirem. Dentro de uma execução forçada, qualquer semana que já tenha uma aula não-demo é
-  pulada (nunca duplicada nem sobrescrita) — não há `isManuallyEdited` em `Lesson` porque, ao
-  contrário de `Week`, não existe hoje um fluxo de reimportação repetida de conteúdo de aula.
+  pulada (nunca duplicada nem sobrescrita).
 
 ```bash
 npm run curriculum:import-lessons              # gera as aulas que ainda não existem
 npm run curriculum:import-lessons -- --force   # força reexecução mesmo com hash igual
 ```
 
-**Última execução real**: 104 aulas criadas, 0 puladas. Conteúdo é intencionalmente completo em
-estrutura (todas as seções pedagógicas presentes, tópicos reais de cada semana, projeto do módulo
-na última semana) mas não é uma explicação didática aprofundada de cada tecnologia individual —
-isso é adicionado incrementalmente pela área administrativa (`/admin/curriculum`), semana a
-semana, conforme a formação avança.
+**Última execução real**: 104 aulas criadas (1 por semana), 0 puladas. Conteúdo é intencionalmente
+completo em estrutura (todas as seções pedagógicas presentes, tópicos reais de cada semana,
+projeto do módulo na última semana) mas não é uma explicação didática aprofundada de cada
+tecnologia individual — isso é adicionado incrementalmente pela área administrativa
+(`/admin/curriculum`), módulo a módulo, conforme a formação avança (ver seção abaixo, que
+substituiu esse formato por 1 aula/semana pelo formato por dia nos módulos já trabalhados).
+
+### Unidade de conteúdo por dia (`importGradeDailyLessons`)
+
+> A pedido explícito do usuário, a unidade real de conteúdo passou a ser o **dia**, não a semana
+> — mais alinhado à carga real da formação (`Program.weeklyDays`, 5 dias/semana). Isso não exigiu
+> nenhuma migração de schema: `Lesson.order` já suportava múltiplas aulas por semana desde a
+> Fase 2 (`@@unique([weekId, order])`); só passou a ser usado com mais de 1 valor por semana.
+
+- `buildDailyLessons(range, weeklyDays)` (`grade-lessons.ts`) reaplica `chunkTopics()` duas
+  vezes: uma para dividir os tópicos do módulo entre as semanas da faixa (como
+  `buildWeekLessons`), outra para dividir os tópicos de cada semana entre os dias. Dias sem
+  tópico novo (semanas com poucos tópicos reais, ex.: 2 para preencher 5 dias) caem em um dia de
+  "consolidação" — usando primeiro os tópicos da **própria semana** como referência de revisão,
+  só recorrendo aos tópicos do módulo inteiro se a semana não tiver nenhum tópico real.
+- `importGradeDailyLessons({ rawContent, weekNumbers })` (`service.ts`): diferente de
+  `importGradeLessons` (que só cria quando a semana ainda não tem aula), esta função
+  **substitui** — apaga (`deleteMany`) e recria as aulas de cada semana informada em
+  `weekNumbers`, pulando (preservando integralmente) qualquer semana com alguma aula
+  `isManuallyEdited`. Não é uma migração automática das 104 semanas: é invocada explicitamente
+  por lista de números de semana, módulo por módulo, conforme cada um é trabalhado.
+- `durationMinutes` de cada aula passou a ser `dailyHours * 60` (~210 min, a carga de 1 dia) em
+  vez de `weeklyDays * dailyHours * 60` (a carga da semana inteira).
+- Depois da geração template, cada uma das novas aulas diárias passa pelo mesmo fluxo de
+  aprofundamento por IA da Etapa 3 (`generateLessonContentAction`, persona Professor) — só que
+  agora aplicado a 5 aulas por semana em vez de 1.
+- Nenhuma mudança de UI foi necessária: `/roadmap/[weekId]`, `/learn` e
+  `/admin/curriculum/[weekId]` já iteravam `week.lessons` como lista desde que o modelo existe.
+
+**Primeiro módulo migrado**: Preparação (semanas 1–7), 35 aulas diárias geradas e aprofundadas.
+As demais 97 semanas continuam no formato legado (1 aula/semana) até serem trabalhadas.

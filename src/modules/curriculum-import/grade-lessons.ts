@@ -134,3 +134,144 @@ export function buildWeekLessons(range: ModuleWeekRange): WeekLessonContent[] {
     };
   });
 }
+
+// ---------------------------------------------------------------------------
+// Conteúdo por dia (unidade real de trabalho: 1 Lesson por dia, não por semana) — a pedido
+// explícito do usuário. Reaproveita `chunkTopics` duas vezes: uma para dividir os tópicos do
+// módulo entre as semanas (igual a `buildWeekLessons`), outra para dividir os tópicos de cada
+// semana entre os dias (`Program.weeklyDays`, normalmente 5). Ver docs/DECISIONS.md.
+// ---------------------------------------------------------------------------
+
+export type DailyLessonContent = {
+  weekNumber: number;
+  dayNumber: number;
+  title: string;
+  objective: string;
+  contentMarkdown: string;
+};
+
+function buildDayContentMarkdown(params: {
+  module: ParsedModule;
+  weekNumber: number;
+  dayNumber: number;
+  topics: string[];
+  weekTopics: string[];
+  isLastDayOfModule: boolean;
+}): string {
+  const { module, weekNumber, dayNumber, topics, weekTopics, isLastDayOfModule } = params;
+  const isConsolidationDay = topics.length === 0;
+  // Fallback em cascata: tópicos da semana primeiro (mais específico), só cai para o módulo
+  // inteiro se a própria semana não tiver nenhum tópico real (módulos muito resumidos).
+  const fallbackTopics =
+    weekTopics.length > 0 ? weekTopics : module.topics.length > 0 ? module.topics : [module.name];
+  const focusTopics = isConsolidationDay ? fallbackTopics : topics;
+
+  const topicIntro = isConsolidationDay
+    ? `Este dia consolida a semana dentro do módulo **${module.name}**, revisando o que já foi estudado:`
+    : `Neste dia, dentro do módulo **${module.name}**, o foco é:`;
+
+  const studyLines = focusTopics
+    .map(
+      (topic) =>
+        `- **${topic}** — pesquise o conceito, veja a documentação/referência oficial, entenda quando e por que se usa, e pratique um exemplo mínimo.`
+    )
+    .join("\n");
+
+  const checklistLines = focusTopics
+    .map((topic) => `- [ ] Consigo explicar e aplicar **${topic}** com minhas próprias palavras.`)
+    .join("\n");
+
+  const projectSection =
+    isLastDayOfModule && module.projectDescription
+      ? `\n## 🏗️ Projeto do módulo\n\n${module.projectDescription}\n\nEste é o dia de consolidar tudo o que foi estudado em **${module.name}** nesse projeto prático, aplicado à infraestrutura da AI Labs.\n`
+      : "";
+
+  return `# Semana ${weekNumber}, Dia ${dayNumber} — ${module.name}
+
+## 🎯 Objetivo do dia
+
+${topicIntro}
+
+${studyLines}
+
+## 📚 Como estudar
+
+Siga o princípio da formação: nunca estudar uma tecnologia sem aplicá-la. Para cada tópico
+acima, leia a documentação oficial, teste em um ambiente real (WSL2 ou o laboratório da AI Labs)
+e registre em uma anotação o que aprendeu e o que ainda ficou pouco claro.
+
+## 💻 Laboratório guiado
+
+Aplique os tópicos de hoje em um exercício prático dentro do ambiente da AI Labs (ou no seu
+próprio laboratório local), documentando os comandos e as decisões tomadas.
+
+## 🏋️ Exercícios
+
+Resolva pelo menos um exercício prático por tópico listado acima.
+
+## 🏗️ Como a AI Labs faria
+
+Pense em como uma empresa real estruturaria isso em produção — não apenas "fazer funcionar", mas
+com organização, documentação e revisão de código.
+${projectSection}
+## ✅ Checklist antes de avançar
+
+${checklistLines}
+
+---
+
+> Conteúdo gerado a partir da grade curricular (\`Grade_Curricular.md\`): objetivo, tópicos reais
+> do dia, laboratório e checklist prontos para uso. Explicações mais aprofundadas de cada tópico
+> específico podem ser adicionadas/editadas pela área administrativa a qualquer momento.
+`;
+}
+
+/**
+ * Gera 1 `DailyLessonContent` para cada dia (`weeklyDays`, ex.: 5) de cada semana da faixa do
+ * módulo — a unidade real de conteúdo passa a ser o dia, não a semana.
+ */
+export function buildDailyLessons(range: ModuleWeekRange, weeklyDays: number): DailyLessonContent[] {
+  const { module } = range;
+  const weekCount = range.endWeek - range.startWeek + 1;
+  const weekTopicChunks = chunkTopics(module.topics, weekCount);
+
+  const result: DailyLessonContent[] = [];
+
+  weekTopicChunks.forEach((weekTopics, weekIdx) => {
+    const weekNumber = range.startWeek + weekIdx;
+    const isLastWeekOfModule = weekIdx === weekTopicChunks.length - 1;
+    const dayTopicChunks = chunkTopics(weekTopics, weeklyDays);
+
+    dayTopicChunks.forEach((dayTopics, dayIdx) => {
+      const dayNumber = dayIdx + 1;
+      const isLastDayOfModule = isLastWeekOfModule && dayIdx === dayTopicChunks.length - 1;
+
+      const title =
+        dayTopics.length > 0
+          ? `Semana ${weekNumber}, Dia ${dayNumber} — ${module.name}: ${dayTopics.slice(0, 2).join(", ")}${dayTopics.length > 2 ? "…" : ""}`
+          : `Semana ${weekNumber}, Dia ${dayNumber} — ${module.name}: consolidação`;
+
+      const objective =
+        dayTopics.length > 0
+          ? `Estudar e aplicar: ${dayTopics.join(", ")}.`
+          : `Consolidar o módulo ${module.name}${isLastDayOfModule && module.projectDescription ? ` e avançar no projeto: ${module.projectDescription}` : "."}`;
+
+      result.push({
+        weekNumber,
+        dayNumber,
+        title,
+        objective,
+        contentMarkdown: buildDayContentMarkdown({
+          module,
+          weekNumber,
+          dayNumber,
+          topics: dayTopics,
+          weekTopics,
+          isLastDayOfModule,
+        }),
+      });
+    });
+  });
+
+  return result;
+}

@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 import { parseCursoMarkdown, type ParsedPhase } from "./parser";
 import { parseGradeCurricular } from "./grade-parser";
 import { distributeWeeksAcrossModules } from "./grade-distribution";
-import { buildWeekLessons } from "./grade-lessons";
+import { buildWeekLessons, buildDailyLessons } from "./grade-lessons";
 
 export const PROGRAM_SLUG = "ai-platform-engineer-academy";
 
@@ -548,5 +548,99 @@ export async function importGradeLessons(options: {
     importJobId: job.id,
     createdCount,
     skippedCount,
+  };
+}
+
+export type DailyLessonImportReport = {
+  createdCount: number;
+  replacedWeeksCount: number;
+  preservedWeeksCount: number;
+  message: string;
+};
+
+/**
+ * Substitui a(s) aula(s) de cada semana informada por 1 `Lesson` por dia (`Program.weeklyDays`,
+ * normalmente 5) — a unidade de conteúdo passa a ser o dia, não a semana (decisão explícita do
+ * usuário, ver docs/DECISIONS.md). Semanas com alguma aula `isManuallyEdited` são puladas e
+ * preservadas integralmente. Diferente de `importGradeLessons`, esta função **substitui**
+ * (delete + recreate) em vez de só criar quando não existe — é uma operação de regeneração
+ * deliberada, não uma importação idempotente repetida automaticamente.
+ */
+export async function importGradeDailyLessons(options: {
+  rawContent: string;
+  weekNumbers: number[];
+}): Promise<DailyLessonImportReport> {
+  const program = await db.program.findUnique({ where: { slug: PROGRAM_SLUG } });
+  if (!program) {
+    throw new Error("Program não encontrado — rode a importação de Curso.md primeiro.");
+  }
+
+  const parsed = parseGradeCurricular(options.rawContent);
+  const ranges = distributeWeeksAcrossModules(program.totalWeeks, parsed.modules);
+
+  const weeks = await db.week.findMany({
+    where: { programId: program.id, number: { in: options.weekNumbers } },
+    include: { lessons: true },
+  });
+  const weekByNumber = new Map(weeks.map((w) => [w.number, w]));
+  const durationMinutes = Math.round(program.dailyHours * 60);
+
+  let createdCount = 0;
+  let replacedWeeksCount = 0;
+  let preservedWeeksCount = 0;
+
+  for (const range of ranges) {
+    const relevantWeekNumbers = options.weekNumbers.filter(
+      (n) => n >= range.startWeek && n <= range.endWeek
+    );
+    if (relevantWeekNumbers.length === 0) continue;
+
+    const dailyLessons = buildDailyLessons(range, program.weeklyDays);
+    const byWeek = new Map<number, typeof dailyLessons>();
+    for (const dl of dailyLessons) {
+      if (!relevantWeekNumbers.includes(dl.weekNumber)) continue;
+      if (!byWeek.has(dl.weekNumber)) byWeek.set(dl.weekNumber, []);
+      byWeek.get(dl.weekNumber)!.push(dl);
+    }
+
+    for (const [weekNumber, lessonsForWeek] of byWeek) {
+      const week = weekByNumber.get(weekNumber);
+      if (!week) continue;
+
+      if (week.lessons.some((l) => l.isManuallyEdited)) {
+        preservedWeeksCount++;
+        continue;
+      }
+
+      if (week.lessons.length > 0) {
+        await db.lesson.deleteMany({ where: { weekId: week.id } });
+        replacedWeeksCount++;
+      }
+
+      for (const dl of lessonsForWeek) {
+        await db.lesson.create({
+          data: {
+            weekId: week.id,
+            order: dl.dayNumber,
+            title: dl.title,
+            objective: dl.objective,
+            durationMinutes,
+            contentMarkdown: dl.contentMarkdown,
+            isDemo: false,
+            status: "AVAILABLE",
+          },
+        });
+        createdCount++;
+      }
+    }
+  }
+
+  logger.info("grade daily lessons import finished", { createdCount, replacedWeeksCount, preservedWeeksCount });
+
+  return {
+    createdCount,
+    replacedWeeksCount,
+    preservedWeeksCount,
+    message: `${createdCount} aula(s) diária(s) criada(s) em ${replacedWeeksCount} semana(s) substituída(s) (${preservedWeeksCount} semana(s) preservada(s) por edição manual).`,
   };
 }

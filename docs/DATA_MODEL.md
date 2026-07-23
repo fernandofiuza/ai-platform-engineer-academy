@@ -48,11 +48,14 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
   sobrescrevê-la (ver `docs/CURRICULUM_IMPORT.md`)
 - **Lesson**(weekId, order, title, objective, durationMinutes, contentMarkdown, isDemo,
   isManuallyEdited, aiGeneratedAt?, status) — `@@unique([weekId, order])`. Além das 2 aulas de
-  demonstração da Semana 0 (Fase 2), as 104 semanas 1–104 têm cada uma 1 `Lesson` real
-  (`isDemo = false`) gerada por `importGradeLessons()` a partir dos tópicos de
-  `Grade_Curricular.md` — ver `docs/CURRICULUM_IMPORT.md`. `isManuallyEdited` (Etapa 3, mesma
-  semântica de `Week.isManuallyEdited`) e `aiGeneratedAt` (marca quando a persona Professor
-  reescreveu o conteúdo, sempre com `status = DRAFT` até aprovação administrativa) — ver
+  demonstração da Semana 0 (Fase 2), cada semana tem `Lesson`(ões) real(is) (`isDemo = false`)
+  geradas a partir dos tópicos de `Grade_Curricular.md` — ver `docs/CURRICULUM_IMPORT.md`. A
+  unidade de conteúdo é o **dia**, não a semana: módulos já regenerados (ex.: Preparação, semanas
+  1–7) têm `Program.weeklyDays` (5) `Lesson`s por semana (`order` 1–5, uma por dia), via
+  `importGradeDailyLessons()`; módulos ainda não regenerados mantêm 1 `Lesson`/semana (formato
+  legado de `importGradeLessons()`), até serem regenerados no novo formato. `isManuallyEdited`
+  (Etapa 3, mesma semântica de `Week.isManuallyEdited`) e `aiGeneratedAt` (marca quando a persona
+  Professor reescreveu o conteúdo, sempre com `status = DRAFT` até aprovação administrativa) — ver
   `docs/DECISIONS.md`.
 - **Activity**(lessonId, type, title, description, status) — **ainda não implementado**
 - **Resource**(lessonId, title, url, kind: `DOC|VIDEO|ARTICLE|REPO|OTHER`)

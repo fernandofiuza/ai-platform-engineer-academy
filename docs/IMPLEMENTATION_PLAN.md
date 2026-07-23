@@ -376,4 +376,23 @@ Com a Fase 6 concluída, todas as seis fases do fluxo de implementação origina
 
 Com isso, as Etapas 1 a 8 do prompt de evolução de IA multi-provider e funcionalidades de
 produto foram entregues.
+
+- **Pós-Etapa 8: correções reais de infraestrutura de IA + "Pergunte ao Professor" + unidade de
+  conteúdo por dia.** Ao configurar chaves reais de Claude/Gemini, três bugs reais foram achados
+  e corrigidos no `ClaudeProvider`: modelo `claude-3-5-sonnet-latest` não existia mais na API
+  (404) — trocado para `claude-sonnet-5`; parsing da resposta assumia texto sempre no índice 0
+  do array `content`, quebrando com blocos de "thinking" — corrigido para procurar o primeiro
+  bloco `type: "text"`; `max_tokens` baixo demais truncava aulas completas — subido para 16000.
+  Persona Professor (`personas.ts`) e o prompt de geração de aula
+  (`buildLessonGenerationMessage`) foram reforçados contra respostas genéricas ("vá pesquisar a
+  documentação"), exigindo explicação completa própria antes de qualquer referência externa.
+  Adicionado card "Pergunte ao Professor" ao final de `/learn/[lessonId]`, linkando para
+  `/ai-tutor?lessonId=...` com a persona Professor e o contexto da aula pré-selecionados.
+  A unidade de conteúdo passou de semana para **dia** (`Program.weeklyDays`, 5): nova
+  `buildDailyLessons()` + `importGradeDailyLessons()` substituem (não só criam) as aulas de
+  semanas informadas por 1 aula/dia, preservando semanas com edição manual. Aplicado ao módulo
+  Preparação (semanas 1–7): 35 aulas diárias geradas e cada uma aprofundada individualmente pela
+  persona Professor via Claude real, revisadas e aprovadas. As demais 97 semanas continuam no
+  formato legado (1 aula/semana) até serem regeneradas da mesma forma. Decisões registradas em
+  `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

@@ -12,7 +12,7 @@ explica, resume, revisa e sugere.`;
 
 async function callMessages(prompt: string, systemPrompt: string = DEFAULT_SYSTEM_PROMPT): Promise<string> {
   const apiKey = process.env.AI_CLAUDE_API_KEY;
-  const model = process.env.AI_CLAUDE_MODEL || "claude-3-5-sonnet-latest";
+  const model = process.env.AI_CLAUDE_MODEL || "claude-sonnet-5";
 
   if (!apiKey) {
     throw new Error("AI_CLAUDE_API_KEY não configurada.");
@@ -27,7 +27,7 @@ async function callMessages(prompt: string, systemPrompt: string = DEFAULT_SYSTE
     },
     body: JSON.stringify({
       model,
-      max_tokens: 700,
+      max_tokens: 16000,
       system: systemPrompt,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -40,8 +40,14 @@ async function callMessages(prompt: string, systemPrompt: string = DEFAULT_SYSTE
   }
 
   const data = await response.json();
-  const content = data?.content?.[0]?.text;
+  // Modelos mais novos podem intercalar blocos de "thinking" antes do bloco de texto — procura
+  // o primeiro bloco `type: "text"` em vez de assumir que é sempre o índice 0.
+  const textBlock = Array.isArray(data?.content)
+    ? data.content.find((block: { type?: string }) => block?.type === "text")
+    : null;
+  const content = textBlock?.text;
   if (typeof content !== "string") {
+    logger.error("claude provider returned unexpected shape", { data: JSON.stringify(data).slice(0, 2000) });
     throw new Error("Resposta inesperada do provider de IA.");
   }
   return content.trim();

@@ -676,5 +676,108 @@ concluídas, submissão do projeto demo marcada `DONE`, uma tentativa de avalia�
 confirmar o fluxo ponta a ponta (elegibilidade → emissão → página de visualização) e depois
 revertidos — nenhum dado de teste permanente ficou no banco.
 
+## 2026-07-23 — Correções reais no `ClaudeProvider` após a primeira chave real configurada
+
+Ao configurar chaves reais de Claude/Gemini pela primeira vez, três bugs reais foram encontrados
+e corrigidos (nenhum era fallback silencioso para o mock — o Gateway sempre detectou a chave
+corretamente; os erros abaixo eram na chamada real à API):
+
+1. **Modelo inexistente**: `AI_CLAUDE_MODEL` (padrão de fábrica) apontava para
+   `claude-3-5-sonnet-latest`, que a API da Anthropic retornou como `not_found_error` (404).
+   **Corrigido** para `claude-sonnet-5` (`.env`, `.env.example`,
+   `src/modules/artificial-intelligence/claude-provider.ts`).
+2. **Parsing de resposta frágil**: `callMessages()` assumia que o texto da resposta estava
+   sempre em `data.content[0].text`. Com um bloco de "thinking" (raciocínio interno) antes do
+   bloco de texto — comum em modelos mais novos —, isso falhava com "Resposta inesperada do
+   provider de IA". **Corrigido** para procurar o primeiro bloco `type: "text"` em vez de
+   assumir o índice 0, com log do corpo bruto da resposta em caso de falha (mais fácil de
+   depurar no futuro).
+3. **`max_tokens` baixo demais para geração de aula completa**: o valor herdado das respostas
+   curtas do tutor (700, depois 4096) truncava o conteúdo gerado pela Etapa 3 no meio de uma
+   frase. **Corrigido** para 16000 — conteúdo de aula completo (7 seções, exemplos de código,
+   exercícios) cabe sem cortes; chamadas curtas continuam rápidas (o modelo não "enche" a
+   resposta só porque o teto é mais alto).
+
+Também corrigido um erro de digitação do usuário no `.env`: o texto `npm run dev` havia sido
+colado sem querer ao final da chave `AI_GEMINI_API_KEY`, corrompendo-a — removido.
+
+## 2026-07-23 — Reforço da persona Professor contra conteúdo genérico ("vá pesquisar a documentação")
+
+**Problema relatado**: o conteúdo gerado (antes das correções acima) era raso, com frases como
+"leia a documentação oficial" no lugar de uma explicação real — mas essa amostra específica
+("Semana 6") nunca tinha sido gerada por IA com sucesso ainda (só o template da importação da
+grade, que usa essa linguagem por design, já que é apenas um esqueleto — ver a decisão da
+Etapa "geração de aulas" — mais a tentativa que falhou por causa do bug #1 acima). Ainda assim,
+o risco de a persona Professor produzir esse tipo de resposta genérica era real e foi reforçado
+preventivamente.
+**Decisão**: `PERSONA_INSTRUCTIONS.PROFESSOR` (`personas.ts`) e
+`buildLessonGenerationMessage()` (`admin-curriculum/actions.ts`) foram reescritos com
+instruções explícitas e negativas: proibido responder só mandando o estudante "pesquisar a
+documentação oficial"/"testar por conta própria" como se isso fosse o conteúdo; a IA deve ela
+mesma ensinar cada conceito, com ordem obrigatória (objetivo → explicação completa →
+analogias → 80/20 → exemplos reais de código/comandos → só então laboratório/exercícios).
+**Verificado ao vivo**: regenerada a Semana 6 com Claude real após as correções — resultado com
+~28 mil caracteres, 7 seções completas, explicação técnica real (transformers, RLHF,
+Constitutional AI), 5 analogias, seção 80/20 explícita, exemplos reais de código (`curl`,
+Python, JSON de configuração), checklist de laboratório e 5 exercícios variados — mostrado ao
+usuário para aprovação manual (status permanece `DRAFT` até `approveLessonContentAction`).
+
+## 2026-07-23 — "Pergunte ao Professor" ao final de cada aula
+
+**Decisão**: `/learn/[lessonId]` ganhou um card fixo ao final do conteúdo, "Pergunte ao
+Professor", com um link para `/ai-tutor?lessonId=<id>`. `/ai-tutor` passou a aceitar
+`?lessonId=` via `searchParams` e repassa como `initialLessonId` para `AiTutorPanel`, que usa
+esse valor para pré-selecionar o contexto de aula na aba "Conversar com uma persona" (Professor
+já é a persona padrão dessa aba desde a Etapa 2). Resultado: 1 clique leva direto para uma
+conversa com o Professor já contextualizada na aula que o estudante estava lendo.
+**Motivo**: instrução explícita do usuário. Reaproveita 100% a infraestrutura de personas já
+existente (Etapa 2) — nenhuma lógica de IA nova, só encadeamento de navegação + estado inicial.
+
+## 2026-07-23 — "Pergunte ao Professor" vira um diálogo inline (não navega mais para `/ai-tutor`)
+
+**Decisão**: a versão inicial do card "Pergunte ao Professor" em `/learn/[lessonId]` linkava
+para `/ai-tutor?lessonId=...`. A pedido explícito do usuário ("uma caixa se abre ali mesmo
+naquela página"), virou um componente cliente (`AskProfessorDialog`) que abre um `Dialog`
+(shadcn/radix) na própria página da aula — textarea + botão "Perguntar" chamando
+`converseAction({ persona: "PROFESSOR", message, lessonId })` diretamente, exibindo a resposta
+renderizada em Markdown dentro do próprio diálogo. Não navega para `/ai-tutor` mais; o campo
+`?lessonId=` em `/ai-tutor` (Etapa anterior) continua existindo e funcionando para quem chega
+por lá diretamente, só deixou de ser o caminho usado a partir da página da aula.
+**Motivo**: instrução explícita do usuário. Reaproveita 100% a action e a persona já existentes
+(Etapa 2) — só muda a superfície de UI (diálogo em vez de navegação de página inteira).
+
+## 2026-07-23 — Unidade de conteúdo passa a ser o dia, não a semana
+
+**Decisão**: a pedido explícito do usuário ("vamos trabalhar por conteúdo, não de semanas"),
+`Lesson` passou a ter, tipicamente, `Program.weeklyDays` (5) linhas por semana em vez de 1 —
+reaproveitando o mesmo modelo `Lesson` já existente (`order` já suportava múltiplas aulas por
+semana desde a Fase 2; nenhuma migração de schema foi necessária). Nova função
+`buildDailyLessons()` (`grade-lessons.ts`) reaplica o utilitário `chunkTopics()` duas vezes: uma
+para dividir os tópicos do módulo entre as semanas (como já fazia `buildWeekLessons`), outra para
+dividir os tópicos de cada semana entre os dias. Nova função de serviço
+`importGradeDailyLessons({ rawContent, weekNumbers })` (`service.ts`) — diferente de
+`importGradeLessons`, que só cria quando a semana ainda não tem aula, esta **substitui**
+(`deleteMany` + recriação) as aulas de cada semana informada, pulando (preservando) qualquer
+semana com alguma aula `isManuallyEdited`. Não é uma migração automática de todas as 104 semanas
+— é invocada explicitamente por lista de números de semana, começando pelo módulo Preparação
+(1–7), a pedido do usuário. As demais 97 semanas continuam com 1 aula/semana até serem
+regeneradas da mesma forma quando o respectivo módulo for trabalhado.
+**Duração por aula**: mudou de `weeklyDays * dailyHours * 60` (a carga da semana inteira,
+inadequada agora que cada aula é 1 dia) para `dailyHours * 60` (~210 min, a carga de 1 dia).
+**Bug real encontrado e corrigido antes da geração por IA**: a primeira versão de
+`buildDayContentMarkdown` usava `module.topics` (todos os ~15 tópicos do módulo inteiro) como
+fallback para "dias de consolidação" (quando uma semana com poucos tópicos reais — ex.: 2 para
+"VS Code, Windows Terminal" — não tem tópico novo para preencher os 5 dias). Isso fazia 3 dos 5
+dias de cada semana mostrarem a lista completa do módulo, não da semana. Corrigido para cair
+primeiro nos tópicos da própria semana (`weekTopics`), só recorrendo ao módulo inteiro se a
+semana não tiver nenhum tópico real.
+**UI**: nenhuma mudança de página foi necessária além da geração de conteúdo —
+`/roadmap/[weekId]`, `/learn` e `/admin/curriculum/[weekId]` já iteravam `week.lessons` (uma
+lista) desde que o modelo `Lesson` existe, então múltiplas aulas por semana já eram exibidas
+corretamente sem nenhum ajuste de template.
+**Verificação**: template gerado para as 7 semanas de Preparação (35 aulas), cada uma
+individualmente aprofundada pela persona Professor (mesmo processo da Etapa 3, aplicado a cada
+uma das 35 aulas em vez de 1 por semana), revisadas antes de aprovar.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

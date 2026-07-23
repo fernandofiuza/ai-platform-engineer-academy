@@ -4,8 +4,14 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import { awardXp, checkAndAwardBadges } from "@/modules/gamification/service";
-import { saveSubmissionSchema, type SaveSubmissionInput } from "./schema";
+import {
+  saveProjectSchema,
+  saveSubmissionSchema,
+  type SaveProjectInput,
+  type SaveSubmissionInput,
+} from "./schema";
 
 export async function saveSubmissionAction(input: SaveSubmissionInput) {
   const session = await auth();
@@ -54,5 +60,44 @@ export async function saveSubmissionAction(input: SaveSubmissionInput) {
   revalidatePath("/projects");
   revalidatePath(`/projects/${parsed.data.projectId}`);
   revalidatePath("/portfolio");
+  return { error: null };
+}
+
+export async function saveProjectAction(input: SaveProjectInput) {
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") {
+    return { error: "Apenas administradores podem gerenciar projetos." };
+  }
+
+  const parsed = saveProjectSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const { projectId, ...data } = parsed.data;
+
+  if (projectId) {
+    await db.project.update({ where: { id: projectId }, data });
+  } else {
+    await db.project.create({ data });
+  }
+
+  logger.info("admin_action", { adminId: session.user.id, action: projectId ? "update_project" : "create_project" });
+  revalidatePath("/admin/projects");
+  revalidatePath("/projects");
+  return { error: null };
+}
+
+export async function archiveProjectAction(projectId: string) {
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") {
+    return { error: "Apenas administradores podem gerenciar projetos." };
+  }
+
+  await db.project.update({ where: { id: projectId }, data: { status: "ARCHIVED" } });
+
+  logger.info("admin_action", { adminId: session.user.id, action: "archive_project", projectId });
+  revalidatePath("/admin/projects");
+  revalidatePath("/projects");
   return { error: null };
 }

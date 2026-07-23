@@ -62,12 +62,16 @@ Legenda: `[ ]` não iniciado · `[~]` em andamento · `[x]` concluído
       na UI
 
 ## Fase 6 — Administração e qualidade
-- [ ] Área administrativa (CRUD do currículo, projetos, labs, quizzes, flashcards, etc.)
-- [ ] Testes automatizados (unit/integration/e2e do fluxo crítico)
-- [ ] Acessibilidade (navegação por teclado, labels, contraste)
-- [ ] Segurança (rate limit, headers, sanitização, auditoria básica)
-- [ ] Documentação final (README completo)
-- [ ] Build de produção + revisão final
+- [x] Área administrativa (`/admin/curriculum` — semanas/aulas/flashcards/quiz; `/admin/projects`;
+      `/admin/labs`; `/admin/imports` já existia)
+- [x] Testes automatizados (18 unitários com Vitest + 1 e2e com Playwright cobrindo o fluxo
+      crítico completo)
+- [x] Acessibilidade (labels associados, navegação e submissão por teclado verificadas,
+      tab order revisado)
+- [x] Segurança (rate limit em login/registro/reset de senha + IA, headers de segurança,
+      sem `dangerouslySetInnerHTML` em lugar nenhum, auditoria básica via logger estruturado)
+- [x] Documentação final (README completo)
+- [x] Build de produção + revisão final
 
 ## Registro de execução
 
@@ -197,3 +201,43 @@ Legenda: `[ ]` não iniciado · `[~]` em andamento · `[x]` concluído
   confirmado. Decisões (contexto mínimo, sem persistir perfil do estudante; rate limit em
   memória, não distribuído) registradas em `docs/DECISIONS.md`. Próximo: Fase 6 —
   Administração e qualidade.
+- **Fase 6 concluída (formação encerrada).** Área administrativa real: `/admin/curriculum`
+  lista as 105 semanas com filtro por status; `/admin/curriculum/[weekId]` edita
+  título/objetivo/status da semana e gerencia aulas (criar/editar/arquivar, com Markdown,
+  duração, status) e, dentro de cada aula, flashcards e perguntas de quiz (múltipla escolha,
+  com opção correta marcada) — sem precisar de rotas administrativas separadas para isso, como
+  decidido na Fase 3. `/admin/projects` e `/admin/labs` ganharam formulários completos
+  (criar/editar/arquivar) reaproveitando os mesmos schemas/actions dos módulos de estudante,
+  com campos de lista representados como texto (uma linha por item). Todas as ações admin
+  passaram a chamar `logger.info("admin_action", ...)` para auditoria básica. Corrigido um gap
+  real encontrado durante a revisão de acessibilidade: o link "Esqueci minha senha" no login
+  apontava para `/esqueci-senha`, uma rota que nunca tinha sido implementada (só estava
+  registrada como pública em `src/proxy.ts` desde a Fase 1) — implementado o fluxo completo de
+  redefinição de senha (`PasswordResetToken`, já existente no schema desde a Fase 1, finalmente
+  usado): `/esqueci-senha` gera um token e, em desenvolvimento, mostra o link diretamente na
+  tela (sem enviar e-mail real); `/redefinir-senha?token=...` troca a senha e invalida o token
+  (reuso do mesmo token é rejeitado). Segurança: rate limit (`src/lib/rate-limit.ts`,
+  generalizado a partir do limitador da Fase 5) aplicado a login (10/15min por IP), registro
+  (5/1h por IP) e redefinição de senha (5/1h por IP), além do já existente para a IA; headers
+  de segurança (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`) via `next.config.ts`; confirmado que não há `dangerouslySetInnerHTML`
+  em nenhum lugar do código. Testes: 18 testes unitários (Vitest — SM-2, streak, checklist de
+  portfólio, rate limit) e 1 teste e2e (Playwright, `tests/e2e/critical-flow.spec.ts`) cobrindo
+  o fluxo crítico completo exigido pela Etapa 29 (registro/login → dashboard → abrir aula →
+  registrar sessão de estudo → concluir aula → ver progresso atualizado), commitado no
+  repositório com `npm run test:unit` / `npm run test:e2e` / `npm run test`. Acessibilidade:
+  verificado que todos os campos de formulário têm labels associados, que a navegação principal
+  e os links são alcançáveis e ativáveis via teclado, e que o tab order do formulário de login
+  segue a ordem visual (rótulo → link "esqueci senha" → campo de senha). Verificado ao vivo:
+  `npm run typecheck`/`lint`/`build` sem erros nem avisos; suíte de testes unitários e e2e
+  passando; smoke tests end-to-end via Playwright cobrindo CRUD administrativo completo
+  (semana → aula → flashcard → quiz; projeto; laboratório), controle de acesso (estudante
+  bloqueado de `/admin`), headers de segurança presentes na resposta HTTP, e o fluxo completo
+  de esqueci/redefinir senha (incluindo rejeição de token reutilizado); `docker compose
+  --profile app up --build` confirmado, com os headers de segurança presentes também no
+  container. Decisões (auditoria via log estruturado em vez de tabela dedicada; escopo do CRUD
+  administrativo sem reordenação por arrastar/soltar nem duplicação/pré-visualização; sem CSP
+  completo, só os headers básicos) registradas em `docs/DECISIONS.md`.
+
+Com a Fase 6 concluída, todas as seis fases do fluxo de implementação original foram entregues.
+O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

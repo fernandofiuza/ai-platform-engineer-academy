@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
-import { LibraryBig } from "lucide-react";
 
-import { ComingSoon } from "@/components/layout/coming-soon";
+import { WeekAdminList } from "@/modules/admin-curriculum/components/week-admin-list";
+import { getAllWeeksForAdmin } from "@/modules/admin-curriculum/queries";
 
 export const metadata: Metadata = { title: "Currículo" };
 
-export default function AdminCurriculumPage() {
+export default async function AdminCurriculumPage() {
+  const weeks = await getAllWeeksForAdmin();
+
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Currículo</h1>
-      <p className="mt-1 text-sm text-muted-foreground">CRUD de programas, fases, módulos, semanas e aulas.</p>
-      <div className="mt-6">
-        <ComingSoon
-          title="Currículo"
-          description="CRUD de programas, fases, módulos, semanas e aulas."
-          phase="Fase 2"
-          icon={LibraryBig}
-        />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Currículo</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {weeks.length} semanas. Clique em uma semana para editar título, objetivo, status e
+          gerenciar aulas, flashcards e quiz.
+        </p>
       </div>
+      <WeekAdminList weeks={weeks} />
     </div>
   );
 }

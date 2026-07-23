@@ -16,3 +16,7 @@ export async function getCompletionForUser(userId: string, laboratoryId: string)
     where: { userId_laboratoryId: { userId, laboratoryId } },
   });
 }
+
+export async function getAllLaboratoriesForAdmin() {
+  return db.laboratory.findMany({ orderBy: { createdAt: "asc" } });
+}

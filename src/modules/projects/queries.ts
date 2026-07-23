@@ -16,3 +16,7 @@ export async function getSubmissionForUser(userId: string, projectId: string) {
     where: { userId_projectId: { userId, projectId } },
   });
 }
+
+export async function getAllProjectsForAdmin() {
+  return db.project.findMany({ orderBy: { createdAt: "asc" } });
+}

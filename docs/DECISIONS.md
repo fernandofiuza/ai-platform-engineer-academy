@@ -308,5 +308,62 @@ qualquer dependência externa nem custo computacional relevante; um modelo local
 dependência de infraestrutura pesada (download de pesos, GPU/CPU) desproporcional ao que a
 Etapa 19 pede de um "nível 1".
 
+## 2026-07-23 — Auditoria administrativa via log estruturado, sem tabela dedicada
+
+**Decisão**: ações administrativas (`update_week`, `create_lesson`, `add_flashcard`,
+`create_project`, `archive_laboratory` etc.) são registradas via
+`logger.info("admin_action", { adminId, action, ... })`, não em uma tabela `AuditLog` no banco.
+**Motivo**: "auditoria básica" é o requisito explícito (não "trilha de auditoria completa
+consultável na UI"); o logger estruturado já existe desde a Fase 1 e os logs de produção
+tipicamente vão para um agregador externo (fora do escopo do MVP). Uma tabela dedicada só se
+justificaria se a auditoria precisasse ser consultável dentro do próprio produto.
+
+## 2026-07-23 — CRUD administrativo sem drag-and-drop, duplicação ou pré-visualização
+
+**Decisão**: o CRUD de currículo/projetos/laboratórios implementa criar, editar e arquivar
+(soft delete via `status = ARCHIVED`), mas não reordenação por arrastar-e-soltar (a ordem de
+semanas é fixa pelo `number`; a ordem de aulas usa o campo `order` editável só implicitamente
+pela ordem de criação), nem duplicação de conteúdo, nem modo de pré-visualização separado do
+conteúdo real.
+**Motivo**: o prompt pede para "evitar construir um CMS genérico excessivamente complexo" —
+arrastar-soltar, duplicar e pré-visualizar são funcionalidades de conveniência de um CMS maduro,
+não essenciais para o MVP administrar o conteúdo que existe hoje (1 programa, poucas aulas/
+projetos/laboratórios de demonstração).
+
+## 2026-07-23 — Quiz e flashcards administrados dentro da aula, sem rotas próprias
+
+**Decisão**: não existem `/admin/quizzes` nem `/admin/flashcards` como rotas separadas —
+gerenciar essas entidades acontece dentro de `/admin/curriculum/[weekId]`, no editor de cada
+aula (`FlashcardManager`/`QuizManager`).
+**Motivo**: a lista de rotas da Etapa 24 do prompt original não inclui rotas administrativas
+específicas para quiz/flashcards — só `/admin/curriculum`, `/admin/projects`, `/admin/labs` e
+`/admin/imports`. Como flashcards e perguntas de quiz sempre pertencem a uma aula, editá-los no
+contexto da própria aula é mais direto do que criar telas administrativas isoladas que
+exigiriam escolher a aula de novo.
+
+## 2026-07-23 — Headers de segurança básicos, sem CSP completo
+
+**Decisão**: `next.config.ts` define `X-Frame-Options`, `X-Content-Type-Options`,
+`Referrer-Policy` e `Permissions-Policy` — não uma Content-Security-Policy completa.
+**Motivo**: uma CSP rigorosa exige mapear precisamente todas as origens de script/estilo/
+imagem/conexão usadas (Next.js dev overlay, fontes do Google via `next/font`, etc.) e testar
+extensivamente para não quebrar a aplicação; o prompt pede "headers de segurança adequados" como
+parte de um MVP, não uma auditoria de segurança completa. Os quatro headers implementados cobrem
+proteções de alto valor e baixo risco de regressão (clickjacking, MIME sniffing, vazamento de
+referrer, APIs de hardware do navegador).
+
+## 2026-07-23 — Reset de senha finalmente implementado (fechando gap da Fase 1)
+
+**Decisão**: `/esqueci-senha` e `/redefinir-senha` foram implementadas na Fase 6, usando o
+modelo `PasswordResetToken` que já existia no schema desde a Fase 1 mas nunca tinha sido
+utilizado por nenhum código.
+**Motivo**: o link "Esqueci minha senha" no formulário de login já apontava para
+`/esqueci-senha` desde a Fase 1 (e a rota já estava até liberada como pública em
+`src/proxy.ts`), mas a página nunca foi criada — um link morto real, encontrado durante a
+verificação de acessibilidade desta fase. Corrigido para não deixar "botões sem funcionamento"
+(limite explícito do prompt). Mantém o design já decidido na Fase 1: em desenvolvimento, o link
+de redefinição é mostrado na tela (não enviado por e-mail de verdade), já que envio real de
+e-mail exige infraestrutura externa fora do escopo do MVP.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

@@ -414,4 +414,10 @@ produto foram entregues.
   Semana 8/Dia 1 (Computação), com passos reais (`lscpu`, `free -h`, compilação em C, `objdump`,
   comparação com Python) e o card de vínculo com a aula visível na página pública. Decisões
   registradas em `docs/DECISIONS.md`.
+- **Módulo Linux regenerado no formato por dia (semanas 20–25).** Mesmo processo: 30 aulas
+  diárias geradas, aprofundadas pela persona Professor via Claude real e aprovadas. Verificado:
+  30/30 com conteúdo real (amostra: Semana 21/Dia 2 — Bash, 15275 chars, explicação técnica
+  precisa de shell interativo vs. linguagem de script); confirmado por varredura completa que
+  não há nenhuma aula presa em `DRAFT` no banco (lição da correção anterior aplicada — aprovação
+  em lote rodada logo após a revisão, antes de seguir para a próxima tarefa).
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

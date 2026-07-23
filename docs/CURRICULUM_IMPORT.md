@@ -249,6 +249,7 @@ substituiu esse formato por 1 aula/semana pelo formato por dia nos módulos já 
 - Nenhuma mudança de UI foi necessária: `/roadmap/[weekId]`, `/learn` e
   `/admin/curriculum/[weekId]` já iteravam `week.lessons` como lista desde que o modelo existe.
 
-**Módulos já migrados**: Preparação (semanas 1–7, 35 aulas) e Fundamentos da Computação
-(semanas 8–19, 60 aulas) — 95 aulas diárias geradas, aprofundadas e aprovadas. As demais 85
-semanas continuam no formato legado (1 aula/semana) até serem trabalhadas.
+**Módulos já migrados**: Preparação (semanas 1–7, 35 aulas), Fundamentos da Computação
+(semanas 8–19, 60 aulas) e Linux (semanas 20–25, 30 aulas) — 125 aulas diárias geradas,
+aprofundadas e aprovadas. As demais 79 semanas continuam no formato legado (1 aula/semana) até
+serem trabalhadas.

@@ -17,6 +17,8 @@
     "docker:db": "docker compose up -d db",
     "docker:app": "docker compose --profile app up --build",
     "curriculum:import": "tsx scripts/import-curriculum.ts",
+    "curriculum:preview-grade": "tsx scripts/preview-grade-import.ts",
+    "curriculum:import-grade": "tsx scripts/import-grade-curricular.ts",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test": "npm run test:unit && npm run test:e2e"

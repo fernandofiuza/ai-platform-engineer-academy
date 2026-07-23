@@ -240,4 +240,24 @@ Legenda: `[ ]` não iniciado · `[~]` em andamento · `[x]` concluído
   completo, só os headers básicos) registradas em `docs/DECISIONS.md`.
 
 Com a Fase 6 concluída, todas as seis fases do fluxo de implementação original foram entregues.
+
+- **Pós-Fase 6: importação de `Grade_Curricular.md`.** O usuário forneceu uma grade curricular
+  real e mais detalhada (24 módulos — Módulo 0 a 10 mais os blocos de IA/RAG/n8n/MCP/OpenCode/
+  Hermes/OpenClaw/Multiagentes/Segurança/Observabilidade/FinOps/SaaS/Engenharia de Soluções — e
+  um Projeto Final "APEX Academy"), a ser distribuída pelas 104 semanas já existentes sem
+  recriar a estrutura. Implementado um segundo importador (`grade-parser.ts` +
+  `grade-distribution.ts` + `importModuleGrid()`, comandos `npm run curriculum:preview-grade` e
+  `npm run curriculum:import-grade`), reaproveitando o padrão de idempotência via `ImportJob` já
+  usado pelo importador de `Curso.md`, sem substituí-lo. Adicionado `Week.isManuallyEdited`
+  (adiado desde a Fase 2, agora com o CRUD administrativo real como precondição) para proteger
+  semanas editadas manualmente contra reimportação. Distribuição calculada pelo método dos
+  maiores restos (peso = contagem de linhas de tópico por módulo, piso mínimo de 4) e revisada
+  com o usuário via dry-run (`curriculum:preview-grade`) antes de qualquer escrita no banco.
+  Aplicada: 104 semanas atualizadas (título + objetivo), 0 preservadas (nenhuma edição manual
+  existia ainda), "Projeto Final: APEX Academy" criado como `Project` (29 componentes como
+  `deliverables`) — mantendo AI Labs e APEX Academy como entidades distintas, conforme instrução
+  explícita do usuário. Verificado: `npm run typecheck`/`lint` sem erros; 5 testes unitários
+  novos (`tests/unit/grade-distribution.test.ts`); estado do banco conferido por amostragem
+  (semanas 1, 7, 8, 62, 100–104 e o `Project` do Projeto Final). Decisões registradas em
+  `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

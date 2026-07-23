@@ -33,8 +33,12 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 - **Phase**(programId, order, name, label /* "Semestre N" */, status)
 - **Track**(phaseId, order, name, status) — trilha dentro do semestre (ex.: Backend, Infra) — **ainda não implementado**
 - **Module**(trackId, order, name, status) — **ainda não implementado**
-- **Week**(programId, phaseId?, number 0–104, title, objective?, isEnvironmentSetup bool, status)
-  — `phaseId` é opcional só para a Semana 0 (`number = 0`), que não pertence a nenhum semestre
+- **Week**(programId, phaseId?, number 0–104, title, objective?, isEnvironmentSetup bool,
+  isManuallyEdited bool, status) — `phaseId` é opcional só para a Semana 0 (`number = 0`), que
+  não pertence a nenhum semestre. `isManuallyEdited` (adicionado nesta sessão, junto com o CRUD
+  administrativo — ver `docs/DECISIONS.md`) é marcado `true` por `updateWeekAction` a cada edição
+  salva no admin, e faz o importador de `Grade_Curricular.md` pular a semana em vez de
+  sobrescrevê-la (ver `docs/CURRICULUM_IMPORT.md`)
 - **Lesson**(weekId, order, title, objective, durationMinutes, contentMarkdown, isDemo, status)
   — `@@unique([weekId, order])`
 - **Activity**(lessonId, type, title, description, status) — **ainda não implementado**
@@ -72,7 +76,11 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 - **Project**(title, problem?, context?, objective?, requirements[], optionalRequirements[],
   deliverables[], acceptanceCriteria[], architectureNotes?, isDemo, status) — sem `steps` (Json),
   `repoUrl`/`deployUrl`/`decisions`/`retrospective` ficam em `ProjectSubmission` (por usuário,
-  não no `Project` template)
+  não no `Project` template). O "Projeto Final: APEX Academy" (importado de
+  `Grade_Curricular.md` — ver `docs/CURRICULUM_IMPORT.md`) é uma linha comum desta mesma tabela,
+  não uma entidade separada; `deliverables[]` guarda os 29 componentes do produto SaaS descrito
+  no arquivo-fonte. Não confundir com "AI Labs" (seção 9 abaixo), que é a empresa fictícia cuja
+  infraestrutura evolui ao longo da formação — são conceitos distintos, ver `docs/DECISIONS.md`.
 - **ProjectSubmission**(userId, projectId, repoUrl?, deployUrl?, decisions?, retrospective?,
   status: `OPEN|DONE|CANCELLED`) — `@@unique([userId, projectId])`; é a submissão do estudante,
   separada do template do projeto

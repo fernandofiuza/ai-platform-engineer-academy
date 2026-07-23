@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { parseCursoMarkdown, type ParsedPhase } from "./parser";
+import { parseGradeCurricular } from "./grade-parser";
+import { distributeWeeksAcrossModules } from "./grade-distribution";
 
 export const PROGRAM_SLUG = "ai-platform-engineer-academy";
 
@@ -293,6 +295,150 @@ export async function importCurriculum(options: {
     createdCount,
     updatedCount,
     skippedCount,
+    warnings: parsed.warnings,
+  };
+}
+
+export type ModuleGridReport = {
+  skipped: boolean;
+  message: string;
+  importJobId: string | null;
+  updatedCount: number;
+  skippedCount: number;
+  projectCreated: boolean;
+  warnings: { excerpt: string; reason: string }[];
+};
+
+/**
+ * Distribui os módulos de Grade_Curricular.md pelas semanas 1..N já existentes (criadas por
+ * `importCurriculum`), atualizando apenas título/objetivo — nunca `phaseId` (o vínculo com o
+ * semestre não muda) e nunca semanas com `isManuallyEdited = true` (edições administrativas são
+ * sempre preservadas). O bloco "PROJETO FINAL" vira um `Project` (não semanas) — ver
+ * docs/CURRICULUM_IMPORT.md.
+ */
+export async function importModuleGrid(options: {
+  sourceFile: string;
+  rawContent: string;
+  force?: boolean;
+}): Promise<ModuleGridReport> {
+  const { sourceFile, rawContent, force = false } = options;
+  const contentHash = createHash("sha256").update(rawContent).digest("hex");
+
+  const lastSuccessfulJob = await db.importJob.findFirst({
+    where: { sourceFile, contentHash },
+    orderBy: { startedAt: "desc" },
+  });
+
+  if (lastSuccessfulJob && !force) {
+    return {
+      skipped: true,
+      message: "Conteúdo idêntico à última importação bem-sucedida — nada a fazer.",
+      importJobId: lastSuccessfulJob.id,
+      updatedCount: 0,
+      skippedCount: 0,
+      projectCreated: false,
+      warnings: [],
+    };
+  }
+
+  const program = await db.program.findUnique({ where: { slug: PROGRAM_SLUG } });
+  if (!program) {
+    throw new Error("Program não encontrado — rode a importação de Curso.md primeiro.");
+  }
+
+  const parsed = parseGradeCurricular(rawContent);
+  const ranges = distributeWeeksAcrossModules(program.totalWeeks, parsed.modules);
+
+  const weeks = await db.week.findMany({
+    where: { programId: program.id, number: { gt: 0 } },
+    orderBy: { number: "asc" },
+  });
+  const weekByNumber = new Map(weeks.map((w) => [w.number, w]));
+
+  const job = await db.importJob.create({ data: { sourceFile, contentHash } });
+
+  let updatedCount = 0;
+  let skippedCount = 0;
+
+  for (const range of ranges) {
+    for (let number = range.startWeek; number <= range.endWeek; number++) {
+      const week = weekByNumber.get(number);
+      if (!week) continue;
+
+      if (week.isManuallyEdited) {
+        skippedCount++;
+        continue;
+      }
+
+      await db.week.update({
+        where: { id: week.id },
+        data: {
+          title: `Semana ${number} — ${range.module.name}`,
+          objective: range.module.projectDescription
+            ? `Projeto do módulo: ${range.module.projectDescription}`
+            : undefined,
+        },
+      });
+      updatedCount++;
+    }
+  }
+
+  let projectCreated = false;
+  if (parsed.finalProject) {
+    const existingProject = await db.project.findFirst({
+      where: { title: `Projeto Final: ${parsed.finalProject.title}` },
+    });
+
+    if (!existingProject) {
+      await db.project.create({
+        data: {
+          title: `Projeto Final: ${parsed.finalProject.title}`,
+          problem: "Consolidar toda a formação em um produto comercial real.",
+          context: parsed.finalProject.description,
+          objective: `Construir a plataforma ${parsed.finalProject.title} como projeto de encerramento da formação.`,
+          deliverables: parsed.finalProject.components,
+          isDemo: false,
+          status: "PLANNED",
+        },
+      });
+      projectCreated = true;
+    }
+  }
+
+  const report = {
+    sourceFile,
+    contentHash,
+    updatedCount,
+    skippedCount,
+    projectCreated,
+    warnings: parsed.warnings,
+  };
+
+  await db.importJob.update({
+    where: { id: job.id },
+    data: {
+      finishedAt: new Date(),
+      createdCount: projectCreated ? 1 : 0,
+      updatedCount,
+      skippedCount,
+      report,
+      warnings: {
+        create: parsed.warnings.map((w) => ({ excerpt: w.excerpt, reason: w.reason })),
+      },
+    },
+  });
+
+  logger.info("grade curricular import finished", report);
+
+  return {
+    skipped: false,
+    message: `Grade importada: ${updatedCount} semana(s) atualizada(s), ${skippedCount} preservada(s) (edição manual)${
+      projectCreated ? ", Projeto Final criado" : ""
+    }.`,
+    importJobId: job.id,
+    updatedCount,
+    skippedCount,
+    projectCreated,
     warnings: parsed.warnings,
   };
 }

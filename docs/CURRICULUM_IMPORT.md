@@ -1,4 +1,12 @@
-# Curriculum Import — `Curso.md`
+# Curriculum Import
+
+> Existem **dois** importadores independentes, para dois arquivos-fonte diferentes: `Curso.md`
+> (Fase 2, seção abaixo) e `Grade_Curricular.md` (grade real e detalhada, seção
+> "Curriculum Import — `Grade_Curricular.md`" ao final deste documento, adicionada nesta sessão).
+> Eles não compartilham parser (os formatos são diferentes), mas seguem o mesmo padrão de
+> idempotência via `ImportJob.contentHash`.
+
+## Curso.md
 
 > Atualizado na Fase 2 para refletir a implementação real
 > (`src/modules/curriculum-import/{parser,service}.ts`). A versão original deste documento
@@ -95,3 +103,83 @@ parsing) e, em seguida, cria 2 aulas de demonstração na Semana 0 com conteúdo
 `Curso.md` (nome/subtítulo/duração do programa e o princípio pedagógico "nunca estudar uma
 tecnologia sem aplicá-la"), além de competências, 1 projeto, 1 laboratório e o catálogo de
 badges (ver `docs/DECISIONS.md`, seção Fase 4).
+
+## Curriculum Import — `Grade_Curricular.md`
+
+> Adicionado nesta sessão (pós-Fase 6), a pedido do usuário. `Curso.md` (seção acima) descreve a
+> formação em prosa genérica; `Grade_Curricular.md` é a grade curricular real, criada pelo
+> usuário, com os módulos efetivos da formação. Este importador **não substitui** o de
+> `Curso.md` — ambos coexistem, com fontes, parsers e comandos próprios. Ver `docs/DECISIONS.md`
+> ("Importação de `Grade_Curricular.md`") para o contexto completo da decisão.
+
+### Formato do arquivo-fonte
+
+`Grade_Curricular.md` tem uma estrutura semi-regular, diferente de `Curso.md`:
+- Cada módulo começa com uma linha `🟦/🟩/🟨/🟥/🟪 MÓDULO N — Nome` ou `🟦/🟩/🟨/🟥/🟪 Nome`
+  (trilhas sem número, ex.: `🟩 IA`, `🟪 Engenharia de Soluções`).
+- Seguem linhas de disciplina/tópico (uma tecnologia ou conceito por linha) e, opcionalmente,
+  uma linha `Projeto` seguida da descrição do projeto do módulo.
+- O bloco `🏆 PROJETO FINAL` encerra o arquivo e descreve o projeto de encerramento da formação
+  ("APEX Academy"): uma frase com `"chamada <Título>."` e uma lista de componentes após a linha
+  `"Ela será composta por:"`.
+
+### O que é extraído
+
+- **`ParsedModule[]`** (`grade-parser.ts`, `parseModules()`): nome do módulo, peso (ver
+  heurística abaixo) e descrição do projeto (se houver), na ordem em que aparecem, até o
+  cabeçalho `🏆 PROJETO FINAL`.
+- **`ParsedFinalProject`** (`parseFinalProject()`): título, descrição e a lista de componentes do
+  bloco `🏆 PROJETO FINAL`.
+- **Peso do módulo** (`countTopicWeight()`): conta linhas que não terminam em "." e não são
+  rótulos conhecidos (`Disciplinas`/`Objetivo`/`Projeto`) como "tópicos"; aplica um piso mínimo
+  de 4 para módulos com descrição muito resumida (n8n, OpenClaw, SaaS caem nesse piso — são
+  estimativas, não contagens literais). Ver `docs/DECISIONS.md`.
+
+### Distribuição das semanas
+
+`grade-distribution.ts` (`distributeWeeksAcrossModules()`) distribui as **104 semanas já
+existentes** proporcionalmente ao peso de cada módulo, usando o método dos maiores restos
+(Hamilton): cada módulo recebe `floor(peso/pesoTotal * 104)` semanas, e as semanas restantes (por
+arredondamento) vão para os módulos com maior parte fracionária descartada, garantindo que a
+soma feche exatamente em 104. Módulos maiores (mais tópicos, ex.: Fundamentos da Computação,
+AWS) recebem mais semanas; módulos no piso mínimo recebem o mínimo (2, na distribuição atual).
+
+### Aplicação no banco (`importModuleGrid()`, `service.ts`)
+
+Para cada faixa de semanas do módulo:
+- Se a `Week` tem `isManuallyEdited = true` → **pulada** (não sobrescrita), contada como
+  "preservada" no relatório.
+- Caso contrário → atualiza apenas `title` (`"Semana N — <Nome do Módulo>"`) e `objective`
+  (`"Projeto do módulo: <descrição>"`, se houver descrição de projeto). `status` e `phaseId`
+  (vínculo com o semestre) **não são tocados**.
+
+Para o Projeto Final: busca um `Project` existente por título
+(`"Projeto Final: <Título>"`); se não existir, cria um com os componentes extraídos como
+`deliverables[]` e `status = PLANNED`. Isso **não** cria uma entidade nova no schema — reaproveita
+o modelo `Project` já existente desde a Fase 4 (ver `docs/DECISIONS.md`, "AI Labs vs. APEX
+Academy").
+
+### Idempotência
+
+Mesmo padrão do importador de `Curso.md`: uma `ImportJob` por execução, com
+`contentHash` (SHA-256 do conteúdo de `Grade_Curricular.md`). Reimportação com o mesmo hash não
+toca no banco, a menos que `--force` seja usado.
+
+### Comandos
+
+```bash
+npm run curriculum:preview-grade   # dry-run: mostra a distribuição calculada, sem gravar nada
+npm run curriculum:import-grade    # aplica de verdade (título/objetivo das semanas + Projeto Final)
+npm run curriculum:import-grade -- --force   # força reimportação mesmo com hash igual
+```
+
+`curriculum:preview-grade` (`scripts/preview-grade-import.ts`) é somente leitura (parseia,
+calcula a distribuição e cruza com o estado atual do banco para sinalizar semanas
+`isManuallyEdited`), pensado para revisão humana antes de rodar a importação real — foi assim
+que a distribuição de 24 módulos/104 semanas foi validada com o usuário antes de aplicar.
+
+### Estado após a última execução real
+
+24 módulos reconhecidos (peso total 229), 104 semanas atualizadas, 0 preservadas (nenhuma edição
+manual existia no momento da importação), Projeto Final "APEX Academy" criado com 29
+componentes como `deliverables`. Zero avisos.

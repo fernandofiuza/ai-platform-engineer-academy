@@ -365,5 +365,75 @@ verificação de acessibilidade desta fase. Corrigido para não deixar "botões 
 de redefinição é mostrado na tela (não enviado por e-mail de verdade), já que envio real de
 e-mail exige infraestrutura externa fora do escopo do MVP.
 
+## 2026-07-23 — Importação de `Grade_Curricular.md` (grade real, pós-Fase 6)
+
+**Decisão**: além do importador de `Curso.md` (Fase 2), foi criado um segundo importador
+(`src/modules/curriculum-import/{grade-parser,grade-distribution}.ts`, função
+`importModuleGrid()` em `service.ts`, comando `npm run curriculum:import-grade`) para o arquivo
+`Grade_Curricular.md`, criado pelo usuário com os módulos reais da formação (Módulo 0 a 10, mais
+IA/RAG/n8n/MCP/OpenCode/Hermes/OpenClaw/Multiagentes/Segurança/Observabilidade/FinOps/SaaS/
+Engenharia de Soluções, 24 módulos no total). Ele distribui as 104 semanas já existentes
+proporcionalmente ao "peso" de cada módulo (contagem de linhas de tópico, com piso mínimo de 4
+para módulos descritos de forma muito resumida como n8n/OpenClaw/SaaS), usando o método dos
+maiores restos (Hamilton) para a soma bater exatamente com 104. Atualiza apenas `title` e
+`objective` de cada `Week` (o `phaseId`/semestre original não é tocado). O campo
+`Week.isManuallyEdited` (ver decisão abaixo) foi adicionado exatamente para este caso: proteger
+semanas editadas manualmente pelo CRUD administrativo contra reimportação.
+**Motivo**: instrução explícita do usuário — `Curso.md` (Fase 2) descrevia a formação em prosa
+genérica; `Grade_Curricular.md` é a grade curricular real e detalhada, e deveria substituir os
+títulos placeholder ("Semana N — a definir") sem recriar a estrutura de 104 semanas nem duplicar
+o importador existente.
+
+## 2026-07-23 — AI Labs vs. APEX Academy: entidades separadas; Projeto Final vira `Project`
+
+**Decisão**: "AI Labs" (empresa fictícia cuja infraestrutura evolui ao longo da formação — ver
+seção 9 de `docs/DATA_MODEL.md`, `Department`/`ArchitectureMilestone`) e "APEX Academy" (o
+produto SaaS educacional que o aluno constrói como projeto de encerramento, descrito no bloco
+"🏆 PROJETO FINAL" de `Grade_Curricular.md`) são mantidas como conceitos distintos — nenhum nome
+substitui o outro em nenhuma entidade existente. O Projeto Final não ganhou um domínio/tabela
+nova: `importModuleGrid()` cria (idempotente, por título) um único `Project` chamado
+`"Projeto Final: APEX Academy"`, com os 29 componentes listados no arquivo como
+`deliverables[]`, reaproveitando o modelo `Project` já existente desde a Fase 4.
+**Motivo**: instrução explícita do usuário para não confundir as duas entidades e para reaproveitar
+o modelo de dados existente (`Project`/`Laboratory`) em vez de criar um novo domínio só para o
+projeto final.
+
+## 2026-07-23 — `Week.isManuallyEdited` finalmente adicionado ao schema
+
+**Decisão**: o campo `isManuallyEdited Boolean @default(false)` (descrito desde a Fase 2 em
+`docs/CURRICULUM_IMPORT.md`, mas adiado — ver decisão "`isManuallyEdited` da importação adiado"
+acima) foi adicionado ao modelo `Week` nesta sessão. `updateWeekAction` (CRUD administrativo,
+`src/modules/admin-curriculum/actions.ts`) agora grava `isManuallyEdited: true` a cada edição
+salva pelo admin; `importModuleGrid()` pula (não sobrescreve) qualquer semana com esse campo
+`true`, apenas contando-a como "preservada" no relatório.
+**Motivo**: a precondição registrada na Fase 2 (CRUD administrativo existir) só se tornou
+verdadeira na Fase 6; a necessidade real surgiu agora, com a reimportação da grade curricular
+tendo que conviver com possíveis edições manuais futuras sem sobrescrevê-las.
+
+## 2026-07-23 — Heurística de peso do módulo: linhas sem ponto final = tópico
+
+**Decisão**: `countTopicWeight()` em `grade-parser.ts` conta como "tópico" (peso do módulo)
+qualquer linha do bloco do módulo que não termine em "." e não seja um rótulo conhecido
+(`Disciplinas`/`Objetivo`/`Projeto`), com piso mínimo de 4 tópicos por módulo. Módulos com
+descrição muito resumida em prosa (ex.: "n8n — Tudo.", "SaaS — Todo conhecimento reunido.") caem
+no piso mínimo em vez de peso zero.
+**Motivo**: `Grade_Curricular.md` não tem uma marcação explícita de "peso"/duração por módulo;
+frases de prosa (que terminam em ponto) descrevem objetivos/projetos, enquanto listas de
+tecnologias/tópicos (que não terminam em ponto) são o sinal mais confiável e simples disponível
+no texto para aproximar o tamanho relativo de cada módulo, sem inventar uma métrica externa ao
+arquivo-fonte.
+
+## 2026-07-23 — "Engenharia de Soluções" incorporada como módulo formal no arquivo-fonte
+
+**Decisão**: o texto original de `Grade_Curricular.md` mencionava "Engenharia de Soluções" como
+uma disciplina adicional em prosa solta, fora do padrão de cabeçalho `🟦 MÓDULO N — Nome` usado
+pelos demais módulos (e também fora da área varrida pelo parser, que para no cabeçalho "🏆
+PROJETO FINAL"). A pedido do usuário, o arquivo foi editado para incluir um cabeçalho de módulo
+formal (`🟪 Engenharia de Soluções`, com disciplinas e projeto) antes do bloco do Projeto Final,
+e o texto duplicado ao final do arquivo foi resumido para não repetir o mesmo conteúdo em prosa.
+**Motivo**: manter o parser simples e sem casos especiais (nenhuma exceção de parsing para texto
+fora do padrão) — a estrutura correta é editar o arquivo-fonte para seguir o mesmo padrão que
+todos os outros módulos, não ensinar o parser a reconhecer um formato solto único.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

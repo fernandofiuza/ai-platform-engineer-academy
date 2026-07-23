@@ -41,6 +41,7 @@ export async function updateWeekAction(input: UpdateWeekInput) {
       title: parsed.data.title,
       objective: parsed.data.objective,
       status: parsed.data.status,
+      isManuallyEdited: true,
     },
   });
 

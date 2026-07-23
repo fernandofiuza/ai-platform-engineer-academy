@@ -424,4 +424,7 @@ produto foram entregues.
   6 semanas para este módulo, não 7; confirmado consultando os títulos das semanas no banco
   antes de aplicar).** 30 aulas diárias geradas, aprofundadas pela persona Professor via Claude
   real e aprovadas. Confirmado por varredura completa: 0 aulas em `DRAFT` no banco.
+- **Módulo Engenharia de Software regenerado no formato por dia (semanas 32–37).** 30 aulas
+  diárias geradas, aprofundadas pela persona Professor via Claude real e aprovadas. Confirmado
+  por varredura completa: 0 aulas em `DRAFT` no banco.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

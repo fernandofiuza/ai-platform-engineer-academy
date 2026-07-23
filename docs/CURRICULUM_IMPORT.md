@@ -27,17 +27,27 @@ original e sinalizando ambiguidade em vez de inventar estrutura.
 - **Semanas 1–104**: criadas vazias (`status = PLANNED`, título `"Semana N — a definir"`),
   distribuídas nos 6 semestres em faixas contíguas o mais uniformes possível (ver
   `docs/DECISIONS.md`).
+- **Departamentos da AI Labs** (Fase 4): bloco delimitado pelas âncoras
+  `"Teremos departamentos"` … `"Cada módulo contribuirá para um departamento."`. Linhas
+  prefixadas com "📁 " viram `Department`, na ordem em que aparecem. Resultado: 10 departamentos.
+- **Linha do tempo de arquitetura da AI Labs** (Fase 4): bloco delimitado pelas âncoras
+  `"Ela começará assim:"` … `"Você verá a arquitetura crescer passo a passo."`. Linhas iguais a
+  `"↓"` são separadores (ignoradas); a frase de transição `"Depois de dois anos estará assim:"`
+  também é ignorada; as demais linhas viram `ArchitectureMilestone`, na ordem em que aparecem.
+  Resultado: 24 marcos (`GitHub` → … → `CI/CD`). Todos entram como `status = PLANNED` — a
+  importação nunca marca um marco como alcançado; isso é uma ação explícita de um ADMIN em
+  `/ai-labs`.
 
 ## O que ainda NÃO é extraído (fica para fases futuras)
 
-- Áreas de conhecimento / tecnologias citadas → `Technology`/`Skill` (Fase 4, junto com o mapa de
-  competências).
-- Departamentos e linha do tempo de arquitetura da AI Labs → `Department`/`ArchitectureMilestone`
-  (Fase 4, junto com a seção "AI Labs" da plataforma).
+- Áreas de conhecimento / tecnologias citadas como entidade `Technology` própria (a Fase 4 criou
+  `Skill`, mas não `Technology` — ver `docs/DECISIONS.md`).
 - Conteúdo semana a semana (1–104), módulos/trilhas dentro de cada semestre, projetos/
-  laboratórios específicos, competências com critérios de nível, certificações internas,
-  bibliografia oficial — nada disso está em `Curso.md` de forma extraível; continuam como
-  estrutura vazia/planejada até serem definidos manualmente pela área administrativa (Fase 6).
+  laboratórios específicos com requisitos detalhados, competências com critérios de nível
+  oficiais, certificações internas, bibliografia oficial — nada disso está em `Curso.md` de
+  forma extraível; continuam como estrutura vazia/planejada (ou com só 1 item demonstrativo,
+  no caso de projetos/laboratórios) até serem definidos manualmente pela área administrativa
+  (Fase 6).
 
 ## Avisos (`ImportWarning`)
 
@@ -46,7 +56,10 @@ Gerados quando:
 2. o número de semestres encontrados é diferente de 6;
 3. o bloco da Semana 0 não é encontrado;
 4. há linhas dentro do bloco da Semana 0 antes de qualquer categoria conhecida;
-5. uma das 12 categorias esperadas não aparece no bloco.
+5. uma das 12 categorias esperadas não aparece no bloco;
+6. o bloco de departamentos não é encontrado, tem linha(s) sem o prefixo "📁 ", ou falta algum
+   dos 10 departamentos esperados;
+7. o bloco da linha do tempo de arquitetura não é encontrado ou não rende nenhum marco.
 
 Na execução atual contra `Curso.md`, **zero avisos** são gerados (todas as âncoras batem).
 
@@ -80,4 +93,5 @@ npm run curriculum:import -- --force   # força reimportação mesmo com hash ig
 `prisma/seed.ts` chama a mesma função `importCurriculum()` (não há duas fontes de verdade de
 parsing) e, em seguida, cria 2 aulas de demonstração na Semana 0 com conteúdo derivado de
 `Curso.md` (nome/subtítulo/duração do programa e o princípio pedagógico "nunca estudar uma
-tecnologia sem aplicá-la").
+tecnologia sem aplicá-la"), além de competências, 1 projeto, 1 laboratório e o catálogo de
+badges (ver `docs/DECISIONS.md`, seção Fase 4).

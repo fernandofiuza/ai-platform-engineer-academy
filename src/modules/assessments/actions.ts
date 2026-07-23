@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { awardXp, checkAndAwardBadges } from "@/modules/gamification/service";
 import { submitAttemptSchema, type SubmitAttemptInput } from "./schema";
 
 export async function submitAttemptAction(input: SubmitAttemptInput) {
@@ -44,6 +45,12 @@ export async function submitAttemptAction(input: SubmitAttemptInput) {
       timeSpentSeconds: parsed.data.timeSpentSeconds,
     },
   });
+
+  await awardXp(session.user.id, "quiz_submitted", 10, {
+    type: "Assessment",
+    id: parsed.data.assessmentId,
+  });
+  await checkAndAwardBadges(session.user.id);
 
   revalidatePath("/assessments");
   revalidatePath(`/assessments/${parsed.data.assessmentId}`);

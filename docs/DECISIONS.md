@@ -221,5 +221,55 @@ Prisma (equivalente a `ILIKE`), não `tsvector`/`to_tsquery` do PostgreSQL.
 o volume atual de dados e evita adicionar migrations com índices GIN/`tsvector` antes de haver
 necessidade real (poucas anotações por usuário).
 
+## 2026-07-23 — Fase 4: sem `ProjectEvidence`/`SkillEvidence` polimórficas
+
+**Decisão**: `Project`/`Laboratory` têm campos de evidência diretos (`repoUrl`, `deployUrl`,
+`evidenceUrl`, `notes`) em vez de uma tabela `ProjectEvidence` genérica com FK polimórfica
+(`projectId?`/`laboratoryId?`). Da mesma forma, evidência de competência não é persistida em
+uma tabela `SkillEvidence` — é computada por query (`LessonCompletion` via `LessonSkill`) toda
+vez que a página de competências é aberta.
+**Motivo**: com 1 projeto e 1 laboratório de demonstração, uma tabela polimórfica genérica
+adicionaria complexidade (FK opcional dupla, sem constraint de "exatamente uma preenchida" no
+nível do banco) sem nenhum ganho real ainda. Entra quando houver múltiplos tipos de evidência
+por projeto/laboratório que justifiquem a modelagem genérica.
+
+## 2026-07-23 — Nível de competência: derivado, não uma cache persistida atualizada em lote
+
+**Decisão**: `UserSkillProgress.level` é recalculado e gravado (upsert) apenas para as
+competências ligadas à aula recém-concluída, dentro da própria `completeLessonAction` — não há
+um job/cron que recalcula tudo periodicamente.
+**Motivo**: o gatilho (concluir uma aula) é o único evento que pode mudar o nível hoje (só
+`LessonCompletion` conta como evidência); recalcular tudo em lote seria trabalho especulativo
+sem outro gatilho que o justifique ainda. Quando projetos/laboratórios também contarem como
+evidência de competência (exigiria `ProjectSkill`/`LaboratorySkill`, não criados nesta fase),
+o recálculo ganha mais gatilhos, não um job em lote.
+
+## 2026-07-23 — `GitHubProvider`: interface criada, nunca chamada
+
+**Decisão**: `src/modules/portfolio/github-provider.ts` define a interface e uma implementação
+`UnconfiguredGitHubProvider` que lança erro ao ser chamada — nenhum código do produto invoca
+esse provider; o cadastro de repositório no portfólio é 100% manual (campo de texto).
+**Motivo**: exigência explícita do prompt ("estruture uma interface `GitHubProvider` para
+integração futura... não torne a integração externa obrigatória"). Implementar a chamada real
+à API do GitHub exigiria um token de acesso e rate limiting — fora do escopo do MVP.
+
+## 2026-07-23 — Gamificação: badge "primeira integração com IA" omitido
+
+**Decisão**: o catálogo de 9 badges não inclui "primeira integração com IA" (citado como
+exemplo na Etapa 18 do prompt original).
+**Motivo**: o tutor de IA é a Fase 5, ainda não implementada — não há nenhum evento real que
+possa disparar essa concessão hoje. O badge entra no catálogo junto com a Fase 5, para não ficar
+como uma condição morta no código (`checkAndAwardBadges` só concede badges com condição real
+verificável).
+
+## 2026-07-23 — AI Labs: sem diagrama Mermaid, timeline em componente próprio
+
+**Decisão**: a linha do tempo de arquitetura em `/ai-labs` é uma lista ordenada estilizada
+(componente `MilestoneTimeline`), não um diagrama Mermaid renderizado.
+**Motivo**: o prompt cita "diagramas Mermaid" como parte da página da AI Labs, mas isso exigiria
+adicionar a biblioteca `mermaid` (ou equivalente) só para esta página — peso extra de bundle
+para um único caso de uso que uma lista ordenada já comunica com clareza equivalente. Fica
+registrado como possível melhoria visual futura, não uma lacuna funcional.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

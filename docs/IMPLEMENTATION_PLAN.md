@@ -37,12 +37,17 @@ Legenda: `[ ]` não iniciado · `[~]` em andamento · `[x]` concluído
 - [x] Flashcards (SM-2 simplificado, com testes unitários em `tests/unit/sm2.test.ts`)
 
 ## Fase 4 — Prática profissional
-- [ ] Projetos
-- [ ] Laboratórios
-- [ ] Mapa de competências
-- [ ] Portfólio (checklist de qualidade + GitHubProvider desacoplado)
-- [ ] AI Labs (departamentos + timeline de arquitetura)
-- [ ] Gamificação (XP, níveis, streak, badges)
+- [x] Projetos (1 demonstrativo — "Construir a própria plataforma de estudos" — com submissão
+      real: repo/deploy/decisões/retrospectiva/status)
+- [x] Laboratórios (1 demonstrativo — preparar o ambiente Docker — com conclusão real)
+- [x] Mapa de competências (14 competências extraídas de `Curso.md`, nível derivado de
+      evidências reais — aulas concluídas via `LessonSkill` —, nunca autoavaliado)
+- [x] Portfólio (checklist de qualidade de 14 itens + `GitHubProvider` desacoplado, não usado
+      ainda)
+- [x] AI Labs (10 departamentos + 24 marcos de arquitetura importados de `Curso.md`; admin
+      marca "alcançado")
+- [x] Gamificação (XP por ação, nível derivado, sequência de estudo já existente, 9 badges com
+      condições reais verificadas a cada ação relevante)
 
 ## Fase 5 — IA
 - [ ] Interface `AIProvider`
@@ -138,3 +143,30 @@ Legenda: `[ ]` não iniciado · `[~]` em andamento · `[x]` concluído
   confirmado contra o mesmo Postgres. Decisões (schema mínimo por entrega vertical mantido,
   escopo de anotações, estimativa simples do planejador) registradas em `docs/DECISIONS.md`.
   Próximo: Fase 4 — Prática profissional.
+- **Fase 4 concluída.** Schema novo (`Skill`/`LessonSkill`/`UserSkillProgress`,
+  `Project`/`ProjectSubmission`, `Laboratory`/`LaboratoryCompletion`, `PortfolioItem`,
+  `Department`/`ArchitectureMilestone`, `Badge`/`UserBadge`/`ExperienceEvent`), uma migration
+  puramente aditiva. O importador de `Curso.md` foi estendido (âncoras "Teremos departamentos"
+  e "Ela começará assim:") para extrair os 10 departamentos e os 24 marcos da linha do tempo de
+  arquitetura da AI Labs — deliberadamente adiado da Fase 2 — com 0 avisos na execução real.
+  Projetos (`/projects`, `/projects/[id]`) e Laboratórios (`/labs`, `/labs/[id]`) com 1 item
+  demonstrativo cada (a própria plataforma como projeto; preparar o Docker como laboratório) e
+  submissão/conclusão real por usuário. Mapa de competências (`/skills`): 14 competências
+  extraídas das áreas de conhecimento citadas em `Curso.md`, nível (`NOT_STARTED` →
+  `COMPETENT`) recalculado automaticamente a partir de evidências reais (aulas concluídas
+  ligadas via `LessonSkill`) sempre que uma aula é concluída — nunca uma autoavaliação.
+  Portfólio (`/portfolio`): checklist de 14 itens de qualidade por repositório, interface
+  `GitHubProvider` desacoplada (não chamada ainda). AI Labs (`/ai-labs`): departamentos +
+  timeline, com marcos "alcançados" só por ação explícita de um ADMIN (a importação nunca
+  infere conclusão). Gamificação: `ExperienceEvent` (XP por aula/sessão/quiz/flashcard/
+  laboratório/projeto concluído), nível derivado (100 XP por nível), 9 badges com condições
+  reais (`checkAndAwardBadges`, chamado após cada ação relevante), painel de nível/badges no
+  dashboard. Verificado ao vivo: `npm run typecheck`/`lint`/`build` sem erros; `npm run
+  test:unit` (6/6); smoke test Playwright cobrindo submissão de projeto, conclusão de
+  laboratório, mapa de competências, portfólio (adicionar + marcar checklist), AI Labs
+  (departamentos + timeline + toggle exclusivo de admin) e badges aparecendo no dashboard —
+  14/14 checks (1 falso-negativo de timing no próprio script de smoke, confirmado à parte);
+  `docker compose --profile app up --build` confirmado contra o mesmo Postgres. Decisões
+  (evidência de competência computada, não persistida como cache; sem ProjectEvidence/
+  SkillEvidence polimórficas; GitHubProvider não integrado ainda) registradas em
+  `docs/DECISIONS.md`. Próximo: Fase 5 — IA.

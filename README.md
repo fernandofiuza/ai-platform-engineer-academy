@@ -130,10 +130,13 @@ docs/              documentação do produto/arquitetura/decisões
 Este é um projeto em construção, entregue em fases verticais (ver
 `docs/IMPLEMENTATION_PLAN.md`). Concluídas: **Fase 1** (fundação — auth, layout, design system),
 **Fase 2** (currículo — roadmap real, Semana 0 interativa, página de aula, importador de
-`Curso.md`) e **Fase 3** (aprendizagem — sessões de estudo com cronômetro persistente,
+`Curso.md`), **Fase 3** (aprendizagem — sessões de estudo com cronômetro persistente,
 planejador + metas, calendário mensal, anotações com busca, avaliações com correção automática,
-flashcards com repetição espaçada). As demais áreas (projetos, laboratórios, competências,
-portfólio, AI Labs, gamificação, tutor de IA, administração além da importação) ainda estão com
-páginas de placeholder (`"Planejado para a Fase N"`) em vez de dados reais — isso é intencional,
-não um bug. A grade semanal (semanas 1–104) está estruturada mas vazia (`"a definir"`), porque
+flashcards com repetição espaçada) e **Fase 4** (prática profissional — 1 projeto e 1
+laboratório demonstrativos com submissão/conclusão real, mapa de competências com nível
+derivado de evidências reais, portfólio com checklist de qualidade, AI Labs com departamentos e
+linha do tempo de arquitetura importados de `Curso.md`, gamificação com XP/nível/badges). As
+demais áreas (tutor de IA, administração além da importação) ainda estão com páginas de
+placeholder (`"Planejado para a Fase N"`) em vez de dados reais — isso é intencional, não um
+bug. A grade semanal (semanas 1–104) está estruturada mas vazia (`"a definir"`), porque
 `Curso.md` não define conteúdo semana a semana — só os 6 semestres e a Semana 0.

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { awardXp } from "@/modules/gamification/service";
 import { computeNextReview } from "./sm2";
 import { getLastReview } from "./queries";
 import { reviewFlashcardSchema, type ReviewFlashcardInput } from "./schema";
@@ -43,6 +44,11 @@ export async function reviewFlashcardAction(input: ReviewFlashcardInput) {
       easeFactor,
       nextReviewAt,
     },
+  });
+
+  await awardXp(session.user.id, "flashcard_reviewed", 2, {
+    type: "Flashcard",
+    id: parsed.data.flashcardId,
   });
 
   revalidatePath("/flashcards");

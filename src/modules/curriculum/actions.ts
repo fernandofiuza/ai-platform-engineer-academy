@@ -8,6 +8,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { importCurriculum } from "@/modules/curriculum-import/service";
+import { awardXp, checkAndAwardBadges } from "@/modules/gamification/service";
+import { recomputeSkillsForLesson } from "@/modules/skills/service";
 import {
   checklistItemUpdateSchema,
   completeLessonSchema,
@@ -55,6 +57,8 @@ export async function updateChecklistItemAction(input: ChecklistItemUpdateInput)
     },
   });
 
+  await checkAndAwardBadges(session.user.id);
+
   revalidatePath("/roadmap");
   return { error: null };
 }
@@ -92,8 +96,13 @@ export async function completeLessonAction(input: CompleteLessonInput) {
     },
   });
 
+  await awardXp(session.user.id, "lesson_completed", 10, { type: "Lesson", id: parsed.data.lessonId });
+  await recomputeSkillsForLesson(session.user.id, parsed.data.lessonId);
+  await checkAndAwardBadges(session.user.id);
+
   revalidatePath("/learn");
   revalidatePath(`/learn/${parsed.data.lessonId}`);
+  revalidatePath("/skills");
   return { error: null };
 }
 

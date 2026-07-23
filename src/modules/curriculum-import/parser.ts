@@ -30,10 +30,22 @@ export type ParseWarning = {
   targetEntityHint?: string;
 };
 
+export type ParsedDepartment = {
+  name: string;
+  order: number;
+};
+
+export type ParsedArchitectureMilestone = {
+  order: number;
+  title: string;
+};
+
 export type ParseResult = {
   program: ParsedProgram;
   phases: ParsedPhase[];
   checklistItems: ParsedChecklistItem[];
+  departments: ParsedDepartment[];
+  architectureMilestones: ParsedArchitectureMilestone[];
   warnings: ParseWarning[];
 };
 
@@ -172,6 +184,120 @@ function parseChecklist(raw: string, warnings: ParseWarning[]): ParsedChecklistI
   return items;
 }
 
+const DEPARTMENT_NAMES = [
+  "Infraestrutura",
+  "Backend",
+  "Front-end",
+  "IA",
+  "DevOps",
+  "Cloud",
+  "Segurança",
+  "Dados",
+  "Produto",
+  "Arquitetura",
+];
+
+function parseDepartments(raw: string, warnings: ParseWarning[]): ParsedDepartment[] {
+  const startMarker = "Teremos departamentos";
+  const endMarker = "Cada módulo contribuirá para um departamento.";
+
+  const startIndex = raw.indexOf(startMarker);
+  const endIndex = startIndex === -1 ? -1 : raw.indexOf(endMarker, startIndex);
+
+  if (startIndex === -1 || endIndex === -1) {
+    warnings.push({
+      excerpt: startMarker,
+      reason: "Bloco de departamentos da AI Labs não encontrado.",
+      targetEntityHint: "Department",
+    });
+    return [];
+  }
+
+  const block = raw.slice(startIndex + startMarker.length, endIndex);
+  const lines = block
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  const departments: ParsedDepartment[] = [];
+  let order = 0;
+  const leftover: string[] = [];
+
+  for (const line of lines) {
+    if (!line.startsWith("📁")) {
+      leftover.push(line);
+      continue;
+    }
+    const name = line.replace(/^📁\s*/, "").trim();
+    departments.push({ name, order: order++ });
+  }
+
+  if (leftover.length > 0) {
+    warnings.push({
+      excerpt: leftover.join(" / "),
+      reason: "Linha(s) no bloco de departamentos sem o prefixo esperado ('📁 ') — ignoradas.",
+      targetEntityHint: "Department",
+    });
+  }
+
+  const foundNames = new Set(departments.map((d) => d.name));
+  const missing = DEPARTMENT_NAMES.filter((name) => !foundNames.has(name));
+  if (missing.length > 0) {
+    warnings.push({
+      excerpt: missing.join(", "),
+      reason: `Departamento(s) esperado(s) não encontrado(s): ${missing.join(", ")}.`,
+      targetEntityHint: "Department",
+    });
+  }
+
+  return departments;
+}
+
+function parseArchitectureMilestones(
+  raw: string,
+  warnings: ParseWarning[]
+): ParsedArchitectureMilestone[] {
+  const startMarker = "Ela começará assim:";
+  const endMarker = "Você verá a arquitetura crescer passo a passo.";
+
+  const startIndex = raw.indexOf(startMarker);
+  const endIndex = startIndex === -1 ? -1 : raw.indexOf(endMarker, startIndex);
+
+  if (startIndex === -1 || endIndex === -1) {
+    warnings.push({
+      excerpt: startMarker,
+      reason: "Bloco da linha do tempo de arquitetura da AI Labs não encontrado.",
+      targetEntityHint: "ArchitectureMilestone",
+    });
+    return [];
+  }
+
+  const block = raw.slice(startIndex + startMarker.length, endIndex);
+  const lines = block
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  const transitionSentences = new Set(["Depois de dois anos estará assim:"]);
+
+  const milestones: ParsedArchitectureMilestone[] = [];
+  let order = 0;
+  for (const line of lines) {
+    if (line === "↓" || transitionSentences.has(line)) continue;
+    milestones.push({ order: order++, title: line });
+  }
+
+  if (milestones.length === 0) {
+    warnings.push({
+      excerpt: startMarker,
+      reason: "Nenhum marco de arquitetura reconhecido dentro do bloco esperado.",
+      targetEntityHint: "ArchitectureMilestone",
+    });
+  }
+
+  return milestones;
+}
+
 export function parseCursoMarkdown(raw: string): ParseResult {
   // Normaliza quebras de linha (Curso.md usa CRLF) para que as âncoras literais com "\n"
   // funcionem de forma previsível.
@@ -181,6 +307,8 @@ export function parseCursoMarkdown(raw: string): ParseResult {
   const program = parseProgram(normalized, warnings);
   const phases = parsePhases(normalized, warnings);
   const checklistItems = parseChecklist(normalized, warnings);
+  const departments = parseDepartments(normalized, warnings);
+  const architectureMilestones = parseArchitectureMilestones(normalized, warnings);
 
-  return { program, phases, checklistItems, warnings };
+  return { program, phases, checklistItems, departments, architectureMilestones, warnings };
 }

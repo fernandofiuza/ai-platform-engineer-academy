@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 
 import { db } from "../src/lib/db";
 import { importCurriculum, PROGRAM_SLUG } from "../src/modules/curriculum-import/service";
+import { seedBadgeCatalog } from "../src/modules/gamification/service";
 
 const DEMO_PASSWORD = "Demo@1234";
 
@@ -179,14 +180,114 @@ async function seedFlashcards(lessonIds: { welcomeLessonId: string; principleLes
   }
 }
 
+const SKILL_CATALOG = [
+  { name: "Engenharia de Software", category: "Fundamentos" },
+  { name: "Backend", category: "Desenvolvimento" },
+  { name: "Frontend", category: "Desenvolvimento" },
+  { name: "Banco de Dados", category: "Dados" },
+  { name: "Infraestrutura", category: "Infraestrutura" },
+  { name: "DevOps", category: "Infraestrutura" },
+  { name: "Cloud (AWS)", category: "Infraestrutura" },
+  { name: "Inteligência Artificial", category: "IA" },
+  { name: "Automação", category: "IA" },
+  { name: "Arquitetura Corporativa", category: "Arquitetura" },
+  { name: "Segurança", category: "Arquitetura" },
+  { name: "Observabilidade", category: "Arquitetura" },
+  { name: "Engenharia de Produto", category: "Soft Skills" },
+  { name: "Soft Skills", category: "Soft Skills" },
+];
+
+async function seedSkills(lessonIds: { welcomeLessonId: string; principleLessonId: string }) {
+  const skillByName = new Map<string, { id: string }>();
+  for (const skill of SKILL_CATALOG) {
+    const saved = await db.skill.upsert({
+      where: { name: skill.name },
+      update: { category: skill.category },
+      create: { name: skill.name, category: skill.category, status: "DRAFT" },
+    });
+    skillByName.set(skill.name, saved);
+  }
+
+  const links = [
+    { lessonId: lessonIds.welcomeLessonId, skillName: "Engenharia de Produto" },
+    { lessonId: lessonIds.principleLessonId, skillName: "Engenharia de Software" },
+  ];
+
+  for (const link of links) {
+    const skill = skillByName.get(link.skillName);
+    if (!skill) continue;
+    await db.lessonSkill.upsert({
+      where: { lessonId_skillId: { lessonId: link.lessonId, skillId: skill.id } },
+      update: {},
+      create: { lessonId: link.lessonId, skillId: skill.id },
+    });
+  }
+}
+
+async function seedProjectAndLab() {
+  const existingProject = await db.project.findFirst({
+    where: { title: "Construir a própria plataforma de estudos" },
+  });
+  if (!existingProject) {
+    await db.project.create({
+      data: {
+        title: "Construir a própria plataforma de estudos",
+        problem:
+          "Em vez de dezenas de projetos desconectados, a formação usa uma única plataforma que evolui a cada módulo.",
+        context: "Esta própria aplicação (AI Platform Engineer Academy) é o projeto contínuo da formação.",
+        objective: "Aplicar cada tecnologia estudada nesta plataforma, de forma verificável.",
+        requirements: [
+          "Publicar o código em um repositório Git com README",
+          "Registrar decisões técnicas relevantes",
+        ],
+        optionalRequirements: ["Deploy público", "Pipeline de CI/CD"],
+        deliverables: ["Repositório", "Documentação"],
+        acceptanceCriteria: [
+          "O repositório existe e está acessível",
+          "O README explica como rodar o projeto",
+        ],
+        isDemo: true,
+        status: "AVAILABLE",
+      },
+    });
+  }
+
+  const existingLab = await db.laboratory.findFirst({
+    where: { title: "Preparar o ambiente com Docker Compose" },
+  });
+  if (!existingLab) {
+    await db.laboratory.create({
+      data: {
+        title: "Preparar o ambiente com Docker Compose",
+        objective: "Confirmar que o PostgreSQL local sobe corretamente via Docker.",
+        environment: "Docker Desktop (ou engine compatível) instalado.",
+        prerequisites: ["Docker instalado", "Repositório clonado"],
+        instructions: "Rode o comando abaixo na raiz do projeto e confirme que o container fica 'healthy'.",
+        commands: "npm run docker:db\ndocker compose ps",
+        expectedResult: "Container 'db' com status healthy.",
+        validation: "docker compose ps deve mostrar '(healthy)' ao lado do serviço db.",
+        troubleshooting: "Se a porta 5432 já estiver em uso, ajuste POSTGRES_PORT no .env.",
+        isDemo: true,
+        status: "AVAILABLE",
+      },
+    });
+  }
+}
+
 async function main() {
   const { admin, student } = await seedUsers();
   const importResult = await seedCurriculum();
   const lessons = await seedDemoLessons();
+  await seedBadgeCatalog();
+  await seedProjectAndLab();
 
   if (lessons) {
     await seedAssessment(lessons.welcomeLesson.id, lessons.program.name);
     await seedFlashcards({
+      welcomeLessonId: lessons.welcomeLesson.id,
+      principleLessonId: lessons.principleLesson.id,
+    });
+    await seedSkills({
       welcomeLessonId: lessons.welcomeLesson.id,
       principleLessonId: lessons.principleLesson.id,
     });

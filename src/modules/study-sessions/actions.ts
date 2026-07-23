@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { awardXp, checkAndAwardBadges } from "@/modules/gamification/service";
 import { finishSessionSchema, startSessionSchema, type FinishSessionInput, type StartSessionInput } from "./schema";
 
 export async function startSessionAction(input: StartSessionInput) {
@@ -115,6 +116,12 @@ export async function finishSessionAction(input: FinishSessionInput) {
       completedContent: parsed.data.completedContent ?? false,
     },
   });
+
+  await awardXp(session.user.id, "session_finished", 5, {
+    type: "StudySession",
+    id: parsed.data.sessionId,
+  });
+  await checkAndAwardBadges(session.user.id);
 
   revalidatePath("/sessions");
   revalidatePath("/calendar");

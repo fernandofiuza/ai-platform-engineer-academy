@@ -37,6 +37,12 @@ model User {
   notes                 Note[]
   assessmentAttempts    AssessmentAttempt[]
   flashcardReviews      FlashcardReview[]
+  skillProgress         UserSkillProgress[]
+  portfolioItems        PortfolioItem[]
+  badges                UserBadge[]
+  experienceEvents      ExperienceEvent[]
+  projectSubmissions    ProjectSubmission[]
+  laboratoryCompletions LaboratoryCompletion[]
 
   @@map("users")
 }
@@ -198,12 +204,13 @@ model Lesson {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  week        Week               @relation(fields: [weekId], references: [id], onDelete: Cascade)
-  resources   Resource[]
-  completions LessonCompletion[]
-  sessions    StudySession[]
-  assessments Assessment[]
-  flashcards  Flashcard[]
+  week         Week               @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  resources    Resource[]
+  completions  LessonCompletion[]
+  sessions     StudySession[]
+  assessments  Assessment[]
+  flashcards   Flashcard[]
+  lessonSkills LessonSkill[]
 
   @@unique([weekId, order])
   @@map("lessons")
@@ -472,4 +479,218 @@ model FlashcardReview {
 
   @@index([userId, nextReviewAt])
   @@map("flashcard_reviews")
+}
+
+// ---------------------------------------------------------------------------
+// Prática profissional (Fase 4): projetos, laboratórios, competências,
+// portfólio, AI Labs (empresa fictícia) e gamificação.
+// Sem ProjectEvidence/SkillEvidence como tabelas polimórficas separadas — campos
+// de evidência ficam diretamente em Project/Laboratory; evidência de competência
+// é derivada por query (LessonCompletion via LessonSkill), não persistida.
+// Ver docs/DECISIONS.md.
+// ---------------------------------------------------------------------------
+
+enum SkillLevel {
+  NOT_STARTED
+  INTRO
+  PRACTICING
+  COMPETENT
+  ADVANCED
+}
+
+model Skill {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  category    String
+  description String?
+  status      ContentStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+
+  lessonSkills LessonSkill[]
+  userProgress UserSkillProgress[]
+
+  @@map("skills")
+}
+
+model LessonSkill {
+  lessonId String
+  skillId  String
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  skill  Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([lessonId, skillId])
+  @@map("lesson_skills")
+}
+
+model UserSkillProgress {
+  id        String     @id @default(cuid())
+  userId    String
+  skillId   String
+  level     SkillLevel @default(NOT_STARTED)
+  updatedAt DateTime   @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+  @@map("user_skill_progress")
+}
+
+model Project {
+  id                   String        @id @default(cuid())
+  title                String
+  problem              String?
+  context              String?
+  objective            String?
+  requirements         String[]      @default([])
+  optionalRequirements String[]      @default([])
+  deliverables         String[]      @default([])
+  acceptanceCriteria   String[]      @default([])
+  architectureNotes    String?
+  isDemo               Boolean       @default(false)
+  status               ContentStatus @default(PLANNED)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  submissions    ProjectSubmission[]
+  portfolioItems PortfolioItem[]
+
+  @@map("projects")
+}
+
+model ProjectSubmission {
+  id            String     @id @default(cuid())
+  userId        String
+  projectId     String
+  repoUrl       String?
+  deployUrl     String?
+  decisions     String?
+  retrospective String?
+  status        GoalStatus @default(OPEN)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("project_submissions")
+}
+
+model Laboratory {
+  id              String        @id @default(cuid())
+  title           String
+  objective       String?
+  environment     String?
+  prerequisites   String[]      @default([])
+  instructions    String?
+  commands        String?
+  expectedResult  String?
+  validation      String?
+  troubleshooting String?
+  isDemo          Boolean       @default(false)
+  status          ContentStatus @default(PLANNED)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  completions LaboratoryCompletion[]
+
+  @@map("laboratories")
+}
+
+model LaboratoryCompletion {
+  id           String   @id @default(cuid())
+  userId       String
+  laboratoryId String
+  completedAt  DateTime @default(now())
+  evidenceUrl  String?
+  notes        String?
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  laboratory Laboratory @relation(fields: [laboratoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, laboratoryId])
+  @@map("laboratory_completions")
+}
+
+model PortfolioItem {
+  id               String        @id @default(cuid())
+  userId           String
+  projectId        String?
+  repoUrl          String
+  qualityChecklist Json
+  status           ContentStatus @default(AVAILABLE)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("portfolio_items")
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  order       Int
+  createdAt   DateTime @default(now())
+
+  @@map("departments")
+}
+
+model ArchitectureMilestone {
+  id          String        @id @default(cuid())
+  order       Int           @unique
+  title       String
+  description String?
+  status      ContentStatus @default(PLANNED)
+  achievedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("architecture_milestones")
+}
+
+model Badge {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String
+  icon        String
+  createdAt   DateTime @default(now())
+
+  users UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@map("user_badges")
+}
+
+model ExperienceEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String
+  points    Int
+  refType   String?
+  refId     String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("experience_events")
 }

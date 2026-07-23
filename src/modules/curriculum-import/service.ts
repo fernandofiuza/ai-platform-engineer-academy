@@ -224,6 +224,39 @@ export async function importCurriculum(options: {
     }
   }
 
+  // Departamentos da AI Labs
+  for (const dept of parsed.departments) {
+    const existing = await db.department.findUnique({ where: { name: dept.name } });
+    await db.department.upsert({
+      where: { name: dept.name },
+      update: { order: dept.order },
+      create: { name: dept.name, order: dept.order },
+    });
+    if (existing) {
+      updatedCount++;
+    } else {
+      createdCount++;
+    }
+  }
+
+  // Linha do tempo de arquitetura da AI Labs (marcos ficam PLANNED até serem marcados como
+  // alcançados pela administração — a importação nunca infere conclusão automaticamente)
+  for (const milestone of parsed.architectureMilestones) {
+    const existing = await db.architectureMilestone.findUnique({
+      where: { order: milestone.order },
+    });
+    await db.architectureMilestone.upsert({
+      where: { order: milestone.order },
+      update: { title: milestone.title },
+      create: { order: milestone.order, title: milestone.title, status: "PLANNED" },
+    });
+    if (existing) {
+      updatedCount++;
+    } else {
+      createdCount++;
+    }
+  }
+
   const report = {
     sourceFile,
     contentHash,

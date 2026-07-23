@@ -49,23 +49,38 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 
 ## 3. Tecnologias e competências
 
-- **Technology**(name, category, status)
-- **Skill**(name, category, description, status)
-- **LessonSkill**(lessonId, skillId) — N:N
+> **Implementado na Fase 4** com escopo reduzido: sem `Technology` nem `SkillEvidence` — ver
+> `docs/DECISIONS.md`. 14 competências seedadas a partir das áreas de conhecimento citadas em
+> `Curso.md`.
+
+- ~~Technology~~ — não implementado; tecnologias aparecem só como texto (ex.: nome da
+  competência), sem entidade própria ainda.
+- **Skill**(name, category, description?, status) — `name` único
+- **LessonSkill**(lessonId, skillId) — N:N, chave primária composta
 - **UserSkillProgress**(userId, skillId, level: `NOT_STARTED|INTRO|PRACTICING|COMPETENT|
-  ADVANCED`, updatedAt)
-- **SkillEvidence**(userSkillProgressId, kind: `PROJECT|QUIZ|LAB|REPO|SESSION|NOTE|ASSESSMENT`,
-  refId, description)
+  ADVANCED`, updatedAt) — nível recalculado automaticamente a cada `LessonCompletion` nova
+  (nunca definido manualmente pelo estudante)
+- ~~SkillEvidence~~ — não implementado; evidência é calculada por query (join
+  `LessonCompletion` × `LessonSkill`), não persistida — ver `docs/DECISIONS.md`.
 
 ## 4. Projetos e laboratórios
 
-- **Project**(title, problem, context, objective, requirements[], optionalRequirements[],
-  technologies N:N, deliverables[], steps JSON, acceptanceCriteria[], repoUrl, deployUrl,
-  architectureNotes, decisions, retrospective, status)
-- **Laboratory**(title, objective, environment, prerequisites[], instructions, commands,
-  expectedResult, validation, troubleshooting, status)
-- **ProjectEvidence**(projectId|laboratoryId, kind: `REPO|DEPLOY|COMMIT|PR|ISSUE|DOC|IMAGE|
-  COMMENT`, url/text)
+> **Implementado na Fase 4** com escopo reduzido: sem `ProjectEvidence` genérica (campos de
+> evidência ficam direto em `Project`/`Laboratory`) e sem N:N com `Technology` (que não existe).
+> 1 projeto e 1 laboratório de demonstração seedados. Ver `docs/DECISIONS.md`.
+
+- **Project**(title, problem?, context?, objective?, requirements[], optionalRequirements[],
+  deliverables[], acceptanceCriteria[], architectureNotes?, isDemo, status) — sem `steps` (Json),
+  `repoUrl`/`deployUrl`/`decisions`/`retrospective` ficam em `ProjectSubmission` (por usuário,
+  não no `Project` template)
+- **ProjectSubmission**(userId, projectId, repoUrl?, deployUrl?, decisions?, retrospective?,
+  status: `OPEN|DONE|CANCELLED`) — `@@unique([userId, projectId])`; é a submissão do estudante,
+  separada do template do projeto
+- **Laboratory**(title, objective?, environment?, prerequisites[], instructions?, commands?,
+  expectedResult?, validation?, troubleshooting?, isDemo, status)
+- **LaboratoryCompletion**(userId, laboratoryId, completedAt, evidenceUrl?, notes?) —
+  `@@unique([userId, laboratoryId])`
+- ~~ProjectEvidence~~ — não implementado (ver acima)
 
 ## 5. Planejamento e progresso
 
@@ -119,17 +134,27 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 
 ## 8. Portfólio e gamificação
 
-- **PortfolioItem**(userId, projectId?, repoUrl, qualityChecklist JSON /* README, testes, CI/CD…
-  */, status)
-- **Badge**(code, name, description, icon)
-- **UserBadge**(userId, badgeId, earnedAt)
-- **ExperienceEvent**(userId, kind, points, refType?, refId?, createdAt)
+> **Implementado na Fase 4.** `GitHubProvider` (`src/modules/portfolio/github-provider.ts`) é
+> uma interface + implementação que sempre lança erro — nunca chamada pelo produto. Ver
+> `docs/DECISIONS.md`.
+
+- **PortfolioItem**(userId, projectId?, repoUrl, qualityChecklist Json /* 14 chaves booleanas —
+  ver `src/modules/portfolio/checklist.ts` */, status)
+- **Badge**(code, name, description, icon) — catálogo de 9, seedado por
+  `seedBadgeCatalog()`
+- **UserBadge**(userId, badgeId, earnedAt) — `@@unique([userId, badgeId])`
+- **ExperienceEvent**(userId, kind, points, refType?, refId?, createdAt) — nível = `1 +
+  floor(totalXp / 100)`, calculado sob demanda (sem campo `level` persistido em `User`)
 
 ## 9. AI Labs (empresa fictícia)
 
-- **Department**(name, description, order)
-- **ArchitectureMilestone**(order, title, description, layer /* infra/app/data/ai/... */,
-  status, achievedAt?)
+> **Implementado na Fase 4.** Importado de `Curso.md` (âncoras "Teremos departamentos" e "Ela
+> começará assim:") — 10 departamentos, 24 marcos. Marcos só viram `COMPLETED` por ação
+> explícita de um ADMIN em `/ai-labs`; a importação nunca marca nada como alcançado. Sem campo
+> `layer` (não extraível do texto-fonte com segurança).
+
+- **Department**(name, description?, order) — `name` único
+- **ArchitectureMilestone**(order, title, description?, status, achievedAt?) — `order` único
 
 ## 10. IA
 

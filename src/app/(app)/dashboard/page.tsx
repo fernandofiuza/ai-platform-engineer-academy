@@ -8,61 +8,53 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getTotalStudyMinutes } from "@/modules/study-sessions/queries";
+import { computeStreak } from "@/modules/study-sessions/streak";
+import { BadgesPanel } from "@/modules/gamification/components/badges-panel";
+import { getAllBadgesWithUserStatus } from "@/modules/gamification/queries";
+import { getXpAndLevel } from "@/modules/gamification/service";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 const NEXT_STEPS = [
   {
-    title: "Projetos e laboratórios práticos",
-    description: "Projetos conectados ao currículo, com critérios de aceite e evidências.",
-    phase: "Fase 4",
-  },
-  {
-    title: "Mapa de competências e portfólio",
-    description: "Evolução das suas competências técnicas e checklist de qualidade do GitHub.",
-    phase: "Fase 4",
-  },
-  {
     title: "Tutor de IA (nível 1)",
     description: "Explicações, resumos e sugestões de próxima atividade — funciona sem chave de IA.",
     phase: "Fase 5",
   },
+  {
+    title: "Área administrativa completa",
+    description: "CRUD de currículo, projetos, laboratórios, quizzes e flashcards.",
+    phase: "Fase 6",
+  },
 ];
 
-function computeStreak(sessionDates: Date[]) {
-  const uniqueDays = new Set(
-    sessionDates.map((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime())
-  );
-  let streak = 0;
-  const cursor = new Date();
-  cursor.setHours(0, 0, 0, 0);
-  // Se não estudou hoje, a sequência ainda conta a partir de ontem.
-  if (!uniqueDays.has(cursor.getTime())) {
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  while (uniqueDays.has(cursor.getTime())) {
-    streak++;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
-}
 
 export default async function DashboardPage() {
   const session = await auth();
   const user = session!.user;
 
-  const [dbUser, totalLessons, completedLessons, totalMinutes, sessionsForStreak, openGoals] =
-    await Promise.all([
-      db.user.findUnique({ where: { id: user.id }, select: { name: true, createdAt: true } }),
-      db.lesson.count({ where: { status: "AVAILABLE" } }),
-      db.lessonCompletion.count({ where: { userId: user.id } }),
-      getTotalStudyMinutes(user.id),
-      db.studySession.findMany({
-        where: { userId: user.id, endedAt: { not: null } },
-        select: { startedAt: true },
-      }),
-      db.studyGoal.count({ where: { userId: user.id, status: "OPEN" } }),
-    ]);
+  const [
+    dbUser,
+    totalLessons,
+    completedLessons,
+    totalMinutes,
+    sessionsForStreak,
+    openGoals,
+    badges,
+    xp,
+  ] = await Promise.all([
+    db.user.findUnique({ where: { id: user.id }, select: { name: true, createdAt: true } }),
+    db.lesson.count({ where: { status: "AVAILABLE" } }),
+    db.lessonCompletion.count({ where: { userId: user.id } }),
+    getTotalStudyMinutes(user.id),
+    db.studySession.findMany({
+      where: { userId: user.id, endedAt: { not: null } },
+      select: { startedAt: true },
+    }),
+    db.studyGoal.count({ where: { userId: user.id, status: "OPEN" } }),
+    getAllBadgesWithUserStatus(user.id),
+    getXpAndLevel(user.id),
+  ]);
 
   const firstName = (dbUser?.name ?? user.name ?? "").split(" ")[0];
   const streak = computeStreak(sessionsForStreak.map((s) => s.startedAt));
@@ -125,14 +117,21 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      <BadgesPanel
+        badges={badges}
+        level={xp.level}
+        totalXp={xp.totalXp}
+        xpIntoLevel={xp.xpIntoLevel}
+        xpForNextLevel={xp.xpForNextLevel}
+      />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Sparkles className="size-4 text-primary" /> Próximas entregas
           </CardTitle>
           <CardDescription>
-            Fases 1 (Fundação), 2 (Currículo) e 3 (Aprendizagem — sessões, metas, planejador,
-            calendário, anotações, avaliações e flashcards) já estão no ar.
+            Fases 1 a 4 (Fundação, Currículo, Aprendizagem e Prática profissional) já estão no ar.
           </CardDescription>
         </CardHeader>
         <CardContent>

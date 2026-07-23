@@ -180,6 +180,44 @@ que a distribuição de 24 módulos/104 semanas foi validada com o usuário ante
 
 ### Estado após a última execução real
 
-24 módulos reconhecidos (peso total 229), 104 semanas atualizadas, 0 preservadas (nenhuma edição
-manual existia no momento da importação), Projeto Final "APEX Academy" criado com 29
-componentes como `deliverables`. Zero avisos.
+24 módulos reconhecidos (peso total 229), 104 semanas atualizadas com `status = AVAILABLE` (não
+apenas `title`/`objective` — ver `docs/DECISIONS.md` para o bug do `status` esquecido na primeira
+versão), 0 preservadas (nenhuma edição manual existia no momento da importação), Projeto Final
+"APEX Academy" criado com 29 componentes como `deliverables`. Zero avisos.
+
+### Geração de aulas (`importGradeLessons()`)
+
+`importModuleGrid()` só popula `Week` (título/objetivo/status) — não cria nenhuma `Lesson`. Para
+o Dashboard e `/learn` mostrarem conteúdo real de cada módulo (e não só as 2 aulas de
+demonstração da Semana 0), existe uma segunda função, `importGradeLessons()`
+(`grade-lessons.ts` + `service.ts`), que gera **1 `Lesson` por semana** (104 no total):
+
+- Os tópicos de cada módulo (a mesma lista usada para calcular o peso em `grade-parser.ts`,
+  agora exposta em `ParsedModule.topics`) são divididos em fatias contíguas entre as semanas do
+  módulo, preservando a ordem do arquivo-fonte (`grade-lessons.ts`, `chunkTopics()`).
+- Cada `Lesson` tem `contentMarkdown` estruturado com as seções: objetivo da semana (tópicos
+  reais), como estudar, laboratório guiado, exercícios/desafio extra, "como a AI Labs faria" e
+  checklist — inspirado na lista "Cada dia de estudo terá" do próprio `Grade_Curricular.md`. A
+  última semana de cada módulo também recebe a seção "Projeto do módulo" com a descrição extraída
+  do arquivo.
+- Módulos sem nenhuma linha de tópico real no texto-fonte (n8n, SaaS — só frases de prosa
+  terminadas em ".") usam o nome do módulo como o próprio conteúdo de estudo da semana, para o
+  checklist nunca ficar vazio.
+- `durationMinutes` de cada aula = `program.weeklyDays * program.dailyHours * 60` (a carga
+  semanal do programa, não um valor arbitrário).
+- Idempotência: mesmo padrão de `ImportJob.contentHash`, mas com `sourceFile` distinto
+  (`"Grade_Curricular.md#lessons"`) do usado por `importModuleGrid`, para os relatórios não se
+  confundirem. Dentro de uma execução forçada, qualquer semana que já tenha uma aula não-demo é
+  pulada (nunca duplicada nem sobrescrita) — não há `isManuallyEdited` em `Lesson` porque, ao
+  contrário de `Week`, não existe hoje um fluxo de reimportação repetida de conteúdo de aula.
+
+```bash
+npm run curriculum:import-lessons              # gera as aulas que ainda não existem
+npm run curriculum:import-lessons -- --force   # força reexecução mesmo com hash igual
+```
+
+**Última execução real**: 104 aulas criadas, 0 puladas. Conteúdo é intencionalmente completo em
+estrutura (todas as seções pedagógicas presentes, tópicos reais de cada semana, projeto do módulo
+na última semana) mas não é uma explicação didática aprofundada de cada tecnologia individual —
+isso é adicionado incrementalmente pela área administrativa (`/admin/curriculum`), semana a
+semana, conforme a formação avança.

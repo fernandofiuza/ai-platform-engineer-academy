@@ -3,7 +3,7 @@ import { distributeWeeksAcrossModules } from "@/modules/curriculum-import/grade-
 import type { ParsedModule } from "@/modules/curriculum-import/grade-parser";
 
 function mockModule(order: number, weight: number): ParsedModule {
-  return { order, name: `Módulo ${order}`, weight, projectDescription: null };
+  return { order, name: `Módulo ${order}`, weight, topics: [], projectDescription: null };
 }
 
 describe("distributeWeeksAcrossModules", () => {

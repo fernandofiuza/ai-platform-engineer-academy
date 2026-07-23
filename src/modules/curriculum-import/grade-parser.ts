@@ -9,6 +9,7 @@ export type ParsedModule = {
   order: number;
   name: string;
   weight: number;
+  topics: string[];
   projectDescription: string | null;
 };
 
@@ -38,21 +39,26 @@ const KNOWN_LABELS = new Set(["Disciplinas", "Objetivo", "Projeto"]);
 const MIN_MODULE_WEIGHT = 4;
 
 /**
- * Conta "linhas de tópico" dentro do bloco de um módulo: linhas que não terminam em "." (frases
- * de prosa terminam em ponto; nomes de tópicos/tecnologias, não) e que não são rótulos
- * conhecidos ("Disciplinas"/"Objetivo"/"Projeto"). Aplica um piso mínimo para módulos descritos
- * de forma muito resumida (ex.: "n8n — Tudo.") para não zerar o peso de tecnologias reais só
- * porque o texto-fonte é terso — ver docs/DECISIONS.md.
+ * Extrai as "linhas de tópico" dentro do bloco de um módulo: linhas que não terminam em "."
+ * (frases de prosa terminam em ponto; nomes de tópicos/tecnologias, não) e que não são rótulos
+ * conhecidos ("Disciplinas"/"Objetivo"/"Projeto"). Usada tanto para calcular o peso do módulo
+ * (contagem) quanto para distribuir os tópicos reais entre as aulas de cada semana — ver
+ * `grade-lessons.ts`.
  */
-function countTopicWeight(blockLines: string[]): number {
+function extractTopics(blockLines: string[]): string[] {
   const projetoIndex = blockLines.findIndex((line) => line === "Projeto");
   const contentLines = projetoIndex === -1 ? blockLines : blockLines.slice(0, projetoIndex);
 
-  const topicLines = contentLines.filter(
-    (line) => !line.endsWith(".") && !KNOWN_LABELS.has(line)
-  );
+  return contentLines.filter((line) => !line.endsWith(".") && !KNOWN_LABELS.has(line));
+}
 
-  return Math.max(MIN_MODULE_WEIGHT, topicLines.length);
+/**
+ * Aplica um piso mínimo para módulos descritos de forma muito resumida (ex.: "n8n — Tudo.") para
+ * não zerar o peso de tecnologias reais só porque o texto-fonte é terso — ver
+ * `docs/DECISIONS.md`.
+ */
+function countTopicWeight(topics: string[]): number {
+  return Math.max(MIN_MODULE_WEIGHT, topics.length);
 }
 
 function extractProjectDescription(blockLines: string[]): string | null {
@@ -89,11 +95,13 @@ function parseModules(normalized: string, warnings: GradeParseWarning[]): Parsed
     const start = headerIndexes[i].lineIndex + 1;
     const end = i + 1 < headerIndexes.length ? headerIndexes[i + 1].lineIndex : lines.length;
     const blockLines = lines.slice(start, end).filter((l) => l.length > 0);
+    const topics = extractTopics(blockLines);
 
     modules.push({
       order: i,
       name: headerIndexes[i].name,
-      weight: countTopicWeight(blockLines),
+      weight: countTopicWeight(topics),
+      topics,
       projectDescription: extractProjectDescription(blockLines),
     });
   }

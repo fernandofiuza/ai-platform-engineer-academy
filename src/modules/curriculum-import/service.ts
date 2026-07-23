@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { parseCursoMarkdown, type ParsedPhase } from "./parser";
 import { parseGradeCurricular } from "./grade-parser";
 import { distributeWeeksAcrossModules } from "./grade-distribution";
+import { buildWeekLessons } from "./grade-lessons";
 
 export const PROGRAM_SLUG = "ai-platform-engineer-academy";
 
@@ -441,5 +442,111 @@ export async function importModuleGrid(options: {
     skippedCount,
     projectCreated,
     warnings: parsed.warnings,
+  };
+}
+
+const LESSONS_SOURCE_TAG = "Grade_Curricular.md#lessons";
+
+export type LessonGridReport = {
+  skipped: boolean;
+  message: string;
+  importJobId: string | null;
+  createdCount: number;
+  skippedCount: number;
+};
+
+/**
+ * Gera 1 `Lesson` real por semana (1..N), a partir dos tópicos de cada módulo distribuídos por
+ * `buildWeekLessons` (grade-lessons.ts). Idempotente por `ImportJob.contentHash` (mesmo padrão de
+ * `importModuleGrid`) e, dentro de uma mesma execução forçada, pula qualquer semana que já tenha
+ * uma aula não-demo (nunca duplica nem sobrescreve conteúdo já existente). Ver
+ * docs/CURRICULUM_IMPORT.md.
+ */
+export async function importGradeLessons(options: {
+  rawContent: string;
+  force?: boolean;
+}): Promise<LessonGridReport> {
+  const { rawContent, force = false } = options;
+  const contentHash = createHash("sha256").update(rawContent).digest("hex");
+
+  const lastSuccessfulJob = await db.importJob.findFirst({
+    where: { sourceFile: LESSONS_SOURCE_TAG, contentHash },
+    orderBy: { startedAt: "desc" },
+  });
+
+  if (lastSuccessfulJob && !force) {
+    return {
+      skipped: true,
+      message: "Conteúdo idêntico à última geração de aulas — nada a fazer.",
+      importJobId: lastSuccessfulJob.id,
+      createdCount: 0,
+      skippedCount: 0,
+    };
+  }
+
+  const program = await db.program.findUnique({ where: { slug: PROGRAM_SLUG } });
+  if (!program) {
+    throw new Error("Program não encontrado — rode a importação de Curso.md primeiro.");
+  }
+
+  const parsed = parseGradeCurricular(rawContent);
+  const ranges = distributeWeeksAcrossModules(program.totalWeeks, parsed.modules);
+
+  const weeks = await db.week.findMany({
+    where: { programId: program.id, number: { gt: 0 } },
+    include: { lessons: true },
+  });
+  const weekByNumber = new Map(weeks.map((w) => [w.number, w]));
+
+  const durationMinutes = Math.round(program.weeklyDays * program.dailyHours * 60);
+
+  const job = await db.importJob.create({ data: { sourceFile: LESSONS_SOURCE_TAG, contentHash } });
+
+  let createdCount = 0;
+  let skippedCount = 0;
+
+  for (const range of ranges) {
+    const lessonsForRange = buildWeekLessons(range);
+    for (const lessonContent of lessonsForRange) {
+      const week = weekByNumber.get(lessonContent.weekNumber);
+      if (!week) continue;
+
+      const hasRealLesson = week.lessons.some((l) => !l.isDemo);
+      if (hasRealLesson) {
+        skippedCount++;
+        continue;
+      }
+
+      await db.lesson.create({
+        data: {
+          weekId: week.id,
+          order: 1,
+          title: lessonContent.title,
+          objective: lessonContent.objective,
+          durationMinutes,
+          contentMarkdown: lessonContent.contentMarkdown,
+          isDemo: false,
+          status: "AVAILABLE",
+        },
+      });
+      createdCount++;
+    }
+  }
+
+  const report = { sourceFile: LESSONS_SOURCE_TAG, contentHash, createdCount, skippedCount };
+
+  await db.importJob.update({
+    where: { id: job.id },
+    data: { finishedAt: new Date(), createdCount, skippedCount, report },
+  });
+
+  logger.info("grade lessons import finished", report);
+
+  return {
+    skipped: false,
+    message: `Aulas geradas: ${createdCount} criada(s), ${skippedCount} pulada(s) (semana já tinha aula real).`,
+    importJobId: job.id,
+    createdCount,
+    skippedCount,
   };
 }

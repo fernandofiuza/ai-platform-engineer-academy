@@ -42,8 +42,9 @@ export default async function LearnPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Aprender</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Aulas disponíveis no momento (demonstrativas — a grade completa chega conforme o
-          currículo for definido).
+          Aulas das 104 semanas da formação, geradas a partir da grade curricular. Explicações
+          mais aprofundadas de cada tópico são adicionadas progressivamente pela área
+          administrativa.
         </p>
       </div>
 

@@ -260,4 +260,21 @@ Com a Fase 6 concluída, todas as seis fases do fluxo de implementação origina
   novos (`tests/unit/grade-distribution.test.ts`); estado do banco conferido por amostragem
   (semanas 1, 7, 8, 62, 100–104 e o `Project` do Projeto Final). Decisões registradas em
   `docs/DECISIONS.md`.
+- **Pós-Fase 6: correção do `status` + geração de aulas reais para as 104 semanas.** Ao
+  conferir o roadmap ao vivo no navegador, o usuário notou que as semanas importadas ainda
+  mostravam o card "conteúdo detalhado ainda não definido" mesmo com título real — bug real:
+  `importModuleGrid` esquecia de gravar `status = AVAILABLE`. Corrigido e reaplicado com
+  `--force`. Em seguida, o usuário reportou que o Dashboard/`/learn` só mostravam as 2 aulas de
+  demonstração da Semana 0 — a importação da grade só criava `Week`, nunca `Lesson`. Implementada
+  `importGradeLessons()` (`grade-lessons.ts`, comando `npm run curriculum:import-lessons`), que
+  gera 1 aula real por semana (104 no total) a partir dos tópicos de cada módulo (já extraídos
+  pelo parser para calcular peso, agora também expostos em `ParsedModule.topics` e distribuídos
+  em fatias contíguas entre as semanas do módulo), com uma estrutura pedagógica completa
+  (objetivo, tópicos da semana, laboratório guiado, exercícios, "como a AI Labs faria", projeto
+  do módulo na última semana, checklist). Verificado ao vivo no navegador (login como estudante,
+  `/learn` lista os 24 temas reais, `/learn/[id]` de uma aula real renderiza todas as seções e o
+  fluxo de concluir aula continua funcionando); `npm run typecheck`/`lint`/`test:unit` sem erros.
+  Decisões (bug do `status`, escopo do conteúdo gerado — estrutura completa mas sem explicação
+  didática aprofundada por tecnologia, que fica para edição incremental via admin) registradas em
+  `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

@@ -435,5 +435,45 @@ e o texto duplicado ao final do arquivo foi resumido para não repetir o mesmo c
 fora do padrão) — a estrutura correta é editar o arquivo-fonte para seguir o mesmo padrão que
 todos os outros módulos, não ensinar o parser a reconhecer um formato solto único.
 
+## 2026-07-23 — `status` esquecido na primeira versão de `importModuleGrid` (bug real, corrigido)
+
+**Decisão/observação**: a primeira versão de `importModuleGrid()` atualizava apenas `title` e
+`objective` da `Week`, deixando `status = PLANNED`. Isso fazia o roadmap continuar mostrando o
+card "conteúdo detalhado ainda não definido" mesmo em semanas com título real, porque toda a UI
+usa `status !== "PLANNED"` como sinal de "semana tem conteúdo" (mesma convenção já usada pela
+Semana 0). Encontrado ao conferir a página `/roadmap` ao vivo no navegador logo após a primeira
+importação. Corrigido para gravar `status: "AVAILABLE"` junto com `title`/`objective` (semanas
+`isManuallyEdited` continuam puladas), e a importação foi reexecutada com `--force` (hash do
+arquivo não mudou) para aplicar a correção às 104 semanas já importadas.
+**Motivo**: a instrução original do usuário já pedia atualizar "título e status"; a omissão foi
+um erro de implementação, não uma decisão de escopo.
+
+## 2026-07-23 — Geração de 1 aula real por semana (`importGradeLessons`)
+
+**Decisão**: além de `importModuleGrid` (que só atualiza `title`/`objective`/`status` da
+`Week`), foi criado `importGradeLessons()` (`grade-lessons.ts` + nova função em `service.ts`,
+comando `npm run curriculum:import-lessons`), que gera **1 `Lesson` real por semana** (104 no
+total, além das 2 aulas de demonstração da Semana 0 já existentes). Os tópicos de cada módulo
+(já extraídos por `grade-parser.ts` para calcular o peso) são divididos em fatias contíguas entre
+as semanas do módulo (mesma ordem do arquivo-fonte); a última semana de cada módulo também recebe
+a descrição do projeto do módulo. Cada aula segue uma estrutura fixa e completa (objetivo,
+tópicos da semana, "como estudar", laboratório guiado, exercícios, "como a AI Labs faria",
+projeto do módulo quando aplicável, checklist) — inspirada literalmente na lista "Cada dia de
+estudo terá" descrita pelo usuário no fim de `Grade_Curricular.md`. Módulos com descrição muito
+resumida no arquivo-fonte (n8n, SaaS — nenhuma linha de tópico real) usam o próprio nome do
+módulo como conteúdo de estudo da semana, para o checklist nunca ficar vazio.
+**Motivo**: o usuário reportou que o Dashboard/`/learn` só mostrava as 2 aulas de demonstração —
+a importação da grade (`importModuleGrid`) só populava `Week`, não `Lesson`, então não havia
+nenhuma aula real vinculada aos módulos importados. Optou-se por gerar uma estrutura pedagógica
+completa e reaproveitável (não apenas um stub vazio) diretamente dos dados já extraídos do
+arquivo-fonte, deixando claro no rodapé de cada aula que explicações mais aprofundadas por tópico
+podem ser adicionadas/editadas pela área administrativa a qualquer momento — não se tentou gerar
+conteúdo didático extenso e único para cada uma das 104 semanas manualmente, o que seria
+inviável de produzir com profundidade e precisão técnica real em uma única sessão.
+**Idempotência**: mesmo padrão de `ImportJob.contentHash`, com `sourceFile` distinto
+(`"Grade_Curricular.md#lessons"`) do usado por `importModuleGrid`, para os dois relatórios de
+importação não colidirem; dentro de uma execução forçada, semanas que já têm uma aula não-demo
+são puladas (nunca duplicadas nem sobrescritas).
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

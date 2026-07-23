@@ -19,6 +19,7 @@
     "curriculum:import": "tsx scripts/import-curriculum.ts",
     "curriculum:preview-grade": "tsx scripts/preview-grade-import.ts",
     "curriculum:import-grade": "tsx scripts/import-grade-curricular.ts",
+    "curriculum:import-lessons": "tsx scripts/import-grade-lessons.ts",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test": "npm run test:unit && npm run test:e2e"

@@ -475,5 +475,28 @@ inviável de produzir com profundidade e precisão técnica real em uma única s
 importação não colidirem; dentro de uma execução forçada, semanas que já têm uma aula não-demo
 são puladas (nunca duplicadas nem sobrescritas).
 
+## 2026-07-23 — Etapa 1 (pós-Fase 6): AI Gateway multi-provider
+
+**Decisão**: o factory de provider único (`factory.ts`, `getAIProvider()`, env `AI_PROVIDER`)
+foi substituído por um **AI Gateway** (`gateway.ts`, `getProviderForTask(taskType)`) que roteia
+entre `OpenAIProvider`, `ClaudeProvider` (novo), `GeminiProvider` (novo) e `MockAIProvider` com
+base em uma regra fixa por tipo de tarefa (`AITaskType`): `TEACH` (perguntas, explicações, quiz,
+sugestão) → OpenAI ou Claude, configurável via `AI_TEACHING_PROVIDER` (padrão OpenAI);
+`CODE_REVIEW` → sempre Claude (usado a partir da Etapa 6); `SUMMARIZE` → sempre Gemini. Cada
+provider real só é instanciado se sua chave (`AI_OPENAI_API_KEY`/`AI_CLAUDE_API_KEY`/
+`AI_GEMINI_API_KEY`) estiver configurada; caso contrário o Gateway cai automaticamente para o
+Mock (mesmo comportamento já validado na Fase 5, agora por provider individual em vez de global).
+Env vars renomeadas: `AI_API_KEY`/`AI_MODEL` (só OpenAI) → `AI_OPENAI_API_KEY`/`AI_OPENAI_MODEL`;
+`AI_PROVIDER` removida (não faz mais sentido escolher "o" provider global — a escolha agora é por
+tarefa). `AIMessage.provider` (já existente desde a Fase 5) continua registrando qual provider
+respondeu cada interação, agora podendo ser `openai`, `claude`, `gemini` ou `mock`.
+**Motivo**: instrução explícita do usuário para uma arquitetura multi-provider com roteamento
+determinístico por tipo de tarefa (não uma IA decidindo por outra IA), mantendo todos os limites
+de segurança já estabelecidos na Fase 5 (chamadas só no servidor, fallback sem quebrar o sistema,
+aviso de que respostas podem conter erros).
+**Ollama**: propositalmente **não** implementado nesta etapa (instrução explícita do usuário, por
+custo de performance na máquina local do aluno) — a interface `AIProvider` já é genérica o
+suficiente para receber um `OllamaProvider` no futuro sem mudar o Gateway.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

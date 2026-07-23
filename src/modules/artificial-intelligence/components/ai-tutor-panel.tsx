@@ -26,6 +26,7 @@ import {
   summarizeLessonAction,
 } from "@/modules/artificial-intelligence/actions";
 import { AI_DISCLAIMER } from "@/modules/artificial-intelligence/types";
+import type { AITaskType } from "@/modules/artificial-intelligence/gateway";
 
 type LessonOption = { id: string; title: string };
 type Message = { id: string; role: "USER" | "ASSISTANT"; content: string; provider: string };
@@ -33,11 +34,11 @@ type Message = { id: string; role: "USER" | "ASSISTANT"; content: string; provid
 export function AiTutorPanel({
   lessonOptions,
   initialMessages,
-  providerName,
+  routing,
 }: {
   lessonOptions: LessonOption[];
   initialMessages: Message[];
-  providerName: string;
+  routing: Record<AITaskType, string>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
@@ -68,7 +69,8 @@ export function AiTutorPanel({
       <Alert>
         <AlertTriangle className="size-4" />
         <AlertDescription>
-          {AI_DISCLAIMER} Provider ativo: <strong>{providerName}</strong>.
+          {AI_DISCLAIMER} Roteamento atual — ensino: <strong>{routing.TEACH}</strong>, resumo:{" "}
+          <strong>{routing.SUMMARIZE}</strong>, revisão de código: <strong>{routing.CODE_REVIEW}</strong>.
         </AlertDescription>
       </Alert>
 

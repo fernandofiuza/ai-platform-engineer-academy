@@ -16,8 +16,9 @@ function splitSentences(content: string) {
 }
 
 /**
- * Provider heurístico e determinístico — sem chamadas externas. Serve como padrão de fábrica
- * (AI_PROVIDER=mock) para que o sistema funcione sem nenhuma chave de IA configurada.
+ * Provider heurístico e determinístico — sem chamadas externas. É o fallback automático do AI
+ * Gateway (`gateway.ts`) para qualquer tarefa cujo provider real não tenha chave configurada,
+ * garantindo que o sistema funcione sem nenhuma chave de IA.
  */
 export class MockAIProvider implements AIProvider {
   readonly name = "mock";

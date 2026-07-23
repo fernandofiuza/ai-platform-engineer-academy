@@ -1,7 +1,8 @@
-// Interface desacoplada do tutor de IA (nível 1). Nenhuma chamada de IA acontece no
-// navegador — só em server actions. O sistema principal funciona 100% sem provider real
-// configurado (AI_PROVIDER=mock é o padrão de fábrica). Ver Etapa 19 do prompt original e
-// docs/DECISIONS.md.
+// Interface desacoplada do tutor de IA, implementada por múltiplos adapters (OpenAI, Claude,
+// Gemini, Mock) e roteada pelo AI Gateway (`gateway.ts`) por tipo de tarefa. Nenhuma chamada de
+// IA acontece no navegador — só em server actions. O sistema principal funciona 100% sem
+// nenhuma chave de provider configurada (fallback automático para o Mock). Ver
+// docs/ARCHITECTURE.md e docs/DECISIONS.md.
 
 export type AIContext = {
   currentLessonTitle?: string;

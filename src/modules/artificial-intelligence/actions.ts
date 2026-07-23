@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { buildContextForUser } from "./context";
-import { getAIProvider } from "./factory";
+import { getProviderForTask } from "./gateway";
 import { checkRateLimit } from "./rate-limit";
 import {
   askQuestionSchema,
@@ -73,7 +73,7 @@ export async function askQuestionAction(input: AskQuestionInput) {
   return withAIGuardrails("ask_question", async () => {
     const session = await auth();
     const parsed = askQuestionSchema.parse(input);
-    const provider = getAIProvider();
+    const provider = getProviderForTask("TEACH");
     const context = await buildContextForUser(session!.user.id, parsed.lessonId);
 
     const answer = await provider.generateAnswer({ question: parsed.question, context });
@@ -93,7 +93,7 @@ export async function summarizeLessonAction(input: SummarizeLessonInput) {
     const lesson = await db.lesson.findUnique({ where: { id: parsed.lessonId } });
     if (!lesson?.contentMarkdown) throw new Error("Aula sem conteúdo para resumir.");
 
-    const provider = getAIProvider();
+    const provider = getProviderForTask("SUMMARIZE");
     const summary = await provider.summarizeContent({ content: lesson.contentMarkdown });
 
     const conversation = await getOrCreateConversation(session!.user.id);
@@ -111,7 +111,7 @@ export async function generateQuizAction(input: GenerateQuizInput) {
     const lesson = await db.lesson.findUnique({ where: { id: parsed.lessonId } });
     if (!lesson?.contentMarkdown) throw new Error("Aula sem conteúdo para gerar quiz.");
 
-    const provider = getAIProvider();
+    const provider = getProviderForTask("TEACH");
     const quiz = await provider.generateQuiz({ content: lesson.contentMarkdown });
 
     const conversation = await getOrCreateConversation(session!.user.id);
@@ -126,7 +126,7 @@ export async function generateQuizAction(input: GenerateQuizInput) {
 export async function suggestNextActivityAction() {
   return withAIGuardrails("suggest_next_activity", async () => {
     const session = await auth();
-    const provider = getAIProvider();
+    const provider = getProviderForTask("TEACH");
     const context = await buildContextForUser(session!.user.id);
 
     const suggestion = await provider.suggestNextActivity({ context });
@@ -146,7 +146,7 @@ export async function explainConceptAction(input: ExplainConceptInput) {
     const lesson = await db.lesson.findUnique({ where: { id: parsed.lessonId } });
     if (!lesson?.contentMarkdown) throw new Error("Aula sem conteúdo para explicar.");
 
-    const provider = getAIProvider();
+    const provider = getProviderForTask("TEACH");
     const explanation = await provider.explainConcept({
       content: lesson.contentMarkdown,
       question: parsed.question,

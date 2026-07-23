@@ -17,7 +17,7 @@ Organização por domínio, não por tipo de arquivo.
 | Autenticação | Auth.js (NextAuth v5), provider Credentials, sessão JWT, papéis STUDENT/ADMIN |
 | Qualidade | ESLint + Prettier, Vitest (unit/integration), Playwright (e2e) |
 | Infra local | Docker + Docker Compose (Postgres com healthcheck) |
-| IA | Interface `AIProvider` desacoplada; providers `mock` e `openai` selecionáveis por env var |
+| IA | AI Gateway multi-provider (`mock`/`openai`/`claude`/`gemini`), roteado por tipo de tarefa |
 
 Gerenciador de pacotes: **npm** (o prompt original menciona pnpm; ambiente disponível usa npm —
 todos os scripts e comandos documentados usam npm).
@@ -48,7 +48,7 @@ src/
     portfolio/
     gamification/
     notifications/
-    artificial-intelligence/ # AIProvider, mock/openai, AIConversation
+    artificial-intelligence/ # AIProvider, Gateway (mock/openai/claude/gemini), AIConversation
     administration/
     ai-labs/                 # empresa fictícia: departamentos, timeline de arquitetura
     curriculum-import/       # importador de Curso.md
@@ -98,26 +98,43 @@ persistida em cookie httpOnly. Middleware protege `/(app)` e `/admin` por papel.
 fluxo desacoplado (`EmailProvider` interface) com modo de desenvolvimento que loga o link no
 console/arquivo em vez de enviar e-mail real — documentado no README.
 
-## 6. IA
+## 6. IA — AI Gateway multi-provider
 
-> **Implementado na Fase 5** em `src/modules/artificial-intelligence/`, exatamente como descrito
-> abaixo. Rate limit (15 req/5min por usuário) em memória; `MockAIProvider` não usa nenhum
-> modelo local, só heurísticas de texto. Ver `docs/DECISIONS.md`.
+> **Fase 5**: interface `AIProvider` + `MockAIProvider`/`OpenAIProvider` em
+> `src/modules/artificial-intelligence/`. **Pós-Fase 6**: substituído o factory de provider único
+> por um **AI Gateway** (`gateway.ts`) que roteia por tipo de tarefa entre múltiplos providers
+> reais. Rate limit (15 req/5min por usuário) em memória; `MockAIProvider` não usa nenhum modelo
+> local, só heurísticas de texto. Ver `docs/DECISIONS.md`.
+
+```
+Plataforma → AI Gateway (getProviderForTask) → { OpenAIProvider, ClaudeProvider, GeminiProvider, MockAIProvider }
+```
 
 ```ts
 interface AIProvider {
+  readonly name: string;
   generateAnswer(input): Promise<...>
   summarizeContent(input): Promise<...>
   generateQuiz(input): Promise<...>
   suggestNextActivity(input): Promise<...>
   explainConcept(input): Promise<...>
 }
+
+type AITaskType = "TEACH" | "CODE_REVIEW" | "SUMMARIZE";
+function getProviderForTask(taskType: AITaskType): AIProvider
 ```
 
-- `MockAIProvider`: respostas determinísticas/heurísticas, usado por padrão e em testes.
-- `OpenAIProvider` (ou compatível): ativado via `AI_PROVIDER=openai` + `AI_API_KEY`, chamado
-  apenas em route handlers/server actions — nunca no client.
-- Sistema principal funciona 100% sem chave de IA configurada.
+- Roteamento fixo e determinístico por tarefa (nenhuma IA decide por outra IA): `TEACH` →
+  OpenAI ou Claude (`AI_TEACHING_PROVIDER`, padrão OpenAI); `CODE_REVIEW` → sempre Claude;
+  `SUMMARIZE` → sempre Gemini.
+- Cada provider real (`OpenAIProvider`/`ClaudeProvider`/`GeminiProvider`) só é instanciado se sua
+  variável de ambiente de chave estiver configurada (`AI_OPENAI_API_KEY`/`AI_CLAUDE_API_KEY`/
+  `AI_GEMINI_API_KEY`); caso contrário o Gateway cai automaticamente para `MockAIProvider`, sem
+  lançar erro — o sistema principal funciona 100% sem nenhuma chave de IA configurada.
+- Todas as chamadas acontecem apenas em server actions — nunca no client. `AIMessage.provider`
+  registra qual provider realmente respondeu cada interação (auditoria/custo).
+- `OllamaProvider` (execução local) está fora desta fase por custo de performance na máquina do
+  aluno; a interface já é genérica o bastante para recebê-lo depois sem mudar o Gateway.
 
 ## 7. Infraestrutura local
 

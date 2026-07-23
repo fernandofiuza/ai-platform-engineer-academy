@@ -277,4 +277,16 @@ Com a Fase 6 concluída, todas as seis fases do fluxo de implementação origina
   Decisões (bug do `status`, escopo do conteúdo gerado — estrutura completa mas sem explicação
   didática aprofundada por tecnologia, que fica para edição incremental via admin) registradas em
   `docs/DECISIONS.md`.
+- **Etapa 1 (IA multi-provider): AI Gateway.** Substituído o factory de provider único por um
+  AI Gateway (`gateway.ts`, `getProviderForTask("TEACH"|"CODE_REVIEW"|"SUMMARIZE")`) que roteia
+  entre `OpenAIProvider`, `ClaudeProvider` (novo), `GeminiProvider` (novo) e `MockAIProvider` por
+  tipo de tarefa: ensino → OpenAI ou Claude (`AI_TEACHING_PROVIDER`, padrão OpenAI); revisão de
+  código → sempre Claude; resumo de conteúdo longo → sempre Gemini. Cada provider real só ativa
+  com sua chave própria (`AI_OPENAI_API_KEY`/`AI_CLAUDE_API_KEY`/`AI_GEMINI_API_KEY`); sem chave,
+  cai automaticamente para o Mock, sem quebrar o sistema. `/ai-tutor` mostra o roteamento atual
+  (ensino/resumo/revisão de código) em vez de um único "provider ativo". Ollama propositalmente
+  não implementado (custo de performance local — fica para fase futura). Verificado ao vivo no
+  navegador (login como estudante, `/ai-tutor` mostra "ensino: mock, resumo: mock, revisão de
+  código: mock" sem nenhuma chave configurada, e as 5 ações do tutor continuam funcionando);
+  `npm run typecheck`/`lint`/`test:unit` sem erros. Decisões registradas em `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

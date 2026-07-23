@@ -8,7 +8,10 @@ de resposta de IA, metadados de importação).
 ## 1. Identidade e acesso
 
 - **User**(id, email, passwordHash, name, role: `STUDENT|ADMIN`, createdAt, ...)
-- **Profile**(userId 1:1, avatarUrl, timezone, studyPreferences JSON leve, bio)
+- **Profile**(userId 1:1, avatarUrl, timezone, studyPreferences JSON leve, bio, manualCommitCount)
+  — `manualCommitCount` (Etapa 5): campo manual editável pelo próprio estudante no Dashboard,
+  já que a integração real com GitHub (`GitHubProvider`) é opcional e nunca chamada — ver
+  `docs/DECISIONS.md`.
 - **PasswordResetToken**(userId, tokenHash, expiresAt, usedAt)
 
 ## 2. Currículo (hierarquia acadêmica)

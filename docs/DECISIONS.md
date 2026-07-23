@@ -580,5 +580,24 @@ status próprios da `Week`, ou título/status do `productMilestone` vinculado). 
 mostra um card fixo da Trilha Produto (marco vinculado, ou "a definir"). Edição fica em
 `/admin/curriculum/[weekId]` (novo componente `ProductMilestoneForm`, upsert por `weekId`).
 
+## 2026-07-23 — Etapa 5: estatísticas reais no dashboard
+
+**Decisão**: o Dashboard passou de 3 para 6 cartões de métrica, todos vindos de tabelas reais já
+existentes: horas estudadas e sequência de estudo (já existiam, apenas reordenadas para o topo —
+"exibir de forma mais proeminente"); aulas concluídas (já existia); **projetos concluídos**
+(`ProjectSubmission.count({ status: "DONE" })`, novo); **commits registrados**
+(`Profile.manualCommitCount`, novo campo — editável inline pelo próprio estudante via
+`updateManualCommitCountAction`); **domínio por tecnologia** (média de
+`SKILL_LEVEL_PROGRESS[level]`, já usado em `/skills`, sobre todas as `Skill` existentes — trata
+competências nunca iniciadas como 0%, não as ignora). Nenhum número é inventado ou hardcoded.
+**"Commits registrados" é manual**: a integração real com GitHub (`GitHubProvider`, Fase 4) segue
+sem implementação (interface pronta, nunca chamada); pedir ao estudante para digitar sua
+contagem de commits é a opção mais simples que atende ao requisito sem exigir OAuth/token do
+GitHub.
+**Limpeza correlata**: o cartão "Próximas entregas" ainda listava a Fase 5 (Tutor de IA) e a Fase
+6 (administração) como pendentes — ambas já estavam concluídas há muito. Atualizado para listar
+as próximas etapas reais desta sessão (Etapa 6: code review por IA; Etapa 8: certificação), já
+que o cartão estava sendo tocado de qualquer forma nesta etapa.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

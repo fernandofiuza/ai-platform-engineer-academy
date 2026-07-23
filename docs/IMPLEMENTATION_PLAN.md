@@ -327,4 +327,14 @@ Com a Fase 6 concluída, todas as seis fases do fluxo de implementação origina
   card da semana) e que a AI Labs (`/ai-labs`) continua mostrando só os 24 marcos próprios,
   filtrados por `track = AI_LABS`; `npm run typecheck`/`lint`/`test:unit` sem erros. Decisões
   registradas em `docs/DECISIONS.md`.
+- **Etapa 5: estatísticas reais no dashboard.** Dashboard expandido de 3 para 6 cartões, todos
+  vindos de dados reais: horas estudadas e sequência de estudo (reordenadas para o topo),
+  aulas concluídas, projetos concluídos (`ProjectSubmission` com `status = DONE`), commits
+  registrados (`Profile.manualCommitCount`, novo campo editável inline pelo estudante — manual
+  porque a integração real com GitHub é opcional), domínio por tecnologia (média de
+  `SKILL_LEVEL_PROGRESS` sobre todas as competências). Cartão "Próximas entregas" corrigido (não
+  listava mais Fase 5/6 como pendentes, já concluídas há muito). Verificado ao vivo: os 6
+  cartões aparecem com os valores reais do estudante demo, e editar o campo de commits (42) e
+  salvar atualiza o cartão imediatamente; `npm run typecheck`/`lint`/`test:unit` sem erros.
+  Decisões registradas em `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

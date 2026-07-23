@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, BookOpen } from "lucide-react";
+import { ArrowRight, BookOpen, Rocket } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
@@ -102,6 +102,27 @@ export default async function WeekDetailPage({
           </CardHeader>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Rocket className="size-4" /> Trilha Produto (APEX Academy)
+          </CardTitle>
+          {week.productMilestone ? (
+            <CardDescription className="flex items-center gap-2">
+              <Badge variant={STATUS_BADGE_VARIANT[week.productMilestone.status]}>
+                {STATUS_LABELS[week.productMilestone.status]}
+              </Badge>
+              <span>
+                {week.productMilestone.title}
+                {week.productMilestone.description ? ` — ${week.productMilestone.description}` : ""}
+              </span>
+            </CardDescription>
+          ) : (
+            <CardDescription>A definir — nenhum marco de produto vinculado a esta semana ainda.</CardDescription>
+          )}
+        </CardHeader>
+      </Card>
 
       {week.lessons.length > 0 ? (
         <div>

@@ -5,5 +5,8 @@ export async function getDepartments() {
 }
 
 export async function getArchitectureMilestones() {
-  return db.architectureMilestone.findMany({ orderBy: { order: "asc" } });
+  return db.architectureMilestone.findMany({
+    where: { track: "AI_LABS" },
+    orderBy: { order: "asc" },
+  });
 }

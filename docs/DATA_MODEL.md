@@ -160,15 +160,24 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 - **ExperienceEvent**(userId, kind, points, refType?, refId?, createdAt) — nível = `1 +
   floor(totalXp / 100)`, calculado sob demanda (sem campo `level` persistido em `User`)
 
-## 9. AI Labs (empresa fictícia)
+## 9. AI Labs (empresa fictícia) e Trilha Produto (APEX Academy)
 
 > **Implementado na Fase 4.** Importado de `Curso.md` (âncoras "Teremos departamentos" e "Ela
 > começará assim:") — 10 departamentos, 24 marcos. Marcos só viram `COMPLETED` por ação
 > explícita de um ADMIN em `/ai-labs`; a importação nunca marca nada como alcançado. Sem campo
 > `layer` (não extraível do texto-fonte com segurança).
+> **Etapa 4** (pós-Fase 6): `ArchitectureMilestone` passou a servir também a Trilha Produto do
+> roadmap (evolução do SaaS "APEX Academy" construído pelo aluno — entidade distinta da AI Labs,
+> ver `docs/DECISIONS.md`), via o campo `track`. As duas trilhas nunca se misturam: toda query
+> que lê marcos da AI Labs filtra `track = AI_LABS` explicitamente.
 
 - **Department**(name, description?, order) — `name` único
-- **ArchitectureMilestone**(order, title, description?, status, achievedAt?) — `order` único
+- **ArchitectureMilestone**(track: `AI_LABS|PRODUCT`, weekId? único, order, title, description?,
+  status, achievedAt?) — `@@unique([track, order])`. `track = AI_LABS` (padrão): as 24 linhas da
+  AI Labs, sem `weekId`. `track = PRODUCT` (Etapa 4): no máximo 1 linha por `Week` (`weekId`
+  único), criada sob demanda pelo admin em `/admin/curriculum/[weekId]` — **não** pré-criada em
+  massa para as 104 semanas (não há conteúdo real de origem para isso; semanas sem marco
+  aparecem como "a definir" computado na UI, não como linha vazia no banco).
 
 ## 10. IA
 

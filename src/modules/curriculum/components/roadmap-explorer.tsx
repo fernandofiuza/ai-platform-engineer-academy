@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { List, Map as MapIcon, GanttChart } from "lucide-react";
+import { List, Map as MapIcon, GanttChart, GraduationCap, Rocket } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ type WeekSummary = {
   number: number;
   title: string;
   status: ContentStatus;
+  productMilestone: { title: string; status: ContentStatus } | null;
 };
 
 type PhaseSummary = {
@@ -33,6 +34,8 @@ type PhaseSummary = {
   status: ContentStatus;
   weeks: WeekSummary[];
 };
+
+type TrackWeek = { id: string; number: number; title: string; status: ContentStatus };
 
 const ALL_STATUSES: (ContentStatus | "ALL")[] = [
   "ALL",
@@ -45,10 +48,29 @@ const ALL_STATUSES: (ContentStatus | "ALL")[] = [
 ];
 
 export function RoadmapExplorer({ phases }: { phases: PhaseSummary[] }) {
+  const [track, setTrack] = React.useState<"FORMACAO" | "PRODUTO">("FORMACAO");
   const [phaseFilter, setPhaseFilter] = React.useState<string>("ALL");
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
 
-  const filteredPhases = phases
+  const trackPhases: { id: string; order: number; name: string; label: string; weeks: TrackWeek[] }[] =
+    phases.map((phase) => ({
+      id: phase.id,
+      order: phase.order,
+      name: phase.name,
+      label: phase.label,
+      weeks: phase.weeks.map((week) =>
+        track === "FORMACAO"
+          ? { id: week.id, number: week.number, title: week.title, status: week.status }
+          : {
+              id: week.id,
+              number: week.number,
+              title: week.productMilestone?.title ?? "Trilha Produto — a definir",
+              status: week.productMilestone?.status ?? "PLANNED",
+            }
+      ),
+    }));
+
+  const filteredPhases = trackPhases
     .filter((phase) => phaseFilter === "ALL" || phase.id === phaseFilter)
     .map((phase) => ({
       ...phase,
@@ -59,6 +81,24 @@ export function RoadmapExplorer({ phases }: { phases: PhaseSummary[] }) {
 
   return (
     <div className="space-y-4">
+      <Tabs value={track} onValueChange={(v) => setTrack(v as "FORMACAO" | "PRODUTO")}>
+        <TabsList>
+          <TabsTrigger value="FORMACAO">
+            <GraduationCap className="size-4" /> Trilha Formação
+          </TabsTrigger>
+          <TabsTrigger value="PRODUTO">
+            <Rocket className="size-4" /> Trilha Produto
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {track === "PRODUTO" ? (
+        <p className="text-sm text-muted-foreground">
+          Evolução do produto &ldquo;APEX Academy&rdquo; (o SaaS construído pelo aluno ao longo da
+          formação) — distinto da AI Labs. Semanas sem marco definido aparecem como &ldquo;a
+          definir&rdquo;.
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-3">
         <Select value={phaseFilter} onValueChange={setPhaseFilter}>
           <SelectTrigger className="w-56">

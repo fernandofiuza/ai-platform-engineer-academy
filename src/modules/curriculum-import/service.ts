@@ -246,12 +246,12 @@ export async function importCurriculum(options: {
   // alcançados pela administração — a importação nunca infere conclusão automaticamente)
   for (const milestone of parsed.architectureMilestones) {
     const existing = await db.architectureMilestone.findUnique({
-      where: { order: milestone.order },
+      where: { track_order: { track: "AI_LABS", order: milestone.order } },
     });
     await db.architectureMilestone.upsert({
-      where: { order: milestone.order },
+      where: { track_order: { track: "AI_LABS", order: milestone.order } },
       update: { title: milestone.title },
-      create: { order: milestone.order, title: milestone.title, status: "PLANNED" },
+      create: { track: "AI_LABS", order: milestone.order, title: milestone.title, status: "PLANNED" },
     });
     if (existing) {
       updatedCount++;

@@ -316,4 +316,15 @@ Com a Fase 6 concluída, todas as seis fases do fluxo de implementação origina
   (caso um DRAFT seja acessado por link direto). Verificado ao vivo: sem chave configurada, o
   botão mostra a recusa esperada em vez de degradar o conteúdo; `npm run
   typecheck`/`lint`/`test:unit` sem erros.
+- **Etapa 4: Trilha "Produto" em paralelo à Trilha "Formação".** `ArchitectureMilestone` (já
+  usado pela AI Labs desde a Fase 4) ganhou `track` (`AI_LABS|PRODUCT`) e `weekId` opcional único,
+  em vez de um domínio novo. `/roadmap` ganhou um seletor de trilha reaproveitando a mesma
+  estrutura de lista/timeline/mapa; `/roadmap/[weekId]` mostra o marco de produto vinculado (ou
+  "a definir"); `/admin/curriculum/[weekId]` ganhou um formulário para criar/editar o marco de
+  produto da semana. Nenhum marco de produto foi pré-criado em massa (tabela esparsa — só existe
+  quando o admin define). Verificado ao vivo: criado um marco de teste ("Autenticação da área do
+  aluno") na Semana 8 via admin, confirmado que aparece na Trilha Produto do roadmap (lista e
+  card da semana) e que a AI Labs (`/ai-labs`) continua mostrando só os 24 marcos próprios,
+  filtrados por `track = AI_LABS`; `npm run typecheck`/`lint`/`test:unit` sem erros. Decisões
+  registradas em `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

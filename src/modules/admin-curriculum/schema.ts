@@ -38,7 +38,15 @@ export const addQuestionSchema = z.object({
     .refine((opts) => opts.some((o) => o.isCorrect), "Marque ao menos uma opção correta."),
 });
 
+export const saveProductMilestoneSchema = z.object({
+  weekId: z.string().min(1),
+  title: z.string().trim().min(1).max(200),
+  description: z.string().max(2000).optional(),
+  status: contentStatus,
+});
+
 export type UpdateWeekInput = z.infer<typeof updateWeekSchema>;
 export type SaveLessonInput = z.infer<typeof saveLessonSchema>;
 export type AddFlashcardInput = z.infer<typeof addFlashcardSchema>;
 export type AddQuestionInput = z.infer<typeof addQuestionSchema>;
+export type SaveProductMilestoneInput = z.infer<typeof saveProductMilestoneSchema>;

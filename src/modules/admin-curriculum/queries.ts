@@ -19,6 +19,7 @@ export async function getWeekWithLessonsForAdmin(weekId: string) {
           assessments: { include: { questions: { include: { options: true } } } },
         },
       },
+      productMilestone: true,
     },
   });
 }

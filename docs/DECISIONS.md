@@ -553,5 +553,32 @@ configurar `AI_OPENAI_API_KEY` ou `AI_CLAUDE_API_KEY`.
 estudante acesse uma aula em `DRAFT` por link direto — nunca apresentado como conteúdo oficial
 sem o aviso.
 
+## 2026-07-23 — Etapa 4: Trilha "Produto" reaproveitando `ArchitectureMilestone`
+
+**Decisão**: em vez de criar uma tabela nova para a Trilha Produto, `ArchitectureMilestone`
+(já existente desde a Fase 4 para a linha do tempo da AI Labs) ganhou um campo
+`track: MilestoneTrack` (`AI_LABS | PRODUCT`, padrão `AI_LABS` — preserva as 24 linhas
+existentes sem migração de dados) e um `weekId String? @unique` opcional (1 marco de produto por
+semana, no máximo). A restrição única de `order` mudou de global para `@@unique([track, order])`,
+já que agora duas "linhas do tempo" independentes compartilham a mesma tabela. Todas as queries
+que já liam `ArchitectureMilestone` para a AI Labs (`getArchitectureMilestones`,
+`toggleMilestoneAchievedAction`) foram atualizadas para filtrar `track: "AI_LABS"` — nunca
+misturam com marcos de produto.
+**Motivo**: instrução explícita do usuário para reaproveitar `Project`/`Laboratory`/
+`ArchitectureMilestone` em vez de criar um novo domínio; `ArchitectureMilestone` já tinha a forma
+certa (`order`, `status`, marco único) para representar uma linha do tempo, só faltava
+distinguir a qual trilha cada marco pertence e vinculá-lo opcionalmente a uma semana.
+**Sem geração em massa**: ao contrário da importação da grade (que criou as 104 `Week` de uma
+vez), **nenhum marco de produto é pré-criado** — a tabela fica esparsa (só existe uma linha
+quando um admin realmente define o marco daquela semana). Semanas sem marco aparecem como "a
+definir" computado na UI, não como uma linha vazia no banco. Isso evita criar 104 registros sem
+nenhum conteúdo real (a Trilha Produto não tem nenhuma fonte de dados em `Curso.md`/
+`Grade_Curricular.md` — é inteiramente definida pela área administrativa ao longo do tempo).
+**UI**: `/roadmap` ganhou um seletor de trilha (Formação/Produto) que reaproveita a mesma
+estrutura de lista/timeline/mapa já existente, só trocando o campo exibido por semana (título e
+status próprios da `Week`, ou título/status do `productMilestone` vinculado). `/roadmap/[weekId]`
+mostra um card fixo da Trilha Produto (marco vinculado, ou "a definir"). Edição fica em
+`/admin/curriculum/[weekId]` (novo componente `ProductMilestoneForm`, upsert por `weekId`).
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

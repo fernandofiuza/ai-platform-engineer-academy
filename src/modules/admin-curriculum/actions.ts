@@ -10,10 +10,12 @@ import {
   addFlashcardSchema,
   addQuestionSchema,
   saveLessonSchema,
+  saveProductMilestoneSchema,
   updateWeekSchema,
   type AddFlashcardInput,
   type AddQuestionInput,
   type SaveLessonInput,
+  type SaveProductMilestoneInput,
   type UpdateWeekInput,
 } from "./schema";
 
@@ -264,5 +266,44 @@ export async function approveLessonContentAction(lessonId: string) {
   revalidatePath(`/admin/curriculum/${lesson.weekId}`);
   revalidatePath("/learn");
   revalidatePath(`/learn/${lessonId}`);
+  return { error: null };
+}
+
+/**
+ * Cria ou atualiza o marco da Trilha Produto vinculado a uma semana (Etapa 4). Reaproveita
+ * `ArchitectureMilestone` (track = PRODUCT) — nunca mistura com a linha do tempo da AI Labs
+ * (track = AI_LABS). `order` usa o próprio número da semana (o vínculo é sempre 1:1 por semana).
+ */
+export async function saveProductMilestoneAction(input: SaveProductMilestoneInput) {
+  const admin = await assertAdmin();
+  if (!admin) return { error: "Apenas administradores podem editar o currículo." };
+
+  const parsed = saveProductMilestoneSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+
+  const week = await db.week.findUnique({ where: { id: parsed.data.weekId } });
+  if (!week) return { error: "Semana não encontrada." };
+
+  await db.architectureMilestone.upsert({
+    where: { weekId: parsed.data.weekId },
+    update: {
+      title: parsed.data.title,
+      description: parsed.data.description,
+      status: parsed.data.status,
+    },
+    create: {
+      track: "PRODUCT",
+      weekId: parsed.data.weekId,
+      order: week.number,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      status: parsed.data.status,
+    },
+  });
+
+  auditLog(admin.id, "save_product_milestone", { weekId: parsed.data.weekId });
+  revalidatePath(`/admin/curriculum/${parsed.data.weekId}`);
+  revalidatePath("/roadmap");
+  revalidatePath(`/roadmap/${parsed.data.weekId}`);
   return { error: null };
 }

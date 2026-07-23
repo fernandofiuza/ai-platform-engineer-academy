@@ -7,7 +7,9 @@ export async function getProgramWithPhasesAndWeeks() {
     include: {
       phases: {
         orderBy: { order: "asc" },
-        include: { weeks: { orderBy: { number: "asc" } } },
+        include: {
+          weeks: { orderBy: { number: "asc" }, include: { productMilestone: true } },
+        },
       },
       weeks: {
         where: { isEnvironmentSetup: true },
@@ -25,6 +27,7 @@ export async function getWeekById(weekId: string) {
       program: true,
       lessons: { orderBy: { order: "asc" } },
       checklistItems: { orderBy: [{ category: "asc" }, { order: "asc" }] },
+      productMilestone: true,
     },
   });
 }

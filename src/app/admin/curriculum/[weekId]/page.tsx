@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { LessonEditor } from "@/modules/admin-curriculum/components/lesson-editor";
+import { ProductMilestoneForm } from "@/modules/admin-curriculum/components/product-milestone-form";
 import { WeekEditForm } from "@/modules/admin-curriculum/components/week-edit-form";
 import { getWeekWithLessonsForAdmin } from "@/modules/admin-curriculum/queries";
 
@@ -44,6 +45,13 @@ export default async function AdminWeekDetailPage({
         initialTitle={week.title}
         initialObjective={week.objective ?? ""}
         initialStatus={week.status}
+      />
+
+      <ProductMilestoneForm
+        weekId={week.id}
+        initialTitle={week.productMilestone?.title ?? ""}
+        initialDescription={week.productMilestone?.description ?? ""}
+        initialStatus={week.productMilestone?.status ?? "PLANNED"}
       />
 
       <div>

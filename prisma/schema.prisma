@@ -147,11 +147,12 @@ model Week {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
-  program        Program         @relation(fields: [programId], references: [id], onDelete: Cascade)
-  phase          Phase?          @relation(fields: [phaseId], references: [id], onDelete: SetNull)
-  lessons        Lesson[]
-  checklistItems ChecklistItem[]
-  studyGoals     StudyGoal[]
+  program          Program                @relation(fields: [programId], references: [id], onDelete: Cascade)
+  phase            Phase?                 @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  lessons          Lesson[]
+  checklistItems   ChecklistItem[]
+  studyGoals       StudyGoal[]
+  productMilestone ArchitectureMilestone?
 
   @@unique([programId, number])
   @@index([phaseId])
@@ -645,16 +646,31 @@ model Department {
   @@map("departments")
 }
 
+// AI_LABS: linha do tempo fixa da infraestrutura da empresa fictícia AI Labs (importada de
+// Curso.md). PRODUCT: Trilha Produto (Etapa 4) — evolução do SaaS "APEX Academy" construído pelo
+// aluno, com no máximo 1 marco por semana (`weekId` único). São conceitos distintos na mesma
+// tabela para reaproveitar o modelo já existente sem criar um novo domínio — ver
+// docs/DECISIONS.md ("AI Labs vs. APEX Academy").
+enum MilestoneTrack {
+  AI_LABS
+  PRODUCT
+}
+
 model ArchitectureMilestone {
-  id          String        @id @default(cuid())
-  order       Int           @unique
+  id          String         @id @default(cuid())
+  track       MilestoneTrack @default(AI_LABS)
+  weekId      String?        @unique
+  order       Int
   title       String
   description String?
-  status      ContentStatus @default(PLANNED)
+  status      ContentStatus  @default(PLANNED)
   achievedAt  DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
+  week Week? @relation(fields: [weekId], references: [id], onDelete: SetNull)
+
+  @@unique([track, order])
   @@map("architecture_milestones")
 }
 

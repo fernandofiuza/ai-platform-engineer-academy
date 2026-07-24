@@ -16,7 +16,7 @@ import { getLessonById, getLessonCompletion } from "@/modules/curriculum/queries
 import { LessonNotesPanel } from "@/modules/notes/components/lesson-notes-panel";
 import { getNotesForLesson } from "@/modules/notes/queries";
 import { getLessonSchedule } from "@/modules/planning/queries";
-import { formatScheduleDate } from "@/modules/planning/format";
+import { formatScheduleDate, stripWeekDayPrefix } from "@/modules/planning/format";
 
 export async function generateMetadata({
   params,
@@ -71,7 +71,9 @@ export default async function LessonDetailPage({
           ) : null}
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{lesson.title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {scheduleEntry ? stripWeekDayPrefix(lesson.title) : lesson.title}
+          </h1>
           {lesson.isDemo ? <Badge variant="secondary">demonstrativa</Badge> : null}
           {completion ? <Badge>concluída</Badge> : null}
         </div>

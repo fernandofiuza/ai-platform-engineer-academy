@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { getLessonsForLearnPage } from "@/modules/curriculum/queries";
-import { formatScheduleDate } from "@/modules/planning/format";
+import { formatScheduleDate, stripWeekDayPrefix } from "@/modules/planning/format";
 import { getLessonSchedule } from "@/modules/planning/queries";
 
 export const metadata: Metadata = { title: "Aprender" };
@@ -159,7 +159,9 @@ function LessonCard({
               <BookOpen className="size-5" />
             </span>
             <div className="min-w-0">
-              <CardTitle className="text-base">{lesson.title}</CardTitle>
+              <CardTitle className="text-base">
+                {paceWeekIndex ? stripWeekDayPrefix(lesson.title) : lesson.title}
+              </CardTitle>
               <CardDescription>
                 Semana {paceWeekIndex ?? lesson.week.number}
                 {lesson.week.phase ? ` · ${lesson.week.phase.label}` : ""}

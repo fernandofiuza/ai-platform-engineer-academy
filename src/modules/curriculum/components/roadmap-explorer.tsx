@@ -25,7 +25,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { STATUS_BADGE_VARIANT, STATUS_LABELS } from "@/modules/curriculum/status";
-import { formatDateRange } from "@/modules/planning/format";
+import { formatDateRange, stripWeekDayPrefix } from "@/modules/planning/format";
 import type { ContentStatus } from "@/generated/prisma/enums";
 
 type PaceGroupLesson = { id: string; title: string; status: "completed" | "scheduled" };
@@ -222,7 +222,7 @@ export function RoadmapExplorer({
                     Semana {group.index} — {formatDateRange(new Date(group.startDate), new Date(group.endDate))}
                   </h3>
                   <div className="mt-2 divide-y rounded-lg border">
-                    {group.lessons.map((lesson) => (
+                    {group.lessons.map((lesson, dayIndex) => (
                       <Link
                         key={lesson.id}
                         href={`/learn/${lesson.id}`}
@@ -234,7 +234,8 @@ export function RoadmapExplorer({
                           ) : (
                             <Circle className="size-4 text-muted-foreground" />
                           )}
-                          {lesson.title}
+                          <span className="text-muted-foreground">Dia {dayIndex + 1}</span> —{" "}
+                          {stripWeekDayPrefix(lesson.title)}
                         </span>
                         <Badge variant={lesson.status === "completed" ? "default" : "outline"}>
                           {lesson.status === "completed" ? "Concluída" : "Planejada"}
@@ -289,7 +290,7 @@ export function RoadmapExplorer({
                   <Link
                     key={group.index}
                     href={`/learn/${group.lessons[0]?.id}`}
-                    title={`Semana ${group.index} — ${formatDateRange(new Date(group.startDate), new Date(group.endDate))}: ${group.lessons.map((l) => l.title).join(", ")}`}
+                    title={`Semana ${group.index} — ${formatDateRange(new Date(group.startDate), new Date(group.endDate))}: ${group.lessons.map((l) => stripWeekDayPrefix(l.title)).join(", ")}`}
                   >
                     <span
                       className={cn(

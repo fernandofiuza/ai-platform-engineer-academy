@@ -1178,5 +1178,27 @@ do currículo (que já estavam disponíveis) ficam na "Semana 1" de ritmo, e as 
 reais da Semana 1 do currículo (Dia 1, Dia 2) ficam na "Semana 2" de ritmo — confirmando que o
 agrupamento por ritmo cruza os limites das semanas fixas do currículo corretamente.
 
+## 2026-07-24 — Fix: título da aula ainda carregava "Semana N, Dia M" da semana fixa antiga
+
+**O que aconteceu**: mesmo depois do agrupamento por ritmo (decisão anterior), o usuário notou
+que uma "Semana 1" (de ritmo) com só 2 aulas podia mostrar uma aula cujo **título** dizia
+literalmente algo como "Semana 1, Dia 3 — ..." — inconsistente, já que só existem 2 aulas
+naquele grupo. Causa: `Lesson.title` é uma string gravada permanentemente na importação
+(`grade-lessons.ts`: `` `Semana ${weekNumber}, Dia ${dayNumber} — ${module}: ${topicos}` ``),
+referindo-se à semana **fixa** do currículo (sempre 5 aulas) — meramente reagrupar por ritmo não
+apaga esse texto antigo já embutido no título de cada aula.
+**Correção**: novo `stripWeekDayPrefix(title)` em `src/modules/planning/format.ts` remove via
+regex o prefixo `"Semana N"` / `"Semana N, Dia M — "` do início do título (títulos que não seguem
+esse padrão, como as aulas de demonstração da Semana 0, voltam inalterados). Aplicado em todo
+lugar que exibe título de aula dentro de um contexto de ritmo: `/roadmap` (lista/timeline em modo
+ritmo), `/learn` (título do card, só quando há `paceWeekIndex`) e `/learn/[lessonId]` (H1, só
+quando há `scheduleEntry`). No Roadmap, o "Dia N" antigo (embutido no título) foi substituído por
+um "Dia N" **novo**, calculado pela posição real da aula dentro do grupo de ritmo atual
+(`dayIndex + 1` na iteração de `group.lessons`) — assim o número exibido sempre bate com a
+quantidade de aulas realmente presentes naquela "semana".
+**Verificado ao vivo**: com `availableDays=[1,3]`, "Semana 2" (de ritmo) mostra "Dia 1 —
+Preparação: Como estudar tecnologia" e "Dia 2 — Preparação: Organização" — sem nenhum "Dia 3"
+nem qualquer número de dia inconsistente com a quantidade de aulas do grupo.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

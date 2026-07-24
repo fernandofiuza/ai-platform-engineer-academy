@@ -512,4 +512,10 @@ produto foram entregues.
   1:1 por semana de currículo) e a aba "Mapa por semestre" não mudaram. Verificado ao vivo:
   `availableDays=[1,3]` produz exatamente 2 aulas por "Semana" em ambas as telas. Ver
   `docs/DECISIONS.md`.
+- **Fix real: título da aula ainda mostrava "Semana N, Dia M" da semana fixa antiga.** O
+  agrupamento por ritmo mudou o número de "Semana", mas `Lesson.title` continuava com o texto
+  literal gravado na importação (semana fixa de 5 aulas). Novo `stripWeekDayPrefix` remove esse
+  prefixo onde há contexto de ritmo (`/roadmap`, `/learn`, `/learn/[lessonId]`); "Dia N" no
+  Roadmap agora é recalculado pela posição real da aula dentro do grupo de ritmo atual, não mais
+  o valor antigo embutido no título. Ver `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

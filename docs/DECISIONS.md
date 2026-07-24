@@ -935,5 +935,26 @@ melhorado); lição registrada para scripts futuros de automação administrativ
 `.first()` em um seletor de botão que se repete em múltiplos cards da mesma página — sempre
 escopar ao contêiner do item-alvo primeiro.
 
+## 2026-07-24 — Fix: modelo do Gemini desatualizado (mesma classe de bug do Claude na Etapa 8)
+
+**O que aconteceu**: a pedido do usuário, testei a API real do Gemini (`GeminiProvider.
+summarizeContent`) e a chamada falhava com 404 "model not found" para `gemini-1.5-flash`
+(o valor configurado em `AI_GEMINI_MODEL`). A chave de API em si estava correta (autenticação
+passou). Investigando via `GET /v1beta/models`, `gemini-1.5-flash` não aparece mais na lista de
+modelos disponíveis para esta chave — descontinuado. Tentativas subsequentes com nomes de modelo
+"fixos" mais novos (`gemini-2.5-flash`, `gemini-2.0-flash`) também falharam: o primeiro retorna
+404 "no longer available to new users", o segundo retorna 429 (quota 0 no free tier para esse
+modelo específico). Apenas o alias `gemini-flash-latest` funcionou — é o nome que o free tier
+desta conta realmente tem cota para usar.
+**Correção**: `AI_GEMINI_MODEL` atualizado para `gemini-flash-latest` em `.env`, `.env.example`,
+e no fallback de `gemini-provider.ts`. Verificado com uma chamada real de resumo, resposta
+coerente em português recebida.
+**Lição**: mesma classe de problema já visto com o Claude (`claude-3-5-sonnet-latest` → 404,
+Etapa 8) — nomes de modelo de IA de terceiros não são estáveis a longo prazo e precisam ser
+revalidados quando o usuário reporta (ou quando se testa) falha de chamada. Diferença notável
+aqui: para contas free tier do Gemini, o alias `-latest` foi a única opção com cota disponível
+(o oposto do padrão geralmente preferido de fixar uma versão exata) — vale reconferir
+periodicamente se a conta muda de tier.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

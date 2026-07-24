@@ -12,7 +12,7 @@ explica, resume e sugere.`;
 
 async function callGenerateContent(prompt: string, systemPrompt: string = DEFAULT_SYSTEM_PROMPT): Promise<string> {
   const apiKey = process.env.AI_GEMINI_API_KEY;
-  const model = process.env.AI_GEMINI_MODEL || "gemini-1.5-flash";
+  const model = process.env.AI_GEMINI_MODEL || "gemini-flash-latest";
 
   if (!apiKey) {
     throw new Error("AI_GEMINI_API_KEY não configurada.");

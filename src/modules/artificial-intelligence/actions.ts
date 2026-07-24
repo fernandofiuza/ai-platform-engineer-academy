@@ -168,6 +168,46 @@ export async function explainConceptAction(input: ExplainConceptInput) {
   });
 }
 
+export async function askProfessorAction(input: ConverseInput) {
+  return withAIGuardrails("ask_professor", async () => {
+    const session = await auth();
+    const parsed = converseSchema.parse(input);
+    if (!parsed.lessonId) {
+      throw new Error("Pergunta ao professor requer uma aula.");
+    }
+
+    const provider = getProviderForPersona(parsed.persona);
+    const context = await buildContextForUser(session!.user.id, parsed.lessonId);
+
+    const response = await provider.converse({
+      persona: parsed.persona,
+      message: parsed.message,
+      context,
+    });
+
+    const conversation = await getOrCreateConversation(session!.user.id);
+    await logExchange(
+      conversation.id,
+      `[${PERSONA_LABELS[parsed.persona]}] ${parsed.message}`,
+      response,
+      provider.name
+    );
+
+    await db.lessonQuestion.create({
+      data: {
+        lessonId: parsed.lessonId,
+        userId: session!.user.id,
+        question: parsed.message,
+        answer: response,
+        provider: provider.name,
+      },
+    });
+
+    revalidatePath(`/learn/${parsed.lessonId}`);
+    return { response, provider: provider.name };
+  });
+}
+
 export async function converseAction(input: ConverseInput) {
   return withAIGuardrails("converse", async () => {
     const session = await auth();

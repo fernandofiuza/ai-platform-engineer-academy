@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Markdown } from "@/components/markdown";
 import { AskProfessorDialog } from "@/modules/artificial-intelligence/components/ask-professor-dialog";
+import { LessonQuestionsList } from "@/modules/artificial-intelligence/components/lesson-questions-list";
+import { getLessonQuestions } from "@/modules/artificial-intelligence/queries";
 import { LessonCompleteForm } from "@/modules/curriculum/components/lesson-complete-form";
 import { getLessonById, getLessonCompletion } from "@/modules/curriculum/queries";
 
@@ -34,9 +36,10 @@ export default async function LessonDetailPage({
     notFound();
   }
 
-  const completion = session?.user
-    ? await getLessonCompletion(session.user.id, lessonId)
-    : null;
+  const [completion, questions] = await Promise.all([
+    session?.user ? getLessonCompletion(session.user.id, lessonId) : Promise.resolve(null),
+    getLessonQuestions(lessonId),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -96,6 +99,16 @@ export default async function LessonDetailPage({
           <AskProfessorDialog lessonId={lesson.id} />
         </CardContent>
       </Card>
+
+      <LessonQuestionsList
+        questions={questions.map((q) => ({
+          id: q.id,
+          question: q.question,
+          answer: q.answer,
+          userName: q.user.name.split(" ")[0],
+          createdAt: q.createdAt,
+        }))}
+      />
 
       {lesson.resources.length > 0 ? (
         <div>

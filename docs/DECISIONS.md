@@ -828,5 +828,28 @@ terminar, rodar explicitamente a aprovação em lote como parte do mesmo fluxo d
 tratar "aprovar o conteúdo" (confirmação do usuário) como equivalente a "já rodei a ação de
 aprovação no sistema".
 
+## 2026-07-24 — Perguntas ao Professor ficam salvas e visíveis para outros alunos
+
+**Decisão**: nova tabela `LessonQuestion` (`lessonId`, `userId`, `question`, `answer`, `provider`,
+`createdAt`) grava cada par pergunta/resposta feito no diálogo "Pergunte ao Professor". Nova
+Server Action `askProfessorAction` (em vez do `converseAction` genérico) faz a chamada à IA e
+persiste o registro. A página da aula (`/learn/[lessonId]`) passa a listar, abaixo do card de
+pergunta, todas as perguntas já feitas por qualquer aluno naquela aula (`LessonQuestionsList`,
+componente client com expandir/recolher por item, primeira pergunta aberta por padrão) — sem
+filtro por usuário, pois o objetivo explícito é students diferentes com a mesma dúvida
+encontrarem a resposta já pronta.
+**Motivo**: pedido explícito do usuário — "quero que elas fiquem salvas com as respostas na
+página para se outra pessoa tiver a mesma dúvida ver ali já salva".
+**Privacidade**: a lista mostra apenas o primeiro nome de quem perguntou (`user.name.split(" ")[0]`),
+não o e-mail nem outros dados do perfil.
+**Verificado**: fluxo completo testado ao vivo via Playwright — pergunta feita no diálogo grava
+uma linha em `LessonQuestion` (contagem 0→1 confirmada via DB), e após reload da página a
+pergunta aparece na lista compartilhada.
+
+## 2026-07-24 — Correção: diálogo "Pergunte ao Professor" sem barra de rolagem
+
+Ver `docs/IMPLEMENTATION_PLAN.md` (entrada correspondente) para o detalhe técnico do fix de CSS
+em `DialogContent`/`ask-professor-dialog.tsx`.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

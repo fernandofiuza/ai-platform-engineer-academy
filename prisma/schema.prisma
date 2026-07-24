@@ -45,6 +45,7 @@ model User {
   laboratoryCompletions LaboratoryCompletion[]
   aiConversations       AIConversation[]
   certifications        Certification[]
+  lessonQuestions       LessonQuestion[]
 
   @@map("users")
 }
@@ -242,9 +243,26 @@ model Lesson {
   flashcards   Flashcard[]
   lessonSkills LessonSkill[]
   laboratories Laboratory[]
+  questions    LessonQuestion[]
 
   @@unique([weekId, order])
   @@map("lessons")
+}
+
+model LessonQuestion {
+  id        String   @id @default(cuid())
+  lessonId  String
+  userId    String
+  question  String
+  answer    String
+  provider  String
+  createdAt DateTime @default(now())
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+  @@map("lesson_questions")
 }
 
 model Resource {

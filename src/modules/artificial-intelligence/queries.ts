@@ -10,3 +10,11 @@ export async function getRecentConversationMessages(userId: string, limit = 20) 
   });
   return conversation?.messages ?? [];
 }
+
+export async function getLessonQuestions(lessonId: string) {
+  return db.lessonQuestion.findMany({
+    where: { lessonId },
+    orderBy: { createdAt: "desc" },
+    include: { user: { select: { name: true } } },
+  });
+}

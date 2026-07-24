@@ -214,6 +214,11 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
   (todas as interações do tutor acumulam nela)
 - **AIMessage**(conversationId, role: `USER|ASSISTANT`, content, provider, tokensApprox?,
   createdAt) — `provider` grava qual provider respondeu (`mock` ou `openai`)
+- **LessonQuestion**(lessonId, userId, question, answer, provider, createdAt) — cada pergunta
+  feita no diálogo "Pergunte ao Professor" de uma aula, com a resposta da IA. Diferente de
+  `AIConversation`/`AIMessage` (histórico privado do usuário no `/ai-tutor`), esta tabela é
+  exibida publicamente na página da aula para **todos** os alunos, não só quem perguntou — é o
+  mecanismo de "outra pessoa com a mesma dúvida já vê a resposta pronta". Ver `docs/DECISIONS.md`.
 
 ## 11. Importação
 

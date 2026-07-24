@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Markdown } from "@/components/markdown";
-import { converseAction } from "@/modules/artificial-intelligence/actions";
+import { askProfessorAction } from "@/modules/artificial-intelligence/actions";
 import { AI_DISCLAIMER } from "@/modules/artificial-intelligence/types";
 
 export function AskProfessorDialog({ lessonId }: { lessonId: string }) {
@@ -26,12 +26,13 @@ export function AskProfessorDialog({ lessonId }: { lessonId: string }) {
 
   function onAsk() {
     startTransition(async () => {
-      const result = await converseAction({ persona: "PROFESSOR", message, lessonId });
+      const result = await askProfessorAction({ persona: "PROFESSOR", message, lessonId });
       if (result.error) {
         toast.error(result.error);
         return;
       }
       setResponse((result.result as { response: string }).response);
+      toast.success("Pergunta salva — outros alunos com a mesma dúvida vão ver a resposta na página.");
     });
   }
 

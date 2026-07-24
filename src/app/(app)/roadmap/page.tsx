@@ -12,6 +12,7 @@ import {
   getProgramWithPhasesAndWeeks,
   getWeekById,
 } from "@/modules/curriculum/queries";
+import { groupByPaceWeek } from "@/modules/planning/schedule";
 import { getLessonSchedule } from "@/modules/planning/queries";
 
 export const metadata: Metadata = { title: "Roadmap" };
@@ -116,6 +117,20 @@ export default async function RoadmapPage() {
             { start: range.start.toISOString(), end: range.end.toISOString() },
           ])
         )}
+        paceGroups={
+          schedule
+            ? groupByPaceWeek(schedule.items).map((group) => ({
+                index: group.index,
+                startDate: group.startDate.toISOString(),
+                endDate: group.endDate.toISOString(),
+                lessons: group.items.map((item) => ({
+                  id: item.lessonId,
+                  title: item.title,
+                  status: item.status,
+                })),
+              }))
+            : undefined
+        }
       />
     </div>
   );

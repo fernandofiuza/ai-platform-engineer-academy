@@ -59,10 +59,10 @@ export default async function LearnPage() {
     );
   }
 
-  const dateByLessonId = new Map(schedule.items.map((i) => [i.lessonId, i]));
+  const scheduleByLessonId = new Map(schedule.items.map((i) => [i.lessonId, i]));
   const groups = new Map<string, { date: Date; lessons: typeof lessons }>();
   for (const lesson of lessons) {
-    const entry = dateByLessonId.get(lesson.id);
+    const entry = scheduleByLessonId.get(lesson.id);
     const date = entry?.date ?? new Date(0);
     const key = date.toDateString();
     if (!groups.has(key)) groups.set(key, { date, lessons: [] });
@@ -93,6 +93,7 @@ export default async function LearnPage() {
                     key={lesson.id}
                     lesson={lesson}
                     isCompleted={completedIds.has(lesson.id)}
+                    paceWeekIndex={scheduleByLessonId.get(lesson.id)?.paceWeekIndex}
                   />
                 ))}
               </div>
@@ -140,7 +141,15 @@ type LessonSummary = {
   week: { number: number; phase: { label: string } | null };
 };
 
-function LessonCard({ lesson, isCompleted }: { lesson: LessonSummary; isCompleted: boolean }) {
+function LessonCard({
+  lesson,
+  isCompleted,
+  paceWeekIndex,
+}: {
+  lesson: LessonSummary;
+  isCompleted: boolean;
+  paceWeekIndex?: number;
+}) {
   return (
     <Link href={`/learn/${lesson.id}`}>
       <Card className="h-full transition-colors hover:bg-accent/50">
@@ -152,7 +161,7 @@ function LessonCard({ lesson, isCompleted }: { lesson: LessonSummary; isComplete
             <div className="min-w-0">
               <CardTitle className="text-base">{lesson.title}</CardTitle>
               <CardDescription>
-                Semana {lesson.week.number}
+                Semana {paceWeekIndex ?? lesson.week.number}
                 {lesson.week.phase ? ` · ${lesson.week.phase.label}` : ""}
               </CardDescription>
             </div>

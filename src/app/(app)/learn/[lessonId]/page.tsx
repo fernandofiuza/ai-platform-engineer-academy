@@ -57,7 +57,7 @@ export default async function LessonDetailPage({
             Aprender
           </Link>
           <span>·</span>
-          <span>Semana {lesson.week.number}</span>
+          <span>Semana {scheduleEntry?.paceWeekIndex ?? lesson.week.number}</span>
           {lesson.week.phase ? <span>· {lesson.week.phase.label}</span> : null}
           {scheduleEntry ? (
             <>

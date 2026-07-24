@@ -502,4 +502,14 @@ produto foram entregues.
   várias anotações Markdown livres por aula, sem estrutura fixa imposta. Verificado ao vivo com
   Playwright: trocar `availableDays` para seg/qua/sex reflete corretamente nas três telas; nota
   criada na página da aula persiste e renderiza após reload. Ver `docs/DECISIONS.md`.
+- **Fix real: "Semana N" no Roadmap/Aprender ignorava o ritmo configurado no Planejador.**
+  "Semana N" significava `Week.number` do currículo (sempre 5 aulas fixas); virou
+  `paceWeekIndex` — o N-ésimo grupo de exatamente `pace` aulas consecutivas do currículo
+  (`pace = StudyPlan.availableDays.length`), cruzando os limites das semanas de conteúdo quando
+  necessário. Bug lateral corrigido: `computeLessonSchedule` retornava aulas fora da ordem do
+  currículo (concluídas antes das agendadas, não intercaladas), o que quebraria o agrupamento
+  por ritmo — corrigido ordenando por `curriculumIndex`. Trilhas Produto/Profissional (marcos
+  1:1 por semana de currículo) e a aba "Mapa por semestre" não mudaram. Verificado ao vivo:
+  `availableDays=[1,3]` produz exatamente 2 aulas por "Semana" em ambas as telas. Ver
+  `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

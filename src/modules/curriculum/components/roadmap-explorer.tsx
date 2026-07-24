@@ -2,7 +2,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Briefcase, List, Map as MapIcon, GanttChart, GraduationCap, Rocket } from "lucide-react";
+import {
+  Briefcase,
+  CheckCircle2,
+  Circle,
+  List,
+  Map as MapIcon,
+  GanttChart,
+  GraduationCap,
+  Rocket,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +27,9 @@ import { cn } from "@/lib/utils";
 import { STATUS_BADGE_VARIANT, STATUS_LABELS } from "@/modules/curriculum/status";
 import { formatDateRange } from "@/modules/planning/format";
 import type { ContentStatus } from "@/generated/prisma/enums";
+
+type PaceGroupLesson = { id: string; title: string; status: "completed" | "scheduled" };
+type PaceGroup = { index: number; startDate: string; endDate: string; lessons: PaceGroupLesson[] };
 
 type WeekSummary = {
   id: string;
@@ -53,11 +65,18 @@ type TrackKey = "FORMACAO" | "PRODUTO" | "PROFISSIONAL";
 export function RoadmapExplorer({
   phases,
   dateRangeByWeekNumber = {},
+  paceGroups,
 }: {
   phases: PhaseSummary[];
   /** Datas reais do cronograma dinâmico (calculadas a partir do Planejador), por número de
-   * semana — ausente quando o aluno ainda não configurou um Planejador. */
+   * semana — ausente quando o aluno ainda não configurou um Planejador. Usado pelas trilhas
+   * Produto/Profissional, que são inerentemente por semana do currículo (marcos 1:1 por Week). */
   dateRangeByWeekNumber?: Record<number, { start: string; end: string }>;
+  /** Aulas agrupadas por "semana de ritmo" (`paceWeekIndex` — grupos de exatamente
+   * `StudyPlan.availableDays.length` aulas cada, cruzando os limites das semanas fixas do
+   * currículo quando necessário). Usado pela Trilha Formação em vez de `phases[].weeks[]`
+   * quando o aluno tem um Planejador configurado — ver `docs/DECISIONS.md`. */
+  paceGroups?: PaceGroup[];
 }) {
   const [track, setTrack] = React.useState<TrackKey>("FORMACAO");
   const [phaseFilter, setPhaseFilter] = React.useState<string>("ALL");
@@ -108,6 +127,8 @@ export function RoadmapExplorer({
       ),
     }));
 
+  const isPaceMode = track === "FORMACAO" && Boolean(paceGroups && paceGroups.length > 0);
+
   return (
     <div className="space-y-4">
       <Tabs value={track} onValueChange={(v) => setTrack(v as TrackKey)}>
@@ -137,35 +158,47 @@ export function RoadmapExplorer({
           marco definido aparecem como &ldquo;a definir&rdquo;.
         </p>
       ) : null}
+      {isPaceMode ? (
+        <p className="text-sm text-muted-foreground">
+          Cada &ldquo;Semana&rdquo; aqui tem exatamente o número de dias configurado no seu{" "}
+          <Link href="/planner" className="underline">
+            Planejador
+          </Link>{" "}
+          — não o número fixo de aulas da grade curricular. Mude sua disponibilidade lá para
+          recalcular tudo na hora.
+        </p>
+      ) : null}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Select value={phaseFilter} onValueChange={setPhaseFilter}>
-          <SelectTrigger className="w-56">
-            <SelectValue placeholder="Fase" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todos os semestres</SelectItem>
-            {phases.map((phase) => (
-              <SelectItem key={phase.id} value={phase.id}>
-                {phase.label}: {phase.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {isPaceMode ? null : (
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Fase" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todos os semestres</SelectItem>
+              {phases.map((phase) => (
+                <SelectItem key={phase.id} value={phase.id}>
+                  {phase.label}: {phase.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            {ALL_STATUSES.map((status) => (
-              <SelectItem key={status} value={status}>
-                {status === "ALL" ? "Todos os status" : STATUS_LABELS[status]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              {ALL_STATUSES.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status === "ALL" ? "Todos os status" : STATUS_LABELS[status]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <Tabs defaultValue="list">
         <TabsList>
@@ -181,74 +214,132 @@ export function RoadmapExplorer({
         </TabsList>
 
         <TabsContent value="list" className="mt-4 space-y-6">
-          {filteredPhases.map((phase) => (
-            <div key={phase.id}>
-              <h3 className="text-sm font-medium text-muted-foreground">
-                {phase.label} — {phase.name}
-              </h3>
-              <div className="mt-2 divide-y rounded-lg border">
-                {phase.weeks.map((week) => (
-                  <Link
-                    key={week.id}
-                    href={`/roadmap/${week.id}`}
-                    className="flex items-center justify-between gap-4 px-4 py-2.5 text-sm hover:bg-accent/50"
-                  >
-                    <span>
-                      <span className="text-muted-foreground">
-                        {week.dateLabel ?? `Semana ${week.number}`}
-                      </span>{" "}
-                      — {week.title}
-                    </span>
-                    <Badge variant={STATUS_BADGE_VARIANT[week.status]}>
-                      {STATUS_LABELS[week.status]}
-                    </Badge>
-                  </Link>
-                ))}
-                {phase.weeks.length === 0 ? (
-                  <p className="px-4 py-3 text-sm text-muted-foreground">
-                    Nenhuma semana com esse filtro.
-                  </p>
-                ) : null}
-              </div>
+          {isPaceMode ? (
+            <div className="space-y-6">
+              {paceGroups!.map((group) => (
+                <div key={group.index}>
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    Semana {group.index} — {formatDateRange(new Date(group.startDate), new Date(group.endDate))}
+                  </h3>
+                  <div className="mt-2 divide-y rounded-lg border">
+                    {group.lessons.map((lesson) => (
+                      <Link
+                        key={lesson.id}
+                        href={`/learn/${lesson.id}`}
+                        className="flex items-center justify-between gap-4 px-4 py-2.5 text-sm hover:bg-accent/50"
+                      >
+                        <span className="flex items-center gap-2">
+                          {lesson.status === "completed" ? (
+                            <CheckCircle2 className="size-4 text-primary" />
+                          ) : (
+                            <Circle className="size-4 text-muted-foreground" />
+                          )}
+                          {lesson.title}
+                        </span>
+                        <Badge variant={lesson.status === "completed" ? "default" : "outline"}>
+                          {lesson.status === "completed" ? "Concluída" : "Planejada"}
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </TabsContent>
-
-        <TabsContent value="timeline" className="mt-4 space-y-6">
-          {filteredPhases.map((phase) => (
-            <div key={phase.id} className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                  {phase.order}
-                </span>
-                <span className="mt-1 w-px flex-1 bg-border" />
-              </div>
-              <div className="flex-1 pb-6">
-                <p className="text-sm font-medium">
+          ) : (
+            filteredPhases.map((phase) => (
+              <div key={phase.id}>
+                <h3 className="text-sm font-medium text-muted-foreground">
                   {phase.label} — {phase.name}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
+                </h3>
+                <div className="mt-2 divide-y rounded-lg border">
                   {phase.weeks.map((week) => (
                     <Link
                       key={week.id}
                       href={`/roadmap/${week.id}`}
-                      title={week.dateLabel ? `${week.dateLabel} — ${week.title}` : week.title}
+                      className="flex items-center justify-between gap-4 px-4 py-2.5 text-sm hover:bg-accent/50"
                     >
-                      <span
-                        className={cn(
-                          "flex size-7 items-center justify-center rounded-md border text-[11px] font-medium transition-colors hover:border-primary",
-                          week.status === "PLANNED" && "bg-muted text-muted-foreground",
-                          week.status !== "PLANNED" && "bg-primary/10 text-primary"
-                        )}
-                      >
-                        {week.number}
+                      <span>
+                        <span className="text-muted-foreground">
+                          {week.dateLabel ?? `Semana ${week.number}`}
+                        </span>{" "}
+                        — {week.title}
                       </span>
+                      <Badge variant={STATUS_BADGE_VARIANT[week.status]}>
+                        {STATUS_LABELS[week.status]}
+                      </Badge>
                     </Link>
                   ))}
+                  {phase.weeks.length === 0 ? (
+                    <p className="px-4 py-3 text-sm text-muted-foreground">
+                      Nenhuma semana com esse filtro.
+                    </p>
+                  ) : null}
                 </div>
               </div>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="timeline" className="mt-4 space-y-6">
+          {isPaceMode ? (
+            <div className="flex flex-wrap gap-1.5">
+              {paceGroups!.map((group) => {
+                const allCompleted = group.lessons.every((l) => l.status === "completed");
+                return (
+                  <Link
+                    key={group.index}
+                    href={`/learn/${group.lessons[0]?.id}`}
+                    title={`Semana ${group.index} — ${formatDateRange(new Date(group.startDate), new Date(group.endDate))}: ${group.lessons.map((l) => l.title).join(", ")}`}
+                  >
+                    <span
+                      className={cn(
+                        "flex size-7 items-center justify-center rounded-md border text-[11px] font-medium transition-colors hover:border-primary",
+                        !allCompleted && "bg-muted text-muted-foreground",
+                        allCompleted && "bg-primary/10 text-primary"
+                      )}
+                    >
+                      {group.index}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
-          ))}
+          ) : (
+            filteredPhases.map((phase) => (
+              <div key={phase.id} className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    {phase.order}
+                  </span>
+                  <span className="mt-1 w-px flex-1 bg-border" />
+                </div>
+                <div className="flex-1 pb-6">
+                  <p className="text-sm font-medium">
+                    {phase.label} — {phase.name}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {phase.weeks.map((week) => (
+                      <Link
+                        key={week.id}
+                        href={`/roadmap/${week.id}`}
+                        title={week.dateLabel ? `${week.dateLabel} — ${week.title}` : week.title}
+                      >
+                        <span
+                          className={cn(
+                            "flex size-7 items-center justify-center rounded-md border text-[11px] font-medium transition-colors hover:border-primary",
+                            week.status === "PLANNED" && "bg-muted text-muted-foreground",
+                            week.status !== "PLANNED" && "bg-primary/10 text-primary"
+                          )}
+                        >
+                          {week.number}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </TabsContent>
 
         <TabsContent value="map" className="mt-4">

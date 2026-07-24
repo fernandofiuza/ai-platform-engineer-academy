@@ -1143,5 +1143,40 @@ estrutura fixa imposta), todas editáveis/excluíveis inline. `createNoteAction`
 **Verificado ao vivo**: criada uma anotação com um comando (`` `docker compose up -d`... ``) na
 página da aula, recarregada a página, anotação aparece renderizada em Markdown no painel.
 
+## 2026-07-24 — "Semana N" vira "semana de ritmo" (bug real: Roadmap/Aprender ignoravam o ritmo)
+
+**O que aconteceu**: o usuário reportou que, mesmo configurando 2 dias/semana no Planejador, o
+Roadmap e o Aprender continuavam mostrando 5 aulas na "Semana 1". Causa raiz: "Semana 1" sempre
+significou `Week.number = 1` — uma unidade de **conteúdo** fixa do currículo (sempre 5 aulas,
+`Program.weeklyDays`), gravada permanentemente no banco na importação. O motor de agendamento
+(decisão anterior) já calculava as *datas* corretamente respeitando o ritmo, mas o *agrupamento*
+em "semanas" no Roadmap e no rótulo "Semana N" de cada aula no Aprender continuavam usando
+`Week.number` do currículo, não o ritmo do aluno — por isso a contagem de 5 nunca mudava.
+**Decisão**: `ScheduledLesson` (`computeLessonSchedule`) ganhou dois campos novos:
+`curriculumIndex` (posição da aula na ordem geral do currículo, 0-based) e `paceWeekIndex`
+(`floor(curriculumIndex / pace) + 1`, onde `pace = StudyPlan.availableDays.length`) — "Semana N"
+passa a significar literalmente "o N-ésimo grupo de `pace` aulas consecutivas do currículo",
+cruzando os limites das semanas fixas quando o ritmo não é múltiplo de 5 (ex.: com pace=2, a
+"semana de ritmo" 3 contém a última aula da Semana-conteúdo 1 + a primeira da Semana-conteúdo 2).
+Nova função `groupByPaceWeek(items)` agrupa por esse índice.
+**Bug lateral corrigido no processo**: `computeLessonSchedule` retornava `items` fora de ordem
+(aulas concluídas primeiro, depois as agendadas — não intercaladas na ordem real do currículo),
+o que teria produzido agrupamentos por ritmo incorretos. Corrigido rastreando `curriculumIndex`
+durante a montagem e ordenando `items` por ele antes de retornar.
+**UI**: `/roadmap` (Trilha Formação, abas Lista e Timeline) e `/learn` (rótulo "Semana N" de cada
+aula) passaram a usar `paceWeekIndex` em vez de `week.number` sempre que existe um `StudyPlan`
+configurado — sem Planejador configurado, cai no fallback anterior (`week.number`, já que não há
+ritmo para calcular). As trilhas Produto/Profissional **não** mudaram — seus marcos são 1:1 por
+`Week` do currículo (não por aula), então continuam agrupados por `Week.number` com a data real
+daquela semana (decisão anterior), o que já fazia sentido sem precisar de recontagem por ritmo. A
+aba "Mapa por semestre" do Roadmap também não mudou (visão agregada por semestre, não por aula).
+Como o filtro por Fase/Status não se aplica a "semanas de ritmo" (sem conceito de semestre fixo
+nem status por grupo), esses seletores ficam ocultos quando a Trilha Formação está em modo ritmo.
+**Verificado ao vivo**: com `availableDays = [1, 3]` (seg/qua), tanto o Roadmap quanto o Aprender
+mostram exatamente 2 aulas em "Semana 1" e "Semana 2" — as duas aulas de demonstração da Semana 0
+do currículo (que já estavam disponíveis) ficam na "Semana 1" de ritmo, e as duas primeiras aulas
+reais da Semana 1 do currículo (Dia 1, Dia 2) ficam na "Semana 2" de ritmo — confirmando que o
+agrupamento por ritmo cruza os limites das semanas fixas do currículo corretamente.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

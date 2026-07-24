@@ -1104,5 +1104,44 @@ os dias configurados; "hoje" avançado sem conclusões empurra a previsão para 
 conclusões no mesmo dia puxam a previsão para trás) — todos passaram. Fluxo completo também
 verificado ao vivo via Playwright nas páginas `/planner` e `/calendar` com um `StudyPlan` real.
 
+## 2026-07-24 — Roadmap e Aprender passam a usar o mesmo cronograma do Planejador
+
+**Decisão**: `getLessonSchedule(userId)` (o motor de agendamento da decisão anterior) virou a
+**única fonte de datas** consumida por `/planner`, `/roadmap`, `/roadmap/[weekId]` e `/learn` —
+nenhuma tela guarda ou deriva "quantos dias por semana" separadamente; todas leem direto do
+`StudyPlan` atual via essa mesma função. Isso resolve o problema relatado pelo usuário (mudar de
+5 para 4 dias no Planejador e o Roadmap/Aprender continuarem mostrando a config antiga): antes
+não existia bug de cache — as telas simplesmente nunca tinham lido `StudyPlan` para nada além de
+sombrear dias da semana no `/calendar`. Como cada página é um Server Component que roda a query
+do zero a cada navegação, o "tempo real" cai de graça, sem necessidade de invalidação manual.
+**Exibição por data em vez de "Semana N, Dia N"**: novo helper compartilhado
+`src/modules/planning/format.ts` (`formatScheduleDate`, `formatDateRange`) garante o mesmo
+formato de data em todas as telas. `/roadmap` (lista e timeline) mostra o intervalo de datas de
+cada semana (`27/07–05/08`) calculado a partir do `weekNumber` de cada item do cronograma, em vez
+de só "Semana N"; `/roadmap/[weekId]` mostra a data real de cada aula individual
+(`27/07 (Seg)`, badge preenchida se já concluída); `/learn` agrupa as aulas por data real
+("24 de julho de 2026 (sexta-feira)") em vez de por semana. Quando o aluno não tem `StudyPlan`
+configurado ainda, todas as telas caem no fallback anterior ("Semana N") — não há como calcular
+datas sem uma configuração de dias disponíveis.
+**Verificado ao vivo**: mudar `StudyPlan.availableDays` para `[1,3,5]` (seg/qua/sex) e recarregar
+`/roadmap`, `/roadmap/[weekId]` e `/learn` mostra imediatamente as aulas só nesses três dias da
+semana, com as datas corretas — sem nenhuma ação de "sincronizar" ou recarregar cache.
+
+## 2026-07-24 — Anotações por aula em `/learn/[lessonId]`
+
+**Decisão**: reaproveitado o módulo `notes` já existente (`Note.scopeType: LESSON`,
+`Note.scopeId: lessonId` — infraestrutura que já existia em `createNoteAction`/`updateNoteAction`
+mas não tinha nenhuma UI embutida na página da aula, só o formulário genérico em `/notes` com um
+seletor manual de aula). Nova query `getNotesForLesson(userId, lessonId)`; novo componente
+`LessonNotesPanel` embutido em `/learn/[lessonId]`, reaproveitando `NoteCard`/`NoteFormDialog`
+sem duplicar lógica. `NoteFormDialog` ganhou uma prop `fixedLessonId` que pré-vincula a
+anotação à aula atual e **esconde** o seletor "vincular a uma aula" (ele só faz sentido no
+formulário genérico de `/notes`, onde a aula não é óbvia pelo contexto). Um aluno pode criar
+várias anotações na mesma aula (texto, links, comandos, checklist — o campo é Markdown livre, sem
+estrutura fixa imposta), todas editáveis/excluíveis inline. `createNoteAction`/`updateNoteAction`/
+`deleteNoteAction` passaram a revalidar `/learn/[lessonId]` também, não só `/notes`.
+**Verificado ao vivo**: criada uma anotação com um comando (`` `docker compose up -d`... ``) na
+página da aula, recarregada a página, anotação aparece renderizada em Markdown no painel.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

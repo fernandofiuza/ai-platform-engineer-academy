@@ -491,4 +491,15 @@ produto foram entregues.
   aulas no mesmo dia adianta a previsão de conclusão. `/planner` mostra a previsão em tempo real
   + próximas 5 aulas agendadas; `/calendar` sobrepõe aulas concluídas/agendadas em cada dia da
   grade. Testado com 3 cenários sintéticos + fluxo completo ao vivo. Ver `docs/DECISIONS.md`.
+- **Roadmap e Aprender sincronizados com o Planejador + exibição por data real + anotações por
+  aula.** `getLessonSchedule` virou a única fonte de datas para `/planner`, `/roadmap`,
+  `/roadmap/[weekId]` e `/learn` — mudar a disponibilidade no Planejador reflete imediatamente
+  nas outras telas (Server Components recalculam a cada navegação, sem cache a invalidar). Novo
+  helper `src/modules/planning/format.ts` padroniza a exibição de datas; "Semana N, Dia N" virou
+  data real ("27/07–05/08" por semana no Roadmap, data individual por aula no detalhe da semana
+  e no Aprender). Reaproveitado o módulo `notes` existente para um painel de anotações embutido
+  em `/learn/[lessonId]` (`LessonNotesPanel`, `NoteFormDialog` com nova prop `fixedLessonId`) —
+  várias anotações Markdown livres por aula, sem estrutura fixa imposta. Verificado ao vivo com
+  Playwright: trocar `availableDays` para seg/qua/sex reflete corretamente nas três telas; nota
+  criada na página da aula persiste e renderiza após reload. Ver `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

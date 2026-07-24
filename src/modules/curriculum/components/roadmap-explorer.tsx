@@ -16,6 +16,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { STATUS_BADGE_VARIANT, STATUS_LABELS } from "@/modules/curriculum/status";
+import { formatDateRange } from "@/modules/planning/format";
 import type { ContentStatus } from "@/generated/prisma/enums";
 
 type WeekSummary = {
@@ -35,7 +36,7 @@ type PhaseSummary = {
   weeks: WeekSummary[];
 };
 
-type TrackWeek = { id: string; number: number; title: string; status: ContentStatus };
+type TrackWeek = { id: string; number: number; title: string; status: ContentStatus; dateLabel: string | null };
 
 const ALL_STATUSES: (ContentStatus | "ALL")[] = [
   "ALL",
@@ -49,10 +50,24 @@ const ALL_STATUSES: (ContentStatus | "ALL")[] = [
 
 type TrackKey = "FORMACAO" | "PRODUTO" | "PROFISSIONAL";
 
-export function RoadmapExplorer({ phases }: { phases: PhaseSummary[] }) {
+export function RoadmapExplorer({
+  phases,
+  dateRangeByWeekNumber = {},
+}: {
+  phases: PhaseSummary[];
+  /** Datas reais do cronograma dinâmico (calculadas a partir do Planejador), por número de
+   * semana — ausente quando o aluno ainda não configurou um Planejador. */
+  dateRangeByWeekNumber?: Record<number, { start: string; end: string }>;
+}) {
   const [track, setTrack] = React.useState<TrackKey>("FORMACAO");
   const [phaseFilter, setPhaseFilter] = React.useState<string>("ALL");
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
+
+  function dateLabelFor(weekNumber: number): string | null {
+    const range = dateRangeByWeekNumber[weekNumber];
+    if (!range) return null;
+    return formatDateRange(new Date(range.start), new Date(range.end));
+  }
 
   const trackPhases: { id: string; order: number; name: string; label: string; weeks: TrackWeek[] }[] =
     phases.map((phase) => ({
@@ -62,7 +77,13 @@ export function RoadmapExplorer({ phases }: { phases: PhaseSummary[] }) {
       label: phase.label,
       weeks: phase.weeks.map((week) => {
         if (track === "FORMACAO") {
-          return { id: week.id, number: week.number, title: week.title, status: week.status };
+          return {
+            id: week.id,
+            number: week.number,
+            title: week.title,
+            status: week.status,
+            dateLabel: dateLabelFor(week.number),
+          };
         }
         const wantedTrack = track === "PRODUTO" ? "PRODUCT" : "PROFESSIONAL";
         const milestone = week.productMilestone?.track === wantedTrack ? week.productMilestone : null;
@@ -73,6 +94,7 @@ export function RoadmapExplorer({ phases }: { phases: PhaseSummary[] }) {
             milestone?.title ??
             (track === "PRODUTO" ? "Trilha Produto — a definir" : "Trilha Profissional — a definir"),
           status: milestone?.status ?? "PLANNED",
+          dateLabel: dateLabelFor(week.number),
         };
       }),
     }));
@@ -172,7 +194,9 @@ export function RoadmapExplorer({ phases }: { phases: PhaseSummary[] }) {
                     className="flex items-center justify-between gap-4 px-4 py-2.5 text-sm hover:bg-accent/50"
                   >
                     <span>
-                      <span className="text-muted-foreground">Semana {week.number}</span>{" "}
+                      <span className="text-muted-foreground">
+                        {week.dateLabel ?? `Semana ${week.number}`}
+                      </span>{" "}
                       — {week.title}
                     </span>
                     <Badge variant={STATUS_BADGE_VARIANT[week.status]}>
@@ -205,7 +229,11 @@ export function RoadmapExplorer({ phases }: { phases: PhaseSummary[] }) {
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {phase.weeks.map((week) => (
-                    <Link key={week.id} href={`/roadmap/${week.id}`} title={week.title}>
+                    <Link
+                      key={week.id}
+                      href={`/roadmap/${week.id}`}
+                      title={week.dateLabel ? `${week.dateLabel} — ${week.title}` : week.title}
+                    >
                       <span
                         className={cn(
                           "flex size-7 items-center justify-center rounded-md border text-[11px] font-medium transition-colors hover:border-primary",

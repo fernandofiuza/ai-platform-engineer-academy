@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { createNoteAction, updateNoteAction } from "@/modules/notes/actions";
 import { NOTE_TEMPLATE_LABELS } from "@/modules/notes/labels";
 
@@ -42,10 +43,14 @@ export function NoteFormDialog({
   lessonOptions,
   existingNote,
   trigger,
+  fixedLessonId,
 }: {
   lessonOptions: LessonOption[];
   existingNote?: ExistingNote;
   trigger?: React.ReactNode;
+  /** Quando informado, a anotação já nasce vinculada a essa aula e o seletor de aula fica
+   * oculto — usado ao embutir o formulário diretamente na página de uma aula específica. */
+  fixedLessonId?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -54,7 +59,7 @@ export function NoteFormDialog({
   const [content, setContent] = React.useState(existingNote?.contentMarkdown ?? "");
   const [template, setTemplate] = React.useState(existingNote?.template ?? "SUMMARY");
   const [tags, setTags] = React.useState(existingNote?.tags.join(", ") ?? "");
-  const [lessonId, setLessonId] = React.useState(existingNote?.scopeId ?? "");
+  const [lessonId, setLessonId] = React.useState(existingNote?.scopeId ?? fixedLessonId ?? "");
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,7 +97,7 @@ export function NoteFormDialog({
         setTitle("");
         setContent("");
         setTags("");
-        setLessonId("");
+        setLessonId(fixedLessonId ?? "");
       }
       router.refresh();
     });
@@ -117,7 +122,7 @@ export function NoteFormDialog({
             <Input id="note-title" value={title} onChange={(e) => setTitle(e.target.value)} required />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={cn("grid gap-3", !fixedLessonId && "sm:grid-cols-2")}>
             <div className="space-y-1.5">
               <Label>Modelo</Label>
               <Select value={template} onValueChange={setTemplate}>
@@ -133,21 +138,23 @@ export function NoteFormDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label>Vincular a uma aula (opcional)</Label>
-              <Select value={lessonId} onValueChange={setLessonId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Nenhuma" />
-                </SelectTrigger>
-                <SelectContent>
-                  {lessonOptions.map((lesson) => (
-                    <SelectItem key={lesson.id} value={lesson.id}>
-                      {lesson.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {fixedLessonId ? null : (
+              <div className="space-y-1.5">
+                <Label>Vincular a uma aula (opcional)</Label>
+                <Select value={lessonId} onValueChange={setLessonId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Nenhuma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lessonOptions.map((lesson) => (
+                      <SelectItem key={lesson.id} value={lesson.id}>
+                        {lesson.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

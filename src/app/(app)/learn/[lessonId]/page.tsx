@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Clock, GraduationCap, Sparkles } from "lucide-react";
+import { CalendarDays, Clock, GraduationCap, Sparkles } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,6 +13,10 @@ import { LessonQuestionsList } from "@/modules/artificial-intelligence/component
 import { getLessonQuestions } from "@/modules/artificial-intelligence/queries";
 import { LessonCompleteForm } from "@/modules/curriculum/components/lesson-complete-form";
 import { getLessonById, getLessonCompletion } from "@/modules/curriculum/queries";
+import { LessonNotesPanel } from "@/modules/notes/components/lesson-notes-panel";
+import { getNotesForLesson } from "@/modules/notes/queries";
+import { getLessonSchedule } from "@/modules/planning/queries";
+import { formatScheduleDate } from "@/modules/planning/format";
 
 export async function generateMetadata({
   params,
@@ -36,10 +40,14 @@ export default async function LessonDetailPage({
     notFound();
   }
 
-  const [completion, questions] = await Promise.all([
+  const [completion, questions, notes, schedule] = await Promise.all([
     session?.user ? getLessonCompletion(session.user.id, lessonId) : Promise.resolve(null),
     getLessonQuestions(lessonId),
+    session?.user ? getNotesForLesson(session.user.id, lessonId) : Promise.resolve([]),
+    session?.user ? getLessonSchedule(session.user.id) : Promise.resolve(null),
   ]);
+
+  const scheduleEntry = schedule?.items.find((i) => i.lessonId === lessonId) ?? null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -51,6 +59,16 @@ export default async function LessonDetailPage({
           <span>·</span>
           <span>Semana {lesson.week.number}</span>
           {lesson.week.phase ? <span>· {lesson.week.phase.label}</span> : null}
+          {scheduleEntry ? (
+            <>
+              <span>·</span>
+              <span className="flex items-center gap-1">
+                <CalendarDays className="size-3.5" />
+                {formatScheduleDate(scheduleEntry.date, "long")}
+                {scheduleEntry.status === "scheduled" ? " (planejada)" : ""}
+              </span>
+            </>
+          ) : null}
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{lesson.title}</h1>
@@ -109,6 +127,10 @@ export default async function LessonDetailPage({
           createdAt: q.createdAt,
         }))}
       />
+
+      {session?.user ? (
+        <LessonNotesPanel lessonId={lesson.id} lessonTitle={lesson.title} notes={notes} />
+      ) : null}
 
       {lesson.resources.length > 0 ? (
         <div>

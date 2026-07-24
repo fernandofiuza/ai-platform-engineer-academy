@@ -28,6 +28,7 @@ export async function createNoteAction(input: CreateNoteInput) {
   });
 
   revalidatePath("/notes");
+  if (parsed.data.lessonId) revalidatePath(`/learn/${parsed.data.lessonId}`);
   return { error: null };
 }
 
@@ -62,6 +63,8 @@ export async function updateNoteAction(input: UpdateNoteInput) {
   });
 
   revalidatePath("/notes");
+  if (parsed.data.lessonId) revalidatePath(`/learn/${parsed.data.lessonId}`);
+  if (note.scopeId && note.scopeId !== parsed.data.lessonId) revalidatePath(`/learn/${note.scopeId}`);
   return { error: null };
 }
 
@@ -86,5 +89,6 @@ export async function deleteNoteAction(noteId: string) {
 
   await db.note.delete({ where: { id: noteId } });
   revalidatePath("/notes");
+  if (note.scopeType === "LESSON" && note.scopeId) revalidatePath(`/learn/${note.scopeId}`);
   return { error: null };
 }

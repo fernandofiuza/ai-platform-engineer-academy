@@ -9,6 +9,8 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { EnvironmentChecklist } from "@/modules/curriculum/components/environment-checklist";
 import { getChecklistProgressForUser, getWeekById } from "@/modules/curriculum/queries";
 import { STATUS_BADGE_VARIANT, STATUS_LABELS } from "@/modules/curriculum/status";
+import { formatScheduleDate } from "@/modules/planning/format";
+import { getLessonSchedule } from "@/modules/planning/queries";
 
 export async function generateMetadata({
   params,
@@ -31,6 +33,9 @@ export default async function WeekDetailPage({
   if (!week) {
     notFound();
   }
+
+  const schedule = session?.user ? await getLessonSchedule(session.user.id) : null;
+  const scheduleByLessonId = new Map((schedule?.items ?? []).map((i) => [i.lessonId, i]));
 
   if (week.isEnvironmentSetup) {
     const progressMap = session?.user
@@ -139,19 +144,29 @@ export default async function WeekDetailPage({
         <div>
           <h2 className="text-sm font-medium text-muted-foreground">Aulas</h2>
           <div className="mt-2 divide-y rounded-lg border">
-            {week.lessons.map((lesson) => (
-              <Link
-                key={lesson.id}
-                href={`/learn/${lesson.id}`}
-                className="flex items-center justify-between gap-4 px-4 py-3 text-sm hover:bg-accent/50"
-              >
-                <span className="flex items-center gap-2">
-                  <BookOpen className="size-4 text-muted-foreground" />
-                  {lesson.title}
-                </span>
-                <ArrowRight className="size-4 text-muted-foreground" />
-              </Link>
-            ))}
+            {week.lessons.map((lesson) => {
+              const entry = scheduleByLessonId.get(lesson.id);
+              return (
+                <Link
+                  key={lesson.id}
+                  href={`/learn/${lesson.id}`}
+                  className="flex items-center justify-between gap-4 px-4 py-3 text-sm hover:bg-accent/50"
+                >
+                  <span className="flex items-center gap-2">
+                    <BookOpen className="size-4 text-muted-foreground" />
+                    {lesson.title}
+                  </span>
+                  <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                    {entry ? (
+                      <Badge variant={entry.status === "completed" ? "default" : "outline"}>
+                        {formatScheduleDate(entry.date)}
+                      </Badge>
+                    ) : null}
+                    <ArrowRight className="size-4" />
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       ) : null}

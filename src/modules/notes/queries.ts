@@ -22,6 +22,13 @@ export async function getNotes(
   });
 }
 
+export async function getNotesForLesson(userId: string, lessonId: string) {
+  return db.note.findMany({
+    where: { userId, scopeType: "LESSON", scopeId: lessonId },
+    orderBy: [{ isFavorite: "desc" }, { updatedAt: "desc" }],
+  });
+}
+
 export async function getAllTagsForUser(userId: string) {
   const notes = await db.note.findMany({ where: { userId }, select: { tags: true } });
   const tagSet = new Set<string>();

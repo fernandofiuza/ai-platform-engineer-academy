@@ -12,6 +12,7 @@ import {
   getProgramWithPhasesAndWeeks,
   getWeekById,
 } from "@/modules/curriculum/queries";
+import { getLessonSchedule } from "@/modules/planning/queries";
 
 export const metadata: Metadata = { title: "Roadmap" };
 
@@ -52,6 +53,18 @@ export default async function RoadmapPage() {
     (acc, phase) => acc + phase.weeks.filter((w) => w.status !== "PLANNED").length,
     0
   );
+
+  const schedule = session?.user ? await getLessonSchedule(session.user.id) : null;
+  const dateRangeByWeekNumber = new Map<number, { start: Date; end: Date }>();
+  for (const item of schedule?.items ?? []) {
+    const existing = dateRangeByWeekNumber.get(item.weekNumber);
+    if (!existing) {
+      dateRangeByWeekNumber.set(item.weekNumber, { start: item.date, end: item.date });
+    } else {
+      if (item.date < existing.start) existing.start = item.date;
+      if (item.date > existing.end) existing.end = item.date;
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -95,7 +108,15 @@ export default async function RoadmapPage() {
         </Link>
       ) : null}
 
-      <RoadmapExplorer phases={program.phases} />
+      <RoadmapExplorer
+        phases={program.phases}
+        dateRangeByWeekNumber={Object.fromEntries(
+          [...dateRangeByWeekNumber.entries()].map(([weekNumber, range]) => [
+            weekNumber,
+            { start: range.start.toISOString(), end: range.end.toISOString() },
+          ])
+        )}
+      />
     </div>
   );
 }

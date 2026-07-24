@@ -1224,5 +1224,36 @@ semana no contexto do cronograma de aulas diário.
 **Verificado ao vivo**: com `availableDays=[1,3]`, as três telas mostram consistentemente "Dia
 01", "Dia 02", "Dia 03", "Dia 04"... sequenciais, sem nenhuma menção a "Semana" em nenhuma delas.
 
+## 2026-07-24 — Roadmap vira um "path" visual (estilo roadmap.sh) + Laboratórios citam a matéria
+
+**O que aconteceu**: depois das correções de nomenclatura, o usuário notou que a Trilha Formação
+do Roadmap tinha ficado visualmente idêntica à tela Aprender (mesma lista agrupada por data) —
+pediu para redesenhar como um roadmap visual no estilo do site roadmap.sh (um "path" de nós
+conectados, não uma lista). Em seguida, também pediu para a seção de Laboratórios parar de
+mencionar semanas e citar a matéria/tecnologia em vez disso.
+**Decisão (Roadmap)**: novo componente `RoadmapPath` — uma trilha vertical com um marcador
+circular por Fase (Semestre) conectado por uma linha, e um card por **módulo** (agrupando semanas
+consecutivas do mesmo módulo, extraído do título da semana) ramificando da linha. Cada card é
+colorido por status (concluído = preenchido, em andamento = contorno, planejado = neutro) e o
+módulo com a próxima aula pendente ganha um marcador "Você está aqui" (aplica só quando há
+Planejador configurado). Extração do nome do módulo via novo `extractModuleName(weekTitle)` em
+`src/modules/curriculum/module-name.ts` (regex sobre o título "Semana N — Módulo"), compartilhado
+com o fix de Laboratórios abaixo. A Trilha Formação deixou de ter as sub-abas Lista/Timeline/Mapa
+(substituídas pelo path visual, único); Produto/Profissional mantiveram as sub-abas como antes
+(marcos por semana de currículo, não por aula — não é o que ficou "igual ao Aprender").
+**Decisão (Laboratórios)**: `describeLinkedWeeks` (`src/modules/laboratories/format.ts`) passou
+a retornar o(s) nome(s) do módulo (via `extractModuleName`) em vez de "Semana N–M". Texto ao
+redor ajustado de "Referente à {label}" para "Matéria: {label}" (mais natural
+gramaticalmente para nomes de tecnologia). Título de cada aula listada no laboratório também
+passou por `stripWeekDayPrefix` (mesma função da decisão anterior), removendo o "Semana N, Dia M
+—" que ainda aparecia ali.
+**Escopo mantido**: o formulário administrativo de laboratórios (`admin-lab-form.tsx`) continua
+mostrando números de semana — é uma ferramenta de gestão de dados para admins, onde saber a
+semana exata vinculada é informação operacional útil, não parte da experiência do aluno visada
+pelo pedido.
+**Verificado ao vivo**: Roadmap mostra a trilha vertical com módulos e marcador de posição atual,
+sem nenhuma menção a "Semana"; `/labs` e `/labs/[labId]` mostram "Matéria: Linux (Semestre 2)" e
+títulos de aula limpos, sem números de semana.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

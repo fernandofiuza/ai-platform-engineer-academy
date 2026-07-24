@@ -1,21 +1,24 @@
+import { extractModuleName } from "@/modules/curriculum/module-name";
+
 type LinkedLesson = {
   lesson: {
     week: {
       number: number;
+      title: string;
       phase: { label: string } | null;
     };
   };
 };
 
+/** Descreve a que matéria(s) um laboratório se refere, pelo nome do módulo (ex.: "Docker",
+ * "Linux") em vez do número da semana — mais legível para o aluno do que "Semana 58-61". Se o
+ * laboratório cruzar mais de um módulo, lista todos, separados por vírgula. */
 export function describeLinkedWeeks(lessons: LinkedLesson[]): string | null {
   if (lessons.length === 0) return null;
 
-  const weekNumbers = [...new Set(lessons.map((l) => l.lesson.week.number))].sort((a, b) => a - b);
+  const moduleNames = [...new Set(lessons.map((l) => extractModuleName(l.lesson.week.title)))];
   const phase = lessons[0].lesson.week.phase?.label;
-  const weekLabel =
-    weekNumbers.length === 1
-      ? `Semana ${weekNumbers[0]}`
-      : `Semanas ${weekNumbers[0]}–${weekNumbers[weekNumbers.length - 1]}`;
+  const modulesLabel = moduleNames.join(", ");
 
-  return phase ? `${weekLabel}, ${phase}` : weekLabel;
+  return phase ? `${modulesLabel} (${phase})` : modulesLabel;
 }

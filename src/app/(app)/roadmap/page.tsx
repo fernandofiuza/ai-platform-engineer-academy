@@ -124,6 +124,7 @@ export default async function RoadmapPage() {
                 date: item.date.toISOString(),
                 status: item.status,
                 curriculumIndex: item.curriculumIndex,
+                weekNumber: item.weekNumber,
               }))
             : undefined
         }

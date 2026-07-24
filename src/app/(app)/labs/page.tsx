@@ -42,7 +42,7 @@ export default async function LabsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {labs.map((lab) => {
-          const weeksLabel = describeLinkedWeeks(lab.lessons);
+          const subjectLabel = describeLinkedWeeks(lab.lessons);
           return (
             <Link key={lab.id} href={`/labs/${lab.id}`}>
               <Card className="h-full transition-colors hover:bg-accent/50">
@@ -53,8 +53,8 @@ export default async function LabsPage() {
                     </span>
                     <div>
                       <CardTitle className="text-base">{lab.title}</CardTitle>
-                      {weeksLabel ? (
-                        <CardDescription>Referente à {weeksLabel}</CardDescription>
+                      {subjectLabel ? (
+                        <CardDescription>Matéria: {subjectLabel}</CardDescription>
                       ) : lab.scenario ? (
                         <CardDescription>{lab.scenario}</CardDescription>
                       ) : lab.objective ? (

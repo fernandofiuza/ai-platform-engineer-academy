@@ -527,4 +527,16 @@ produto foram entregues.
   por semana de currículo) e "Semestre N" (Fase) não foram tocados. Verificado ao vivo:
   `availableDays=[1,3]` mostra "Dia 01"–"Dia 05" sequenciais nas três telas, sem "Semana" em
   nenhuma. Ver `docs/DECISIONS.md`.
+- **Roadmap (Trilha Formação) virou um "path" visual estilo roadmap.sh; Laboratórios citam a
+  matéria em vez da semana.** A Trilha Formação do Roadmap havia ficado visualmente idêntica à
+  tela Aprender (mesma lista por data) — substituída por `RoadmapPath`, um path vertical com um
+  marcador por Fase (Semestre) e um card por módulo (semanas consecutivas do mesmo módulo,
+  extraído do título via novo `extractModuleName`), colorido por status e com "Você está aqui"
+  no módulo da próxima aula pendente; sem sub-abas Lista/Timeline/Mapa nessa trilha. Cards de
+  módulo mostram só o nome (sem subtítulo de intervalo de semanas). Produto/Profissional não
+  mudaram. Em Laboratórios, `describeLinkedWeeks` passou a citar o(s) módulo(s) ("Matéria: X")
+  em vez de "Semana N–M", e os títulos de aula linkados usam `stripWeekDayPrefix`. Formulário
+  admin de laboratórios mantém números de semana (ferramenta operacional, fora do escopo do
+  pedido). Verificado ao vivo com Playwright. Ver `docs/DECISIONS.md`.
+
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

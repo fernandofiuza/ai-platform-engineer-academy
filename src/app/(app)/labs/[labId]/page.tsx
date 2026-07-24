@@ -10,6 +10,7 @@ import { Markdown } from "@/components/markdown";
 import { CompleteLabForm } from "@/modules/laboratories/components/complete-lab-form";
 import { describeLinkedWeeks } from "@/modules/laboratories/format";
 import { getCompletionForUser, getLaboratoryById } from "@/modules/laboratories/queries";
+import { stripWeekDayPrefix } from "@/modules/planning/format";
 
 export async function generateMetadata({
   params,
@@ -32,7 +33,7 @@ export default async function LaboratoryDetailPage({
   if (!lab) notFound();
 
   const completion = session?.user ? await getCompletionForUser(session.user.id, labId) : null;
-  const weeksLabel = describeLinkedWeeks(lab.lessons);
+  const subjectLabel = describeLinkedWeeks(lab.lessons);
 
   const plainSections: { title: string; content: string | null }[] = [
     { title: "Ambiente", content: lab.environment },
@@ -54,7 +55,7 @@ export default async function LaboratoryDetailPage({
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm">
               <BookOpen className="size-4 text-muted-foreground" />
-              Referente à {weeksLabel}
+              Matéria: {subjectLabel}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 pt-0">
@@ -64,9 +65,7 @@ export default async function LaboratoryDetailPage({
                 href={`/learn/${ll.lesson.id}`}
                 className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent/50"
               >
-                <span>
-                  Semana {ll.lesson.week.number} — {ll.lesson.title}
-                </span>
+                <span>{stripWeekDayPrefix(ll.lesson.title)}</span>
                 <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" />
               </Link>
             ))}

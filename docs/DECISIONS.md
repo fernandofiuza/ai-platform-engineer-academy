@@ -1042,5 +1042,23 @@ entradas curadas manualmente, título+descrição curtos, não justificam um pip
 `/roadmap/[weekId]` (semana 61, Docker) mostra o marco de Produto real; o formulário admin
 generalizado mostra a trilha certa pré-selecionada.
 
+## 2026-07-24 — Desfazer conclusão de aula + bug real de XP duplicado corrigido no processo
+
+**Decisão**: `LessonCompleteForm` (`/learn/[lessonId]`) ganhou um botão "Desfazer conclusão"
+(com confirmação via `window.confirm`, já que apaga a reflexão registrada), visível só quando a
+aula já está concluída. Nova action `uncompleteLessonAction(lessonId)`: apaga o `LessonCompletion`
+do usuário, reverte o XP daquela conclusão (`experienceEvent.deleteMany` filtrando
+`refType: "Lesson", refId: lessonId`), e chama `recomputeSkillsForLesson` de novo para recalcular
+a evidência de competências (a função já é 100% derivada de `COUNT(LessonCompletion)`, então só
+recontar já corrige sozinho). Badges já concedidos **não** são revogados — mesmo padrão de
+"conquista não se perde" comum em gamificação.
+**Bug real encontrado e corrigido no mesmo commit**: `completeLessonAction` chamava
+`awardXp(..., 10, ...)` **incondicionalmente**, inclusive quando o usuário só estava atualizando
+a reflexão de uma aula já concluída (botão "Atualizar reflexão") — cada reenvio do formulário
+concedia mais 10 XP, sem limite, para a mesma aula. Corrigido checando se já existia um
+`LessonCompletion` **antes** do upsert; XP só é concedido na primeira conclusão. Verificado ao
+vivo via Playwright: concluir uma aula grava 1 evento de XP; reabrir e desfazer remove a
+completion e o evento de XP, e o botão volta a mostrar "Concluir aula".
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

@@ -79,6 +79,10 @@ export async function completeLessonAction(input: CompleteLessonInput) {
     return { error: "Aula não encontrada." };
   }
 
+  const existing = await db.lessonCompletion.findUnique({
+    where: { userId_lessonId: { userId: session.user.id, lessonId: parsed.data.lessonId } },
+  });
+
   await db.lessonCompletion.upsert({
     where: { userId_lessonId: { userId: session.user.id, lessonId: parsed.data.lessonId } },
     update: {
@@ -96,12 +100,48 @@ export async function completeLessonAction(input: CompleteLessonInput) {
     },
   });
 
-  await awardXp(session.user.id, "lesson_completed", 10, { type: "Lesson", id: parsed.data.lessonId });
+  if (!existing) {
+    await awardXp(session.user.id, "lesson_completed", 10, { type: "Lesson", id: parsed.data.lessonId });
+  }
   await recomputeSkillsForLesson(session.user.id, parsed.data.lessonId);
   await checkAndAwardBadges(session.user.id);
 
   revalidatePath("/learn");
   revalidatePath(`/learn/${parsed.data.lessonId}`);
+  revalidatePath("/skills");
+  return { error: null };
+}
+
+/**
+ * Desfaz a conclusão de uma aula: remove o registro de `LessonCompletion` (e a reflexão
+ * associada), reverte o XP concedido na conclusão original (evento com `refType: "Lesson"`,
+ * `refId: lessonId`) e recalcula a evidência de competências ligadas a essa aula. Badges já
+ * concedidos NÃO são revogados (consistente com o padrão usual de conquistas em gamificação —
+ * uma vez ganho, não se perde por desfazer uma ação posterior).
+ */
+export async function uncompleteLessonAction(lessonId: string) {
+  const session = await auth();
+  if (!session?.user) {
+    return { error: "Sessão expirada. Faça login novamente." };
+  }
+
+  const existing = await db.lessonCompletion.findUnique({
+    where: { userId_lessonId: { userId: session.user.id, lessonId } },
+  });
+  if (!existing) {
+    return { error: "Esta aula ainda não foi concluída." };
+  }
+
+  await db.lessonCompletion.delete({
+    where: { userId_lessonId: { userId: session.user.id, lessonId } },
+  });
+  await db.experienceEvent.deleteMany({
+    where: { userId: session.user.id, kind: "lesson_completed", refType: "Lesson", refId: lessonId },
+  });
+  await recomputeSkillsForLesson(session.user.id, lessonId);
+
+  revalidatePath("/learn");
+  revalidatePath(`/learn/${lessonId}`);
   revalidatePath("/skills");
   return { error: null };
 }

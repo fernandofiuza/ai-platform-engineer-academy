@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { completeLessonAction } from "@/modules/curriculum/actions";
+import { completeLessonAction, uncompleteLessonAction } from "@/modules/curriculum/actions";
 
 const CONFIDENCE_LABELS: Record<number, string> = {
   1: "1 — Não entendi",
@@ -65,6 +65,22 @@ export function LessonCompleteForm({
     });
   }
 
+  function onUncomplete() {
+    if (!window.confirm("Desfazer a conclusão desta aula? Sua reflexão será apagada.")) return;
+    startTransition(async () => {
+      const result = await uncompleteLessonAction(lessonId);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Conclusão desfeita — a aula voltou para 'não concluída'.");
+      setWhatLearned("");
+      setWhatUnclear("");
+      setConfidence("3");
+      router.refresh();
+    });
+  }
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-1.5">
@@ -105,14 +121,21 @@ export function LessonCompleteForm({
         />
       </div>
 
-      <Button type="submit" disabled={isPending}>
-        {isPending ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <CheckCircle2 className="size-4" />
-        )}
-        {isCompleted ? "Atualizar reflexão" : "Concluir aula"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" disabled={isPending}>
+          {isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <CheckCircle2 className="size-4" />
+          )}
+          {isCompleted ? "Atualizar reflexão" : "Concluir aula"}
+        </Button>
+        {isCompleted ? (
+          <Button type="button" variant="ghost" onClick={onUncomplete} disabled={isPending}>
+            <Undo2 className="size-4" /> Desfazer conclusão
+          </Button>
+        ) : null}
+      </div>
     </form>
   );
 }

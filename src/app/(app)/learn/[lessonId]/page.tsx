@@ -16,7 +16,12 @@ import { getLessonById, getLessonCompletion } from "@/modules/curriculum/queries
 import { LessonNotesPanel } from "@/modules/notes/components/lesson-notes-panel";
 import { getNotesForLesson } from "@/modules/notes/queries";
 import { getLessonSchedule } from "@/modules/planning/queries";
-import { formatDayNumber, formatScheduleDate, stripWeekDayPrefix } from "@/modules/planning/format";
+import {
+  formatDayNumber,
+  formatScheduleDate,
+  stripWeekDayHeading,
+  stripWeekDayPrefix,
+} from "@/modules/planning/format";
 
 export async function generateMetadata({
   params,
@@ -102,7 +107,7 @@ export default async function LessonDetailPage({
       {lesson.contentMarkdown ? (
         <Card>
           <CardContent className="pt-6">
-            <Markdown content={lesson.contentMarkdown} />
+            <Markdown content={stripWeekDayHeading(lesson.contentMarkdown)} />
           </CardContent>
         </Card>
       ) : null}

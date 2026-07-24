@@ -33,16 +33,16 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 ```
 
 - **Program**(slug, name, subtitle, durationMonths, totalWeeks, weeklyDays, dailyHours, status)
-- **Phase**(programId, order, name, label /* "Semestre N" */, status, finalProjectId? único,
-  finalAssessmentId? único) — os dois campos opcionais (Etapa 8) marcam qual `Project`/
-  `Assessment` conta como "final do semestre" para a certificação; definidos pela área
-  administrativa em `/admin/curriculum`, sparse (só existem quando definidos) — ver
-  `docs/DECISIONS.md`.
-- **Track**(phaseId, order, name, status) — trilha dentro do semestre (ex.: Backend, Infra) — **ainda não implementado**
+- **Phase**(programId, order, name, label /* "Fase N" — o texto de origem em `Curso.md` usa
+  "Semestre", mas o app exibe "Fase" */, status, finalProjectId? único, finalAssessmentId?
+  único) — os dois campos opcionais (Etapa 8) marcam qual `Project`/`Assessment` conta como
+  "final da fase" para a certificação; definidos pela área administrativa em
+  `/admin/curriculum`, sparse (só existem quando definidos) — ver `docs/DECISIONS.md`.
+- **Track**(phaseId, order, name, status) — trilha dentro da fase (ex.: Backend, Infra) — **ainda não implementado**
 - **Module**(trackId, order, name, status) — **ainda não implementado**
 - **Week**(programId, phaseId?, number 0–104, title, objective?, isEnvironmentSetup bool,
   isManuallyEdited bool, status) — `phaseId` é opcional só para a Semana 0 (`number = 0`), que
-  não pertence a nenhum semestre. `isManuallyEdited` (adicionado nesta sessão, junto com o CRUD
+  não pertence a nenhuma fase. `isManuallyEdited` (adicionado nesta sessão, junto com o CRUD
   administrativo — ver `docs/DECISIONS.md`) é marcado `true` por `updateWeekAction` a cada edição
   salva no admin, e faz o importador de `Grade_Curricular.md` pular a semana em vez de
   sobrescrevê-la (ver `docs/CURRICULUM_IMPORT.md`)
@@ -244,13 +244,14 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 ## 12. Certificação (Etapa 8)
 
 > Certificado **interno** da formação — não é uma certificação de mercado. Emitido só quando os
-> 3 requisitos do semestre são cumpridos (checados sob demanda, sem cache): todas as semanas
-> obrigatórias do semestre com `Lesson` `AVAILABLE` concluídas (`LessonCompletion`), o projeto
-> final do semestre (`Phase.finalProject`) com `ProjectSubmission.status = DONE`, e a avaliação
-> final do semestre (`Phase.finalAssessment`) com ao menos um `AssessmentAttempt` enviado.
+> 3 requisitos da fase são cumpridos (checados sob demanda, sem cache): todas as semanas
+> obrigatórias da fase com `Lesson` `AVAILABLE` concluídas (`LessonCompletion`), o projeto
+> final da fase (`Phase.finalProject`) com `ProjectSubmission.status = DONE`, e a avaliação
+> final da fase (`Phase.finalAssessment`) com ao menos um `AssessmentAttempt` enviado.
 
 - **Certification**(userId, phaseId, code único, issuedAt) — `@@unique([userId, phaseId])`,
-  emitido uma única vez por usuário/semestre; `code` gerado como `APEA-S{order}-{uuid curto}`.
+  emitido uma única vez por usuário/fase; `code` gerado como `APEA-S{order}-{uuid curto}` (prefixo
+  `S` mantido por estabilidade do formato — não está ligado ao rótulo "Fase" exibido na UI).
 
 ## Índices e constraints (mínimo)
 

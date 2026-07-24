@@ -21,7 +21,7 @@ export type ImportReport = {
 
 /**
  * Distribui `totalWeeks` o mais igualmente possível entre as fases, na ordem em que aparecem.
- * Curso.md não define os limites exatos de semana por semestre — essa distribuição é uma
+ * Curso.md não define os limites exatos de semana por fase — essa distribuição é uma
  * decisão registrada em docs/DECISIONS.md, não um fato extraído do arquivo.
  */
 function distributeWeeksAcrossPhases(totalWeeks: number, phases: ParsedPhase[]) {
@@ -112,13 +112,13 @@ export async function importCurriculum(options: {
     createdCount++;
   }
 
-  // Phases (semestres)
+  // Phases (fases)
   const phaseIdByOrder = new Map<number, string>();
   for (const phase of parsed.phases) {
     const existing = await db.phase.findUnique({
       where: { programId_order: { programId: program.id, order: phase.order } },
     });
-    const label = `Semestre ${phase.order}`;
+    const label = `Fase ${phase.order}`;
     const saved = await db.phase.upsert({
       where: { programId_order: { programId: program.id, order: phase.order } },
       update: { name: phase.name, label },
@@ -197,7 +197,7 @@ export async function importCurriculum(options: {
     }
   }
 
-  // Semanas 1..totalWeeks — estrutura vazia, distribuída pelos semestres
+  // Semanas 1..totalWeeks — estrutura vazia, distribuída pelas fases
   if (parsed.phases.length > 0) {
     const ranges = distributeWeeksAcrossPhases(parsed.program.totalWeeks, parsed.phases);
 
@@ -312,8 +312,8 @@ export type ModuleGridReport = {
 
 /**
  * Distribui os módulos de Grade_Curricular.md pelas semanas 1..N já existentes (criadas por
- * `importCurriculum`), atualizando apenas título/objetivo — nunca `phaseId` (o vínculo com o
- * semestre não muda) e nunca semanas com `isManuallyEdited = true` (edições administrativas são
+ * `importCurriculum`), atualizando apenas título/objetivo — nunca `phaseId` (o vínculo com a
+ * fase não muda) e nunca semanas com `isManuallyEdited = true` (edições administrativas são
  * sempre preservadas). O bloco "PROJETO FINAL" vira um `Project` (não semanas) — ver
  * docs/CURRICULUM_IMPORT.md.
  */

@@ -1252,8 +1252,61 @@ mostrando números de semana — é uma ferramenta de gestão de dados para admi
 semana exata vinculada é informação operacional útil, não parte da experiência do aluno visada
 pelo pedido.
 **Verificado ao vivo**: Roadmap mostra a trilha vertical com módulos e marcador de posição atual,
-sem nenhuma menção a "Semana"; `/labs` e `/labs/[labId]` mostram "Matéria: Linux (Semestre 2)" e
-títulos de aula limpos, sem números de semana.
+sem nenhuma menção a "Semana"; `/labs` e `/labs/[labId]` mostram "Matéria: Linux (Fase 2)" e
+títulos de aula limpos, sem números de semana (rótulo de fase atualizado depois, ver decisão
+abaixo sobre a renomeação "Semestre" → "Fase").
+
+## 2026-07-24 — "Semestre" vira "Fase" no app; fix do card de módulo do Roadmap e do heading das
+## aulas geradas por IA
+
+**O que aconteceu**: o usuário reportou dois problemas depois do redesenho do Roadmap: (1) ao
+clicar em um módulo (ex.: "Linux", Fase 2), a página de detalhe da semana ainda mostrava "Semana
+N" e os títulos brutos das aulas ("Semana N, Dia M — ..."); (2) o card de destaque da Semana 0 na
+tela inicial do Roadmap também mostrava "Semana 0 — ..." literalmente. Em seguida, pediu para
+trocar a nomenclatura "Semestre" por "Fase" em todo o sistema. Por fim, relatou que o **conteúdo**
+das aulas (não só o título) também mostrava "Semana N, Dia M" e, num caso, "6 semestres".
+**Decisão (fix `/roadmap/[weekId]`)**: a página de detalhe da semana (destino tanto dos módulos
+da Trilha Formação quanto dos marcos de Produto/Profissional) parou de mostrar "Semana {N}" e
+passou a mostrar `phase.label: phase.name` (agora "Fase N: Nome"); o `<h1>` e o `<title>` da aba
+passaram a usar `extractModuleName(week.title)` em vez do título bruto; a lista de aulas usa
+`stripWeekDayPrefix(lesson.title)`. O card da Semana 0 (tanto em `/roadmap` quanto em
+`/roadmap/[weekId]`) também passou a usar `extractModuleName`, mostrando só "Preparação do
+Ambiente" — a Semana 0 continua sendo um caso especial (fora do sistema de fases/módulos), mas
+não precisa mais expor "Semana 0" no texto visível.
+**Decisão (rename "Semestre" → "Fase")**: `Phase.label` é dado persistido, gerado uma única vez
+na importação (`Semestre ${phase.order}` em `curriculum-import/service.ts`) — não é recalculado
+a cada carregamento como o cronograma. Trocado para `Fase ${phase.order}` no importador (novas
+importações) e corrigido via script único para as 6 fases já existentes no banco (mudança pontual
+de dado, não uma migration formal — só o texto do rótulo). Textos fixos com a palavra "semestre"
+em Certificações, Dashboard, `/admin/curriculum` e no filtro/aba do Roadmap (Produto/Profissional)
+também foram trocados para "fase". `Curso.md` continua usando "Semestre" no texto-fonte (não é
+alterado — é o arquivo de origem); `parser.ts` continua batendo nesse texto literal para extrair
+as 6 fases, só o rótulo exibido no app mudou. Documentação viva (`README.md`,
+`docs/DATA_MODEL.md`, `docs/CURRICULUM_IMPORT.md`) atualizada para refletir "Fase" como a
+convenção atual; `docs/PRODUCT_SPEC.md` não foi tocado por descrever fielmente o texto de origem
+de `Curso.md` (que usa "semestre").
+**Decisão (heading duplicado no conteúdo das aulas geradas por IA)**: o gerador de conteúdo por
+IA (`generateLessonContentAction`, `buildLessonGenerationMessage`) recebia o título bruto da aula
+("Semana N, Dia M — Módulo: Tópico") como o "tema" no prompt, e o modelo reproduzia isso como o
+próprio heading `# Semana N, Dia M — ...` do Markdown gerado — duplicando (e piorando) a
+numeração que já era removida do título na tela. Corrigido na origem: o prompt agora recebe
+`stripWeekDayPrefix(lesson.title)` como tema, com instrução explícita para não incluir
+"Semana"/"Dia" no heading. Para as aulas já geradas (302 no banco), aplicado
+`stripWeekDayHeading` (novo, em `planning/format.ts`) só na primeira linha do Markdown, no
+momento da renderização em `/learn/[lessonId]` — não reescreve o conteúdo já gerado no banco, só
+remove o heading duplicado na exibição, mesmo padrão de `stripWeekDayPrefix` para títulos. O mesmo
+saneamento (`stripWeekDayPrefix`) foi aplicado onde o título bruto da aula também vazava para
+prompts/contexto de IA em outros pontos (contexto do Professor em `artificial-intelligence/
+context.ts`, geração de laboratórios em `laboratories/actions.ts`) para não reintroduzir o mesmo
+problema em features adjacentes. A aula de demonstração "O princípio da formação" (seed) tinha o
+texto fixo "ao longo dos 6 semestres" — corrigido para "6 fases" no `seed.ts` e no banco (via
+script único, já que o seed só cria aulas de demonstração na primeira vez — `update: {}` no
+upsert — e não sobrescreve o texto de uma aula já existente).
+**Verificado ao vivo**: `/roadmap` sem nenhuma menção a "Semana"/"Semestre" (card da Semana 0 lê
+"Preparação do Ambiente", fases mostram "Fase 1"–"Fase 6"); clicar no módulo "Linux" (Fase 2) leva
+a uma página com `<h1>Linux</h1>`, sem "Semana"; a aula "Semana 24, Dia 1 — Linux: Systemd" abre
+com título de página "Linux: Systemd" e o Markdown renderizado também começa com `# Linux:
+Systemd`, sem o heading duplicado antigo.
 
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

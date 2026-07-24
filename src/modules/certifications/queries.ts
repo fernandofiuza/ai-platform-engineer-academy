@@ -14,9 +14,9 @@ export type CertificationEligibility = {
 };
 
 /**
- * Verifica os 3 requisitos da certificação de semestre (Etapa 8): todas as semanas obrigatórias
- * do semestre concluídas (aulas disponíveis com `LessonCompletion`), o projeto final do semestre
- * (`Phase.finalProject`) submetido com `status = DONE`, e a avaliação final do semestre
+ * Verifica os 3 requisitos da certificação de fase (Etapa 8): todas as semanas obrigatórias
+ * da fase concluídas (aulas disponíveis com `LessonCompletion`), o projeto final da fase
+ * (`Phase.finalProject`) submetido com `status = DONE`, e a avaliação final da fase
  * (`Phase.finalAssessment`) com ao menos uma tentativa enviada. Se o projeto/avaliação final
  * ainda não tiver sido definido pela área administrativa, o requisito correspondente nunca é
  * satisfeito (não inventamos o que ainda não existe) — ver docs/DECISIONS.md.

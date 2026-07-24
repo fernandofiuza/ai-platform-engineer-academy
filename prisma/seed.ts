@@ -81,7 +81,7 @@ async function seedDemoLessons() {
       durationMinutes: 10,
       isDemo: true,
       status: "AVAILABLE",
-      contentMarkdown: `## "Nunca estudar uma tecnologia sem aplicá-la em um projeto real."\n\nEsse é o princípio central da formação.\n\n- Se aprendermos Redis, ele entra na plataforma.\n- Se aprendermos Docker, fazemos o deploy da plataforma.\n- Se aprendermos observabilidade, monitoramos a aplicação.\n\nCada tecnologia estudada precisa aparecer, de forma verificável, na mesma plataforma que evolui com você ao longo dos 6 semestres.\n\n> Conteúdo de demonstração (aula de exemplo), extraído de \`Curso.md\`.`,
+      contentMarkdown: `## "Nunca estudar uma tecnologia sem aplicá-la em um projeto real."\n\nEsse é o princípio central da formação.\n\n- Se aprendermos Redis, ele entra na plataforma.\n- Se aprendermos Docker, fazemos o deploy da plataforma.\n- Se aprendermos observabilidade, monitoramos a aplicação.\n\nCada tecnologia estudada precisa aparecer, de forma verificável, na mesma plataforma que evolui com você ao longo das 6 fases.\n\n> Conteúdo de demonstração (aula de exemplo), extraído de \`Curso.md\`.`,
     },
   });
 

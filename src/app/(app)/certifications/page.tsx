@@ -20,15 +20,15 @@ export default async function CertificationsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Certificações</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Certificado interno da formação por semestre — não é uma certificação de mercado.
+          Certificado interno da formação por fase — não é uma certificação de mercado.
         </p>
       </div>
 
       <Alert>
         <Award className="size-4" />
         <AlertDescription>
-          Cada semestre exige: todas as semanas obrigatórias concluídas, o projeto final do
-          semestre submetido como concluído, e a avaliação final do semestre respondida.
+          Cada fase exige: todas as semanas obrigatórias concluídas, o projeto final da
+          fase submetido como concluído, e a avaliação final da fase respondida.
         </AlertDescription>
       </Alert>
 
@@ -75,16 +75,16 @@ export default async function CertificationsPage() {
                   done={eligibility.hasFinalProject && eligibility.projectDone}
                   label={
                     eligibility.hasFinalProject
-                      ? "Projeto final do semestre submetido como concluído"
-                      : "Projeto final do semestre ainda não definido pela área administrativa"
+                      ? "Projeto final da fase submetido como concluído"
+                      : "Projeto final da fase ainda não definido pela área administrativa"
                   }
                 />
                 <RequirementRow
                   done={eligibility.hasFinalAssessment && eligibility.assessmentDone}
                   label={
                     eligibility.hasFinalAssessment
-                      ? "Avaliação final do semestre respondida"
-                      : "Avaliação final do semestre ainda não definida pela área administrativa"
+                      ? "Avaliação final da fase respondida"
+                      : "Avaliação final da fase ainda não definida pela área administrativa"
                   }
                 />
               </CardContent>

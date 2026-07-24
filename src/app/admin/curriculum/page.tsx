@@ -35,7 +35,7 @@ export default async function AdminCurriculumPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Requisitos de certificação por semestre</CardTitle>
+          <CardTitle className="text-base">Requisitos de certificação por fase</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {phases.map((phase) => (

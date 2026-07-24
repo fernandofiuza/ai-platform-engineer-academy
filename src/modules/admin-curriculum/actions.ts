@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getProviderForPersona } from "@/modules/artificial-intelligence/gateway";
+import { stripWeekDayPrefix } from "@/modules/planning/format";
 import {
   addFlashcardSchema,
   addQuestionSchema,
@@ -180,8 +181,10 @@ export async function deleteQuestionAction(questionId: string, weekId: string) {
 }
 
 function buildLessonGenerationMessage(lesson: { title: string; objective: string | null }) {
+  const theme = stripWeekDayPrefix(lesson.title);
   return [
-    `Gere o conteúdo completo desta aula em Markdown, para o tema: "${lesson.title}"`,
+    `Gere o conteúdo completo desta aula em Markdown, para o tema: "${theme}"`,
+    `Não inclua "Semana" ou "Dia" no título/heading da aula — comece direto pelo tema.`,
     `(objetivo: ${lesson.objective ?? "não informado"}).`,
     "Use o conteúdo de referência (tópicos e checklist já definidos para esta semana) apenas para",
     "saber QUAIS tópicos cobrir e qual é o projeto do módulo — não copie o texto dele, ele é só um",
@@ -235,7 +238,7 @@ export async function generateLessonContentAction(lessonId: string, confirmOverw
       persona: "PROFESSOR",
       message: buildLessonGenerationMessage(lesson),
       context: {
-        currentLessonTitle: lesson.title,
+        currentLessonTitle: stripWeekDayPrefix(lesson.title),
         currentLessonContent: lesson.contentMarkdown ?? undefined,
         completedLessonTitles: [],
         openGoalTitles: [],

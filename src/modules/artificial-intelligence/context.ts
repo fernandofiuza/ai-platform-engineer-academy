@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { stripWeekDayPrefix } from "@/modules/planning/format";
 import type { AIContext } from "./types";
 
 export async function buildContextForUser(
@@ -17,9 +18,9 @@ export async function buildContextForUser(
   ]);
 
   return {
-    currentLessonTitle: currentLesson?.title,
+    currentLessonTitle: currentLesson ? stripWeekDayPrefix(currentLesson.title) : undefined,
     currentLessonContent: currentLesson?.contentMarkdown ?? undefined,
-    completedLessonTitles: completions.map((c) => c.lesson.title),
+    completedLessonTitles: completions.map((c) => stripWeekDayPrefix(c.lesson.title)),
     openGoalTitles: goals.map((g) => g.title),
     recentQuizScores: attempts.map((a) => a.score ?? 0),
   };

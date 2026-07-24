@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { RoadmapExplorer } from "@/modules/curriculum/components/roadmap-explorer";
+import { extractModuleName } from "@/modules/curriculum/module-name";
 import {
   getChecklistProgressForUser,
   getProgramWithPhasesAndWeeks,
@@ -71,7 +72,7 @@ export default async function RoadmapPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Roadmap</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {program.name} — {program.totalWeeks} semanas em {program.phases.length} semestres.{" "}
+          {program.name} — {program.totalWeeks} semanas em {program.phases.length} fases.{" "}
           {definedWeeks} de {totalWeeks} semanas já têm conteúdo definido; as demais estão
           marcadas como <Badge variant="secondary">Planejado</Badge>.
         </p>
@@ -87,7 +88,7 @@ export default async function RoadmapPage() {
                     <ListChecks className="size-5" />
                   </span>
                   <div>
-                    <CardTitle>{weekZero.title}</CardTitle>
+                    <CardTitle>{extractModuleName(weekZero.title)}</CardTitle>
                     <CardDescription>Checklist de preparação do ambiente</CardDescription>
                   </div>
                 </div>

@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getGeminiProvider } from "@/modules/artificial-intelligence/gateway";
 import { awardXp, checkAndAwardBadges } from "@/modules/gamification/service";
+import { stripWeekDayPrefix } from "@/modules/planning/format";
 import {
   completeLaboratorySchema,
   saveLaboratorySchema,
@@ -229,24 +230,28 @@ export async function generateLabContentAction(input: {
     };
   }
 
-  const scenario = input.scenario?.trim() || input.title?.trim() || lessons[0].title;
-  const title = input.title?.trim() || `Laboratório — ${lessons[0].title}`;
+  const scenario = input.scenario?.trim() || input.title?.trim() || stripWeekDayPrefix(lessons[0].title);
+  const title = input.title?.trim() || `Laboratório — ${stripWeekDayPrefix(lessons[0].title)}`;
 
   try {
     const instructions = await provider.converse({
       persona: "PROFESSOR",
       message: buildLabGenerationMessage({
         scenario,
-        lessons: lessons.map((l) => ({ title: l.title, objective: l.objective })),
+        lessons: lessons.map((l) => ({ title: stripWeekDayPrefix(l.title), objective: l.objective })),
       }),
       context: {
-        currentLessonTitle: lessons[0].title,
+        currentLessonTitle: stripWeekDayPrefix(lessons[0].title),
         // Só um resumo curto de cada aula, não o conteúdo inteiro: os títulos/objetivos já vão
         // no prompt (buildLabGenerationMessage), e o laboratório é só prática — não precisa da
         // teoria completa das aulas como contexto. Manter isso pequeno evita prompts de 100k+
         // caracteres quando um laboratório cobre muitas aulas de várias semanas.
         currentLessonContent: lessons
-          .map((l) => (l.contentMarkdown ? `${l.title}: ${l.contentMarkdown.slice(0, 400)}...` : null))
+          .map((l) =>
+            l.contentMarkdown
+              ? `${stripWeekDayPrefix(l.title)}: ${l.contentMarkdown.slice(0, 400)}...`
+              : null
+          )
           .filter(Boolean)
           .join("\n\n"),
         completedLessonTitles: [],

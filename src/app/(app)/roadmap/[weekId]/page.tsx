@@ -7,9 +7,10 @@ import { auth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EnvironmentChecklist } from "@/modules/curriculum/components/environment-checklist";
+import { extractModuleName } from "@/modules/curriculum/module-name";
 import { getChecklistProgressForUser, getWeekById } from "@/modules/curriculum/queries";
 import { STATUS_BADGE_VARIANT, STATUS_LABELS } from "@/modules/curriculum/status";
-import { formatScheduleDate } from "@/modules/planning/format";
+import { formatScheduleDate, stripWeekDayPrefix } from "@/modules/planning/format";
 import { getLessonSchedule } from "@/modules/planning/queries";
 
 export async function generateMetadata({
@@ -19,7 +20,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { weekId } = await params;
   const week = await getWeekById(weekId);
-  return { title: week ? week.title : "Semana" };
+  if (!week) return { title: "Roadmap" };
+  return { title: extractModuleName(week.title) };
 }
 
 export default async function WeekDetailPage({
@@ -60,7 +62,7 @@ export default async function WeekDetailPage({
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{week.title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{extractModuleName(week.title)}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Marque cada item conforme for preparando seu ambiente. Seu progresso é salvo
             automaticamente.
@@ -71,22 +73,20 @@ export default async function WeekDetailPage({
     );
   }
 
+  const moduleName = extractModuleName(week.title);
+
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Semana {week.number}</span>
-          {week.phase ? (
-            <>
-              <span>·</span>
-              <span>
-                {week.phase.label}: {week.phase.name}
-              </span>
-            </>
-          ) : null}
-        </div>
+        {week.phase ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>
+              {week.phase.label}: {week.phase.name}
+            </span>
+          </div>
+        ) : null}
         <div className="mt-1 flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{week.title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{moduleName}</h1>
           <Badge variant={STATUS_BADGE_VARIANT[week.status]}>{STATUS_LABELS[week.status]}</Badge>
         </div>
         {week.objective ? (
@@ -154,7 +154,7 @@ export default async function WeekDetailPage({
                 >
                   <span className="flex items-center gap-2">
                     <BookOpen className="size-4 text-muted-foreground" />
-                    {lesson.title}
+                    {stripWeekDayPrefix(lesson.title)}
                   </span>
                   <span className="flex items-center gap-2 text-xs text-muted-foreground">
                     {entry ? (

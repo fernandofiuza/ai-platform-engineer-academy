@@ -25,15 +25,16 @@ original e sinalizando ambiguidade em vez de inventar estrutura.
 - **Program**: nome, subtítulo, duração (24 meses / 104 semanas), carga (5d/sem, 3h30/dia).
   Extraído por âncora literal (`raw.includes("24 meses")` etc.) — se a âncora não for encontrada
   (ex.: o texto for editado), gera `ImportWarning` e mantém o último valor conhecido.
-- **6 Semestres (`Phase`)**: extraídos via regex `/(\d)º Semestre\s*\n\s*([^\n]+)/g`, na ordem em
-  que aparecem no arquivo.
+- **6 Fases (`Phase`)**: extraídas via regex `/(\d)º Semestre\s*\n\s*([^\n]+)/g` (o texto de origem
+  em `Curso.md` usa "Semestre"; o rótulo exibido no app é `"Fase N"`), na ordem em que aparecem no
+  arquivo.
 - **Semana 0 — Preparação do Ambiente**: bloco delimitado pelas âncoras
   `"Instalaremos e configuraremos:"` … `"\nDepois\n"`. Dentro dele, um allowlist de 12 categorias
   conhecidas (Sistema, IDE, IA, Versionamento, Terminal, Docker, Navegadores, Banco, API,
   Desenvolvimento, Diagramas, Documentação) decide onde cada `ChecklistItem` começa; linhas com
   prefixo "✅ " têm o prefixo removido. Resultado: 40 itens.
 - **Semanas 1–104**: criadas vazias (`status = PLANNED`, título `"Semana N — a definir"`),
-  distribuídas nos 6 semestres em faixas contíguas o mais uniformes possível (ver
+  distribuídas nas 6 fases em faixas contíguas o mais uniformes possível (ver
   `docs/DECISIONS.md`).
 - **Departamentos da AI Labs** (Fase 4): bloco delimitado pelas âncoras
   `"Teremos departamentos"` … `"Cada módulo contribuirá para um departamento."`. Linhas
@@ -50,7 +51,7 @@ original e sinalizando ambiguidade em vez de inventar estrutura.
 
 - Áreas de conhecimento / tecnologias citadas como entidade `Technology` própria (a Fase 4 criou
   `Skill`, mas não `Technology` — ver `docs/DECISIONS.md`).
-- Conteúdo semana a semana (1–104), módulos/trilhas dentro de cada semestre, projetos/
+- Conteúdo semana a semana (1–104), módulos/trilhas dentro de cada fase, projetos/
   laboratórios específicos com requisitos detalhados, competências com critérios de nível
   oficiais, certificações internas, bibliografia oficial — nada disso está em `Curso.md` de
   forma extraível; continuam como estrutura vazia/planejada (ou com só 1 item demonstrativo,
@@ -61,7 +62,7 @@ original e sinalizando ambiguidade em vez de inventar estrutura.
 
 Gerados quando:
 1. uma âncora literal esperada do `Program` não é encontrada;
-2. o número de semestres encontrados é diferente de 6;
+2. o número de fases ("Semestre" em `Curso.md`) encontradas é diferente de 6;
 3. o bloco da Semana 0 não é encontrado;
 4. há linhas dentro do bloco da Semana 0 antes de qualquer categoria conhecida;
 5. uma das 12 categorias esperadas não aparece no bloco;
@@ -151,7 +152,7 @@ Para cada faixa de semanas do módulo:
   "preservada" no relatório.
 - Caso contrário → atualiza apenas `title` (`"Semana N — <Nome do Módulo>"`) e `objective`
   (`"Projeto do módulo: <descrição>"`, se houver descrição de projeto). `status` e `phaseId`
-  (vínculo com o semestre) **não são tocados**.
+  (vínculo com a fase) **não são tocados**.
 
 Para o Projeto Final: busca um `Project` existente por título
 (`"Projeto Final: <Título>"`); se não existir, cria um com os componentes extraídos como

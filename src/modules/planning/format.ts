@@ -39,6 +39,16 @@ export function stripWeekDayPrefix(title: string): string {
 }
 
 /**
+ * Mesma limpeza de `stripWeekDayPrefix`, mas para o cabeçalho Markdown (`# Semana N, Dia M — ...`)
+ * que o gerador de conteúdo por IA reproduz porque recebia o título bruto da aula como tema do
+ * prompt (`buildLessonGenerationMessage`). Só afeta a primeira linha, quando ela é um heading
+ * `#`; o resto do conteúdo não é tocado. Ver `docs/DECISIONS.md`.
+ */
+export function stripWeekDayHeading(markdown: string): string {
+  return markdown.replace(/^(#\s+)Semana\s+\d+(?:,\s*Dia\s+\d+)?\s*—\s*/, "$1");
+}
+
+/**
  * "Dia N" sequencial do cronograma do aluno — `curriculumIndex + 1` (1-based), zero-padded a 2
  * dígitos. Substitui por completo o conceito de "Semana N" (fixa do currículo ou por ritmo) na
  * exibição do Planejador/Roadmap/Aprender, a pedido explícito do usuário — sem agrupamento por

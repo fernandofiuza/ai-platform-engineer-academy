@@ -11,10 +11,10 @@ import { awardXp } from "@/modules/gamification/service";
 import { getCertificationEligibility } from "./queries";
 
 /**
- * Emite o certificado interno do semestre (Etapa 8) se o estudante cumprir os 3 requisitos:
- * semanas obrigatórias concluídas, projeto final do semestre com submissão DONE, e avaliação
- * final do semestre com ao menos uma tentativa enviada. Idempotente — reemitir para um semestre
- * já certificado apenas retorna o certificado existente, nunca duplica.
+ * Emite o certificado interno da fase (Etapa 8) se o estudante cumprir os 3 requisitos:
+ * semanas obrigatórias concluídas, projeto final da fase com submissão DONE, e avaliação
+ * final da fase com ao menos uma tentativa enviada. Idempotente — reemitir para uma fase
+ * já certificada apenas retorna o certificado existente, nunca duplica.
  */
 export async function requestCertificationAction(phaseId: string) {
   const session = await auth();
@@ -26,10 +26,10 @@ export async function requestCertificationAction(phaseId: string) {
   if (existing) return { error: null, certificationId: existing.id };
 
   const eligibility = await getCertificationEligibility(session.user.id, phaseId);
-  if (!eligibility) return { error: "Semestre não encontrado.", certificationId: null };
+  if (!eligibility) return { error: "Fase não encontrada.", certificationId: null };
   if (!eligibility.eligible) {
     return {
-      error: "Você ainda não cumpriu todos os requisitos deste semestre.",
+      error: "Você ainda não cumpriu todos os requisitos desta fase.",
       certificationId: null,
     };
   }
@@ -51,7 +51,7 @@ const setPhaseRequirementsSchema = z.object({
   finalAssessmentId: z.string().nullable(),
 });
 
-/** Admin define qual Project/Assessment conta como "final do semestre" para a certificação. */
+/** Admin define qual Project/Assessment conta como "final da fase" para a certificação. */
 export async function setPhaseCertificationRequirementsAction(
   input: z.infer<typeof setPhaseRequirementsSchema>
 ) {

@@ -23,7 +23,7 @@ oficial inventado. Ver `docs/PRODUCT_SPEC.md`.
 | Área | O que tem |
 |---|---|
 | Autenticação | Cadastro, login, logout, redefinição de senha, papéis `STUDENT`/`ADMIN` |
-| Currículo | Roadmap das 104 semanas (lista/timeline/mapa por semestre), Semana 0 interativa, página de aula com Markdown seguro |
+| Currículo | Roadmap das 104 semanas (lista/timeline/mapa por fase), Semana 0 interativa, página de aula com Markdown seguro |
 | Aprendizagem | Sessões de estudo com cronômetro persistente, planejador + metas, calendário mensal, anotações com busca, quizzes com correção automática, flashcards com repetição espaçada (SM-2) |
 | Prática profissional | Projetos e laboratórios com submissão/conclusão real, mapa de competências com evidências reais, portfólio com checklist de qualidade, gamificação (XP/nível/badges) |
 | AI Labs | Empresa fictícia: departamentos e linha do tempo de arquitetura, importados de `Curso.md` |
@@ -102,7 +102,7 @@ O seed cria:
   | ADMIN | `admin@apea.dev` | `Demo@1234` |
   | STUDENT | `estudante@apea.dev` | `Demo@1234` |
 
-- o currículo importado de `Curso.md` (programa, 6 semestres, as 104 semanas — a maioria ainda
+- o currículo importado de `Curso.md` (programa, 6 fases, as 104 semanas — a maioria ainda
   vazia/`PLANNED` — o checklist da Semana 0, os departamentos e a linha do tempo da AI Labs);
 - 2 aulas de demonstração, 1 quiz, 3 flashcards, 14 competências, 1 projeto, 1 laboratório e o
   catálogo de 9 badges de gamificação — todos claramente demonstrativos (`isDemo: true` onde
@@ -209,7 +209,7 @@ cada 5 minutos por usuário e 4.000 caracteres por entrada.
 ## Limitações conhecidas
 
 - A grade semanal (semanas 1–104) está estruturada mas vazia (`"a definir"`), porque `Curso.md`
-  não define conteúdo semana a semana — só os 6 semestres e a Semana 0. Preencher isso é
+  não define conteúdo semana a semana — só as 6 fases e a Semana 0. Preencher isso é
   trabalho de conteúdo pedagógico, não de engenharia, e fica para quando esse conteúdo existir.
 - Rate limit e cache do provider de IA são em memória (não sobrevivem a reinício do processo,
   não são compartilhados entre múltiplas instâncias).

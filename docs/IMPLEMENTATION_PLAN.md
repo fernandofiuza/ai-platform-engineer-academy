@@ -539,4 +539,17 @@ produto foram entregues.
   admin de laboratórios mantém números de semana (ferramenta operacional, fora do escopo do
   pedido). Verificado ao vivo com Playwright. Ver `docs/DECISIONS.md`.
 
+- **"Semestre" virou "Fase" no app; fix do detalhe de módulo do Roadmap e do heading duplicado
+  no conteúdo das aulas.** A página `/roadmap/[weekId]` (aberta ao clicar num módulo do Roadmap)
+  ainda mostrava "Semana N" e títulos brutos de aula — corrigida para usar `phase.label`/
+  `extractModuleName`/`stripWeekDayPrefix`, igual ao resto do sistema; o card de destaque da
+  Semana 0 também parou de expor "Semana 0" (mostra só "Preparação do Ambiente"). `Phase.label`
+  ("Semestre N", dado persistido na importação) virou "Fase N" — atualizado no importador e, para
+  as fases já existentes, via script único; textos fixos equivalentes em Certificações,
+  Dashboard e admin também renomeados. O gerador de conteúdo de aula por IA reproduzia "Semana N,
+  Dia M" como heading do Markdown porque recebia o título bruto como tema do prompt — corrigido
+  na origem (prompt limpo) e, para as 302 aulas já geradas, com um strip só da primeira linha na
+  renderização (`stripWeekDayHeading`), sem reescrever o conteúdo salvo. Verificado ao vivo. Ver
+  `docs/DECISIONS.md`.
+
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

@@ -173,7 +173,7 @@ export function RoadmapExplorer({
                 <SelectValue placeholder="Fase" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">Todos os semestres</SelectItem>
+                <SelectItem value="ALL">Todas as fases</SelectItem>
                 {phases.map((phase) => (
                   <SelectItem key={phase.id} value={phase.id}>
                     {phase.label}: {phase.name}
@@ -205,7 +205,7 @@ export function RoadmapExplorer({
                 <GanttChart className="size-4" /> Timeline
               </TabsTrigger>
               <TabsTrigger value="map">
-                <MapIcon className="size-4" /> Mapa por semestre
+                <MapIcon className="size-4" /> Mapa por fase
               </TabsTrigger>
             </TabsList>
 

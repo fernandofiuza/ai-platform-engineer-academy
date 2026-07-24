@@ -33,8 +33,8 @@ const NEXT_STEPS = [
     phase: "Etapa 6",
   },
   {
-    title: "Certificação por semestre",
-    description: "Certificado interno ao concluir semanas + projeto final + avaliação do semestre.",
+    title: "Certificação por fase",
+    description: "Certificado interno ao concluir semanas + projeto final + avaliação da fase.",
     phase: "Etapa 8",
   },
 ];

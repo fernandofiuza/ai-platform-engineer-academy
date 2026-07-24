@@ -427,4 +427,7 @@ produto foram entregues.
 - **Módulo Engenharia de Software regenerado no formato por dia (semanas 32–37).** 30 aulas
   diárias geradas, aprofundadas pela persona Professor via Claude real e aprovadas. Confirmado
   por varredura completa: 0 aulas em `DRAFT` no banco.
+- **Módulo Python regenerado no formato por dia (semanas 38–44).** 35 aulas diárias geradas,
+  aprofundadas pela persona Professor via Claude real e aprovadas. Confirmado por varredura
+  completa: 0 aulas em `DRAFT` no banco.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

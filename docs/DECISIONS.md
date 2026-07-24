@@ -1006,5 +1006,41 @@ existente + 35 da segunda leva), 581 vínculos laboratório-aula, 0 laboratório
 cobrindo os mesmos 24 módulos por outro ângulo (ex: primeira leva = "montar do zero", segunda
 leva = "investigar/corrigir um incidente" no mesmo módulo).
 
+## 2026-07-24 — Terceira trilha ("Profissional") + Trilha Produto deixa de estar vazia
+
+**O que aconteceu**: o usuário reportou que "as trilhas ficaram vazias" e descreveu uma visão de
+3 trilhas paralelas: Formação (o que se estuda), Produto (aplicar o aprendizado construindo o
+próprio SaaS "APEX Academy" — a plataforma) e Profissional (habilidades de mercado/carreira que
+normalmente ficam fora de cursos técnicos). Investigando: a Trilha Formação e a Trilha Produto já
+existiam (`roadmap-explorer.tsx`, tabs), mas a Trilha Produto estava genuinamente vazia — nenhum
+`ArchitectureMilestone(track: PRODUCT)` tinha sido criado para nenhuma das 104 semanas (por
+design: a Etapa 4 deliberadamente não pré-cria marcos de produto em massa, só sob demanda pelo
+admin — ver decisão "Etapa 4" anterior). A Trilha Profissional não existia.
+**Decisão**: `MilestoneTrack` ganhou um terceiro valor, `PROFESSIONAL`, reaproveitando
+`ArchitectureMilestone` (mesmo padrão de `PRODUCT` vs `AI_LABS`) em vez de criar um novo modelo —
+consistente com a filosofia de schema mínimo do projeto. Como `ArchitectureMilestone.weekId` é
+`@unique` **na tabela inteira** (não por track), uma semana só pode ter UM marco no total —
+Produto e Profissional nunca coexistem na mesma semana, então o conteúdo dos dois foi distribuído
+em semanas distintas (24 marcos de Produto, um por módulo, ancorado na última semana de cada
+módulo; 16 marcos Profissionais, um por habilidade de carreira listada pelo usuário, espalhados
+pelas semanas restantes).
+**UI**: `RoadmapExplorer` ganhou uma terceira aba "Trilha Profissional"; `/roadmap/[weekId]`
+mostra o card certo (Produto ou Profissional) conforme o `track` do marco vinculado à semana, ou
+"a definir" se nenhum. `ProductMilestoneForm` (admin) foi generalizado para `MilestoneForm` com
+um seletor de trilha — antes só permitia criar marcos de Produto; a action foi renomeada de
+`saveProductMilestoneAction` para `saveMilestoneAction(track, ...)`.
+**Conteúdo**: os 24 marcos de Produto seguem a narrativa "terminou a disciplina → aplica no
+produto" descrita pelo usuário (ex.: Docker → Dockerfile → Compose → Volumes → Nginx → Deploy →
+CI/CD; FastAPI → login/JWT/refresh token; PostgreSQL → schema real de Aluno/Curso/Projeto/XP;
+n8n → automatizar onboarding/certificados). Os 16 marcos Profissionais cobrem exatamente as 16
+habilidades listadas pelo usuário (conversar com clientes, levantar requisitos, estimar esforço,
+documentação técnica, code review, issues no GitHub, backlog, sprints, apresentar arquitetura,
+portfólio, currículo técnico, LinkedIn, entrevista técnica, precificar consultoria, transformar
+projeto em SaaS). Populado via script direto (upsert no banco, sem geração por IA — são 40
+entradas curadas manualmente, título+descrição curtos, não justificam um pipeline de IA).
+**Verificado**: as 3 abas do `/roadmap` renderizam corretamente com Playwright (screenshots);
+`/roadmap/[weekId]` (semana 61, Docker) mostra o marco de Produto real; o formulário admin
+generalizado mostra a trilha certa pré-selecionada.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

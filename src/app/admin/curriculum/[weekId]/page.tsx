@@ -49,6 +49,9 @@ export default async function AdminWeekDetailPage({
 
       <ProductMilestoneForm
         weekId={week.id}
+        initialTrack={
+          week.productMilestone?.track === "PROFESSIONAL" ? "PROFESSIONAL" : "PRODUCT"
+        }
         initialTitle={week.productMilestone?.title ?? ""}
         initialDescription={week.productMilestone?.description ?? ""}
         initialStatus={week.productMilestone?.status ?? "PLANNED"}

@@ -731,12 +731,16 @@ model Department {
 
 // AI_LABS: linha do tempo fixa da infraestrutura da empresa fictícia AI Labs (importada de
 // Curso.md). PRODUCT: Trilha Produto (Etapa 4) — evolução do SaaS "APEX Academy" construído pelo
-// aluno, com no máximo 1 marco por semana (`weekId` único). São conceitos distintos na mesma
-// tabela para reaproveitar o modelo já existente sem criar um novo domínio — ver
-// docs/DECISIONS.md ("AI Labs vs. APEX Academy").
+// aluno. PROFESSIONAL: Trilha Profissional — habilidades de mercado (comunicação com cliente,
+// documentação, code review, portfólio, entrevista técnica, etc), não ligadas a uma tecnologia
+// específica da semana. Cada semana tem no máximo 1 marco no total (`weekId` único), de UM desses
+// tracks — não é possível uma semana ter, ao mesmo tempo, marco de Produto E de Profissional.
+// São conceitos distintos na mesma tabela para reaproveitar o modelo já existente sem criar um
+// novo domínio — ver docs/DECISIONS.md ("AI Labs vs. APEX Academy").
 enum MilestoneTrack {
   AI_LABS
   PRODUCT
+  PROFESSIONAL
 }
 
 model ArchitectureMilestone {

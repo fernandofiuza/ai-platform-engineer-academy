@@ -188,7 +188,7 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 - **ExperienceEvent**(userId, kind, points, refType?, refId?, createdAt) — nível = `1 +
   floor(totalXp / 100)`, calculado sob demanda (sem campo `level` persistido em `User`)
 
-## 9. AI Labs (empresa fictícia) e Trilha Produto (APEX Academy)
+## 9. AI Labs (empresa fictícia), Trilha Produto (APEX Academy) e Trilha Profissional
 
 > **Implementado na Fase 4.** Importado de `Curso.md` (âncoras "Teremos departamentos" e "Ela
 > começará assim:") — 10 departamentos, 24 marcos. Marcos só viram `COMPLETED` por ação
@@ -198,14 +198,21 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 > roadmap (evolução do SaaS "APEX Academy" construído pelo aluno — entidade distinta da AI Labs,
 > ver `docs/DECISIONS.md`), via o campo `track`. As duas trilhas nunca se misturam: toda query
 > que lê marcos da AI Labs filtra `track = AI_LABS` explicitamente.
+> **Expansão de Trilhas** (2026-07-24): terceira trilha, "Trilha Profissional" (habilidades de
+> mercado/carreira — comunicação com cliente, documentação, code review, portfólio, entrevista
+> técnica, etc), adicionada como `track = PROFESSIONAL` na mesma tabela. Populada com 24 marcos
+> de Produto (1 por módulo, na última semana de cada) e 16 marcos Profissionais (espalhados pelas
+> 104 semanas, em semanas distintas dos marcos de Produto), com conteúdo real curado — não mais
+> "a definir" em todas as semanas. Ver `docs/DECISIONS.md`.
 
 - **Department**(name, description?, order) — `name` único
-- **ArchitectureMilestone**(track: `AI_LABS|PRODUCT`, weekId? único, order, title, description?,
-  status, achievedAt?) — `@@unique([track, order])`. `track = AI_LABS` (padrão): as 24 linhas da
-  AI Labs, sem `weekId`. `track = PRODUCT` (Etapa 4): no máximo 1 linha por `Week` (`weekId`
-  único), criada sob demanda pelo admin em `/admin/curriculum/[weekId]` — **não** pré-criada em
-  massa para as 104 semanas (não há conteúdo real de origem para isso; semanas sem marco
-  aparecem como "a definir" computado na UI, não como linha vazia no banco).
+- **ArchitectureMilestone**(track: `AI_LABS|PRODUCT|PROFESSIONAL`, weekId? único, order, title,
+  description?, status, achievedAt?) — `@@unique([track, order])`. `track = AI_LABS` (padrão): as
+  24 linhas da AI Labs, sem `weekId`. `track = PRODUCT`/`PROFESSIONAL`: no máximo 1 linha por
+  `Week` no total (`weekId` único na tabela inteira — uma semana nunca tem marco de Produto **e**
+  Profissional ao mesmo tempo), editável em `/admin/curriculum/[weekId]` via um único formulário
+  com seletor de trilha (`saveMilestoneAction`). Semanas sem marco aparecem como "a definir"
+  computado na UI, não como linha vazia no banco.
 
 ## 10. IA
 

@@ -475,4 +475,12 @@ produto foram entregues.
   título da seção — prompt reestruturado para deixar título e instrução inequivocamente
   separados. Resultado final: 71 laboratórios no banco, 581 vínculos laboratório-aula, 0
   laboratórios e 0 aulas em `DRAFT`. Ver `docs/DECISIONS.md`.
+- **Terceira trilha ("Profissional") + Trilha Produto deixa de estar vazia.** `MilestoneTrack`
+  ganhou o valor `PROFESSIONAL`; `RoadmapExplorer` ganhou uma terceira aba; `/roadmap/[weekId]`
+  passou a mostrar o card certo (Produto ou Profissional) conforme o `track` do marco. Populados
+  24 marcos de Produto reais (1 por módulo, narrativa "aplicar no APEX Academy o que acabou de
+  estudar") e 16 marcos Profissionais (as 16 habilidades de carreira pedidas pelo usuário —
+  conversar com cliente, requisitos, code review, portfólio, entrevista técnica, etc), em semanas
+  distintas (uma semana só pode ter 1 marco no total). `ProductMilestoneForm`/action
+  generalizados para suportar ambas as trilhas via seletor. Ver `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

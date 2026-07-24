@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { List, Map as MapIcon, GanttChart, GraduationCap, Rocket } from "lucide-react";
+import { Briefcase, List, Map as MapIcon, GanttChart, GraduationCap, Rocket } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +23,7 @@ type WeekSummary = {
   number: number;
   title: string;
   status: ContentStatus;
-  productMilestone: { title: string; status: ContentStatus } | null;
+  productMilestone: { title: string; status: ContentStatus; track: string } | null;
 };
 
 type PhaseSummary = {
@@ -47,8 +47,10 @@ const ALL_STATUSES: (ContentStatus | "ALL")[] = [
   "ARCHIVED",
 ];
 
+type TrackKey = "FORMACAO" | "PRODUTO" | "PROFISSIONAL";
+
 export function RoadmapExplorer({ phases }: { phases: PhaseSummary[] }) {
-  const [track, setTrack] = React.useState<"FORMACAO" | "PRODUTO">("FORMACAO");
+  const [track, setTrack] = React.useState<TrackKey>("FORMACAO");
   const [phaseFilter, setPhaseFilter] = React.useState<string>("ALL");
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
 
@@ -58,16 +60,21 @@ export function RoadmapExplorer({ phases }: { phases: PhaseSummary[] }) {
       order: phase.order,
       name: phase.name,
       label: phase.label,
-      weeks: phase.weeks.map((week) =>
-        track === "FORMACAO"
-          ? { id: week.id, number: week.number, title: week.title, status: week.status }
-          : {
-              id: week.id,
-              number: week.number,
-              title: week.productMilestone?.title ?? "Trilha Produto — a definir",
-              status: week.productMilestone?.status ?? "PLANNED",
-            }
-      ),
+      weeks: phase.weeks.map((week) => {
+        if (track === "FORMACAO") {
+          return { id: week.id, number: week.number, title: week.title, status: week.status };
+        }
+        const wantedTrack = track === "PRODUTO" ? "PRODUCT" : "PROFESSIONAL";
+        const milestone = week.productMilestone?.track === wantedTrack ? week.productMilestone : null;
+        return {
+          id: week.id,
+          number: week.number,
+          title:
+            milestone?.title ??
+            (track === "PRODUTO" ? "Trilha Produto — a definir" : "Trilha Profissional — a definir"),
+          status: milestone?.status ?? "PLANNED",
+        };
+      }),
     }));
 
   const filteredPhases = trackPhases
@@ -81,13 +88,16 @@ export function RoadmapExplorer({ phases }: { phases: PhaseSummary[] }) {
 
   return (
     <div className="space-y-4">
-      <Tabs value={track} onValueChange={(v) => setTrack(v as "FORMACAO" | "PRODUTO")}>
+      <Tabs value={track} onValueChange={(v) => setTrack(v as TrackKey)}>
         <TabsList>
           <TabsTrigger value="FORMACAO">
             <GraduationCap className="size-4" /> Trilha Formação
           </TabsTrigger>
           <TabsTrigger value="PRODUTO">
             <Rocket className="size-4" /> Trilha Produto
+          </TabsTrigger>
+          <TabsTrigger value="PROFISSIONAL">
+            <Briefcase className="size-4" /> Trilha Profissional
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -96,6 +106,13 @@ export function RoadmapExplorer({ phases }: { phases: PhaseSummary[] }) {
           Evolução do produto &ldquo;APEX Academy&rdquo; (o SaaS construído pelo aluno ao longo da
           formação) — distinto da AI Labs. Semanas sem marco definido aparecem como &ldquo;a
           definir&rdquo;.
+        </p>
+      ) : null}
+      {track === "PROFISSIONAL" ? (
+        <p className="text-sm text-muted-foreground">
+          Habilidades de mercado e carreira trabalhadas ao longo da formação (comunicação com
+          cliente, documentação, code review, portfólio, entrevista técnica, e mais). Semanas sem
+          marco definido aparecem como &ldquo;a definir&rdquo;.
         </p>
       ) : null}
 

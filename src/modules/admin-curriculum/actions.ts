@@ -10,12 +10,12 @@ import {
   addFlashcardSchema,
   addQuestionSchema,
   saveLessonSchema,
-  saveProductMilestoneSchema,
+  saveMilestoneSchema,
   updateWeekSchema,
   type AddFlashcardInput,
   type AddQuestionInput,
   type SaveLessonInput,
-  type SaveProductMilestoneInput,
+  type SaveMilestoneInput,
   type UpdateWeekInput,
 } from "./schema";
 
@@ -277,15 +277,17 @@ export async function approveLessonContentAction(lessonId: string) {
 }
 
 /**
- * Cria ou atualiza o marco da Trilha Produto vinculado a uma semana (Etapa 4). Reaproveita
- * `ArchitectureMilestone` (track = PRODUCT) — nunca mistura com a linha do tempo da AI Labs
- * (track = AI_LABS). `order` usa o próprio número da semana (o vínculo é sempre 1:1 por semana).
+ * Cria ou atualiza o marco (Trilha Produto ou Trilha Profissional) vinculado a uma semana
+ * (Etapa 4 + expansão de Trilhas). Reaproveita `ArchitectureMilestone` — nunca mistura com a
+ * linha do tempo da AI Labs (track = AI_LABS). `order` usa o próprio número da semana. Uma
+ * semana só pode ter UM marco no total (`weekId` único na tabela), então trocar o `track` aqui
+ * substitui um eventual marco do outro track que já existisse nesta semana.
  */
-export async function saveProductMilestoneAction(input: SaveProductMilestoneInput) {
+export async function saveMilestoneAction(input: SaveMilestoneInput) {
   const admin = await assertAdmin();
   if (!admin) return { error: "Apenas administradores podem editar o currículo." };
 
-  const parsed = saveProductMilestoneSchema.safeParse(input);
+  const parsed = saveMilestoneSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
 
   const week = await db.week.findUnique({ where: { id: parsed.data.weekId } });
@@ -294,12 +296,13 @@ export async function saveProductMilestoneAction(input: SaveProductMilestoneInpu
   await db.architectureMilestone.upsert({
     where: { weekId: parsed.data.weekId },
     update: {
+      track: parsed.data.track,
       title: parsed.data.title,
       description: parsed.data.description,
       status: parsed.data.status,
     },
     create: {
-      track: "PRODUCT",
+      track: parsed.data.track,
       weekId: parsed.data.weekId,
       order: week.number,
       title: parsed.data.title,
@@ -308,7 +311,7 @@ export async function saveProductMilestoneAction(input: SaveProductMilestoneInpu
     },
   });
 
-  auditLog(admin.id, "save_product_milestone", { weekId: parsed.data.weekId });
+  auditLog(admin.id, "save_milestone", { weekId: parsed.data.weekId, track: parsed.data.track });
   revalidatePath(`/admin/curriculum/${parsed.data.weekId}`);
   revalidatePath("/roadmap");
   revalidatePath(`/roadmap/${parsed.data.weekId}`);

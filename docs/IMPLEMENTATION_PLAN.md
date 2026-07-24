@@ -483,4 +483,12 @@ produto foram entregues.
   conversar com cliente, requisitos, code review, portfólio, entrevista técnica, etc), em semanas
   distintas (uma semana só pode ter 1 marco no total). `ProductMilestoneForm`/action
   generalizados para suportar ambas as trilhas via seletor. Ver `docs/DECISIONS.md`.
+- **Planejador dinâmico: motor de agendamento automático por aula.** Novo
+  `computeLessonSchedule` (`src/modules/planning/schedule.ts`) distribui as aulas pendentes nos
+  dias disponíveis do `StudyPlan`, recalculado do zero a cada requisição a partir de
+  `LessonCompletion` real — sem tabela de agendamento persistida. Implementa sozinho o
+  comportamento pedido: aula não estudada desliza para a frente automaticamente; concluir 2+
+  aulas no mesmo dia adianta a previsão de conclusão. `/planner` mostra a previsão em tempo real
+  + próximas 5 aulas agendadas; `/calendar` sobrepõe aulas concluídas/agendadas em cada dia da
+  grade. Testado com 3 cenários sintéticos + fluxo completo ao vivo. Ver `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

@@ -132,7 +132,10 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 
 - **StudyPlan**(userId 1:1, availableDays Int[], preferredTime?, dailyHours, startDate, notes?)
   — `pace` não existe como campo separado; a estimativa de ritmo é calculada na página, não
-  armazenada.
+  armazenada. **2026-07-24**: passou a alimentar um motor de agendamento por aula
+  (`computeLessonSchedule`) que distribui as aulas `AVAILABLE` do currículo nos dias
+  disponíveis — também sem tabela de agendamento própria, recalculado a cada requisição a partir
+  de `LessonCompletion`. Ver `docs/DECISIONS.md`.
 - **StudyGoal**(userId, title, targetDate?, relatedWeekId?, status: `OPEN|DONE|CANCELLED`)
 - **StudySession**(userId, lessonId?, startedAt, pausedAt?, totalPausedSeconds, endedAt?,
   durationMinutes?, focusRating?, difficultyRating?, notes?, completedContent) — o cronômetro

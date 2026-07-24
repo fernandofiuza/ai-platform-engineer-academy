@@ -202,6 +202,12 @@ enquanto a edição inline resolve o mesmo caso de uso com menos código.
 
 ## 2026-07-23 — Planejador: estimativa simples, sem motor de reagendamento automático
 
+> **SUPERSEDIDA em 2026-07-24** — ver decisão "Planejador dinâmico: motor de agendamento
+> por aula" abaixo. A premissa desta decisão (grade majoritariamente `PLANNED`, sem aulas reais
+> suficientes para redistribuir) deixou de valer depois que a maior parte do currículo passou a
+> ter aulas diárias reais geradas (ver módulo por módulo em decisões anteriores). Mantida aqui
+> por histórico.
+
 **Decisão**: `/planner` calcula uma estimativa de término (`totalWeeks * weeklyDays /
 availableDays.length`, a partir da data de início) como texto informativo, mas não implementa
 um motor de "redistribuição automática de atividades" nem cria/move tarefas sozinho. Férias e
@@ -1059,6 +1065,44 @@ concedia mais 10 XP, sem limite, para a mesma aula. Corrigido checando se já ex
 `LessonCompletion` **antes** do upsert; XP só é concedido na primeira conclusão. Verificado ao
 vivo via Playwright: concluir uma aula grava 1 evento de XP; reabrir e desfazer remove a
 completion e o evento de XP, e o botão volta a mostrar "Concluir aula".
+
+## 2026-07-24 — Planejador dinâmico: motor de agendamento por aula
+
+**Decisão**: implementado um motor de agendamento (`src/modules/planning/schedule.ts`,
+`computeLessonSchedule`) que distribui **todas** as aulas `AVAILABLE` do currículo (ordenadas por
+`week.number` + `lesson.order`) nos dias disponíveis configurados em `StudyPlan.availableDays`, a
+partir de `StudyPlan.startDate`, empacotando o máximo de aulas que caibam em `dailyHours` por dia
+(usando `durationMinutes` de cada aula, com 60min de padrão quando ausente; sempre pelo menos 1
+aula por dia disponível, mesmo que sozinha já estoure o orçamento).
+**Não é uma tabela de agendamento persistida** — é uma função pura, recalculada do zero a cada
+requisição a partir do estado real (`LessonCompletion` do usuário) e da configuração atual do
+`StudyPlan`, seguindo a mesma convenção já registrada no schema para `Progress` ("sem tabela
+derivada própria, calculado sob demanda"). Isso implementa sozinho, sem nenhum código especial de
+"detecção de atraso/adiantamento", exatamente o comportamento pedido pelo usuário:
+- Aulas concluídas usam a data real (`LessonCompletion.completedAt`); aulas pendentes são
+  agendadas a partir de `max(startDate, hoje)` — nunca no passado.
+- Se o aluno não estuda em um dia disponível, a aula pendente simplesmente continua pendente; na
+  próxima vez que a página carregar, ela é recalculada a partir de "hoje" (que avançou), então
+  desliza para a frente sozinha — sem precisar mover nada manualmente.
+- Se o aluno conclui 2+ aulas no mesmo dia, a fila de pendentes encolhe mais rápido; o próximo
+  cálculo já usa menos dias futuros, e a previsão de conclusão recua sozinha.
+- A previsão de conclusão (`forecastDate`) é sempre o resultado do cálculo mais recente — "tempo
+  real" no sentido de nunca estar desatualizada, não no sentido de recalcular no navegador sem
+  reload (Server Component, recalcula a cada carregamento de página).
+**UI**: `/planner` substitui a antiga "estimativa simples" por um card "Cronograma dinâmico" com
+barra de progresso, previsão de conclusão, e as próximas 5 aulas agendadas (link direto para
+`/learn/[lessonId]`). `/calendar` passou a sobrepor as aulas concluídas (✓, verde) e agendadas
+(→, azul) em cada dia da grade, com tooltip nativo (`title`) listando os títulos ao passar o
+mouse; dias com exatamente 1 aula agendada e nenhuma concluída viram um link direto para a aula.
+**Limitação conhecida, aceita por simplicidade**: o orçamento diário (`dailyHours`) considera só
+aulas *pendentes* ao empacotar um dia — não desconta minutos de aulas já concluídas naquele mesmo
+dia. Na prática isso significa que um dia onde o aluno já concluiu aulas suficientes para bater a
+carga horária ainda pode aparecer com mais 1 aula pendente "encaixada" nele; o aluno decide se
+faz também ou deixa escorregar (e o recálculo seguinte já absorve isso automaticamente).
+**Verificado**: lógica pura testada com 3 cenários sintéticos (agendamento básico respeitando só
+os dias configurados; "hoje" avançado sem conclusões empurra a previsão para frente; duas
+conclusões no mesmo dia puxam a previsão para trás) — todos passaram. Fluxo completo também
+verificado ao vivo via Playwright nas páginas `/planner` e `/calendar` com um `StudyPlan` real.
 
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

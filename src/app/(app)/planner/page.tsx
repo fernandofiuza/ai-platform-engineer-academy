@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { CalendarClock, Target, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, CalendarClock, CalendarRange, Target } from "lucide-react";
 
 import { auth } from "@/lib/auth";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { StudyGoals } from "@/modules/planning/components/study-goals";
 import { StudyPlanForm } from "@/modules/planning/components/study-plan-form";
-import { getGoals, getStudyPlan, getWeekOptions } from "@/modules/planning/queries";
-import { getProgramWithPhasesAndWeeks } from "@/modules/curriculum/queries";
+import { getGoals, getLessonSchedule, getStudyPlan, getWeekOptions } from "@/modules/planning/queries";
 
 export const metadata: Metadata = { title: "Planejador de estudos" };
 
@@ -14,22 +16,18 @@ export default async function PlannerPage() {
   const session = await auth();
   const userId = session!.user.id;
 
-  const [plan, goals, weekOptions, program] = await Promise.all([
+  const [plan, goals, weekOptions, schedule] = await Promise.all([
     getStudyPlan(userId),
     getGoals(userId),
     getWeekOptions(),
-    getProgramWithPhasesAndWeeks(),
+    getLessonSchedule(userId),
   ]);
 
-  let estimate: { weeksToFinish: number; finishDate: Date } | null = null;
-  if (plan && program && plan.availableDays.length > 0) {
-    const weeksToFinish = Math.ceil(
-      (program.totalWeeks * program.weeklyDays) / plan.availableDays.length
-    );
-    const finishDate = new Date(plan.startDate);
-    finishDate.setDate(finishDate.getDate() + weeksToFinish * 7);
-    estimate = { weeksToFinish, finishDate };
-  }
+  const nextUp = schedule?.items.filter((i) => i.status === "scheduled").slice(0, 5) ?? [];
+  const progressPercent =
+    schedule && schedule.totalCount > 0
+      ? Math.round((schedule.completedCount / schedule.totalCount) * 100)
+      : 0;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -47,8 +45,8 @@ export default async function PlannerPage() {
             <CalendarClock className="size-4" /> Sua disponibilidade
           </CardTitle>
           <CardDescription>
-            Usada para estimar seu ritmo em relação à carga prevista da formação
-            {program ? ` (${program.weeklyDays} dias/semana, ${program.dailyHours}h/dia)` : ""}.
+            Dias da semana e carga horária usados para agendar automaticamente suas próximas
+            aulas — mudar isso aqui recalcula o cronograma inteiro na hora.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -56,22 +54,80 @@ export default async function PlannerPage() {
         </CardContent>
       </Card>
 
-      {estimate ? (
+      {schedule ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <TrendingUp className="size-4" /> Estimativa (planejamento automático básico)
+              <CalendarRange className="size-4" /> Cronograma dinâmico
             </CardTitle>
+            <CardDescription>
+              Recalculado automaticamente a cada aula concluída — sem cronograma fixo. Aulas que
+              não forem estudadas em um dia disponível são remarcadas sozinhas para a próxima
+              data; concluir mais de uma aula no mesmo dia adianta a previsão.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            No seu ritmo atual, a formação levaria aproximadamente{" "}
-            <strong className="text-foreground">{estimate.weeksToFinish} semanas</strong>, terminando
-            por volta de{" "}
-            <strong className="text-foreground">
-              {estimate.finishDate.toLocaleDateString("pt-BR")}
-            </strong>
-            . Estimativa simples baseada na sua disponibilidade vs. a carga prevista — não
-            considera férias/pausas registradas nas observações.
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Progress value={progressPercent} className="h-2" />
+              <span className="shrink-0 text-sm text-muted-foreground">
+                {schedule.completedCount}/{schedule.totalCount} ({progressPercent}%)
+              </span>
+            </div>
+
+            <p className="text-sm">
+              {schedule.pendingCount === 0 ? (
+                <span className="text-foreground">
+                  Você concluiu todas as aulas disponíveis no currículo até agora. 🎉
+                </span>
+              ) : schedule.forecastDate ? (
+                <>
+                  Previsão de conclusão das {schedule.pendingCount} aula(s) pendente(s):{" "}
+                  <strong className="text-foreground">
+                    {schedule.forecastDate.toLocaleDateString("pt-BR", {
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </strong>
+                  .
+                </>
+              ) : (
+                <span className="text-destructive">
+                  Nenhum dia da semana está marcado como disponível — selecione ao menos um dia
+                  acima para o planejador conseguir agendar suas aulas.
+                </span>
+              )}
+            </p>
+
+            {nextUp.length > 0 ? (
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted-foreground">Próximas aulas agendadas</p>
+                <div className="divide-y rounded-lg border">
+                  {nextUp.map((item) => (
+                    <Link
+                      key={item.lessonId}
+                      href={`/learn/${item.lessonId}`}
+                      className="flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-accent/50"
+                    >
+                      <span>
+                        <span className="text-muted-foreground">Semana {item.weekNumber}</span> —{" "}
+                        {item.title}
+                      </span>
+                      <Badge variant="secondary">
+                        {item.date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <Link
+              href="/calendar"
+              className="flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
+            >
+              Ver cronograma completo no calendário <ArrowRight className="size-3.5" />
+            </Link>
           </CardContent>
         </Card>
       ) : null}

@@ -1200,5 +1200,29 @@ quantidade de aulas realmente presentes naquela "semana".
 Preparação: Como estudar tecnologia" e "Dia 2 — Preparação: Organização" — sem nenhum "Dia 3"
 nem qualquer número de dia inconsistente com a quantidade de aulas do grupo.
 
+## 2026-07-24 — "Semana N" removido por completo: só "Dia 01, Dia 02, ..." sequencial
+
+**O que aconteceu**: mesmo depois de corrigir o agrupamento por ritmo e o título da aula (duas
+decisões anteriores no mesmo dia), o usuário pediu para remover **todo** o conceito de "Semana"
+da exibição do cronograma — nem a semana fixa do currículo, nem a "semana de ritmo" que eu tinha
+introduzido — deixando só uma numeração sequencial de dias ("Dia 01", "Dia 02", "Dia 03", ...) de
+acordo com o Planejador, no Roadmap, no Aprender e no Planejador.
+**Decisão**: removido o campo `paceWeekIndex` e a função `groupByPaceWeek` de
+`schedule.ts` (a "semana de ritmo" introduzida horas antes foi descartada — ficou claro, pelo
+pedido do usuário, que nem esse agrupamento intermediário era desejado). `ScheduledLesson` mantém
+só `curriculumIndex` (posição sequencial 0-based no cronograma do aluno). Novo
+`formatDayNumber(curriculumIndex)` em `src/modules/planning/format.ts` retorna `"Dia " +
+(curriculumIndex+1)` com zero-padding a 2 dígitos — usado em todo lugar que antes mostrava
+"Semana N": `/planner` ("Próximas aulas agendadas"), `/learn` (card de cada aula) e
+`/learn/[lessonId]` (breadcrumb), e `/roadmap` (Trilha Formação, agora sem nenhum agrupamento por
+semana — a Lista agrupa só por **data real** (mesmo padrão do Aprender) com "Dia N" por aula, e a
+Timeline vira uma sequência plana de caixinhas "Dia N" sem separação por semana ou semestre).
+**Escopo mantido**: as trilhas Produto/Profissional (marcos 1:1 por semana de currículo —
+diferente do cronograma de aulas) e o rótulo "Semestre N" (Fase, um conceito diferente de
+"Semana") não foram tocados — o pedido do usuário foi especificamente sobre a numeração de
+semana no contexto do cronograma de aulas diário.
+**Verificado ao vivo**: com `availableDays=[1,3]`, as três telas mostram consistentemente "Dia
+01", "Dia 02", "Dia 03", "Dia 04"... sequenciais, sem nenhuma menção a "Semana" em nenhuma delas.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

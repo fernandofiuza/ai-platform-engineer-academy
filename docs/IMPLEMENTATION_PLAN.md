@@ -518,4 +518,13 @@ produto foram entregues.
   prefixo onde há contexto de ritmo (`/roadmap`, `/learn`, `/learn/[lessonId]`); "Dia N" no
   Roadmap agora é recalculado pela posição real da aula dentro do grupo de ritmo atual, não mais
   o valor antigo embutido no título. Ver `docs/DECISIONS.md`.
+- **"Semana N" removido por completo do cronograma: só "Dia 01, Dia 02, ..." sequencial.** A
+  "semana de ritmo" (`paceWeekIndex`/`groupByPaceWeek`) introduzida horas antes foi descartada a
+  pedido do usuário — nenhum agrupamento por semana no cronograma de aulas, só a numeração
+  sequencial (`curriculumIndex`) via novo `formatDayNumber`. Aplicado em `/planner`, `/learn`,
+  `/learn/[lessonId]` e `/roadmap` (Trilha Formação — Lista agrupada só por data real, Timeline
+  em sequência plana sem separação por semana/semestre). Trilhas Produto/Profissional (marcos
+  por semana de currículo) e "Semestre N" (Fase) não foram tocados. Verificado ao vivo:
+  `availableDays=[1,3]` mostra "Dia 01"–"Dia 05" sequenciais nas três telas, sem "Semana" em
+  nenhuma. Ver `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

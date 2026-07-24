@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { getLessonsForLearnPage } from "@/modules/curriculum/queries";
-import { formatScheduleDate, stripWeekDayPrefix } from "@/modules/planning/format";
+import { formatDayNumber, formatScheduleDate, stripWeekDayPrefix } from "@/modules/planning/format";
 import { getLessonSchedule } from "@/modules/planning/queries";
 
 export const metadata: Metadata = { title: "Aprender" };
@@ -93,7 +93,7 @@ export default async function LearnPage() {
                     key={lesson.id}
                     lesson={lesson}
                     isCompleted={completedIds.has(lesson.id)}
-                    paceWeekIndex={scheduleByLessonId.get(lesson.id)?.paceWeekIndex}
+                    curriculumIndex={scheduleByLessonId.get(lesson.id)?.curriculumIndex}
                   />
                 ))}
               </div>
@@ -144,11 +144,11 @@ type LessonSummary = {
 function LessonCard({
   lesson,
   isCompleted,
-  paceWeekIndex,
+  curriculumIndex,
 }: {
   lesson: LessonSummary;
   isCompleted: boolean;
-  paceWeekIndex?: number;
+  curriculumIndex?: number;
 }) {
   return (
     <Link href={`/learn/${lesson.id}`}>
@@ -160,10 +160,12 @@ function LessonCard({
             </span>
             <div className="min-w-0">
               <CardTitle className="text-base">
-                {paceWeekIndex ? stripWeekDayPrefix(lesson.title) : lesson.title}
+                {curriculumIndex !== undefined ? stripWeekDayPrefix(lesson.title) : lesson.title}
               </CardTitle>
               <CardDescription>
-                Semana {paceWeekIndex ?? lesson.week.number}
+                {curriculumIndex !== undefined
+                  ? formatDayNumber(curriculumIndex)
+                  : `Semana ${lesson.week.number}`}
                 {lesson.week.phase ? ` · ${lesson.week.phase.label}` : ""}
               </CardDescription>
             </div>

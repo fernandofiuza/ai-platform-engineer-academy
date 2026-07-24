@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { StudyGoals } from "@/modules/planning/components/study-goals";
 import { StudyPlanForm } from "@/modules/planning/components/study-plan-form";
+import { formatDayNumber, stripWeekDayPrefix } from "@/modules/planning/format";
 import { getGoals, getLessonSchedule, getStudyPlan, getWeekOptions } from "@/modules/planning/queries";
 
 export const metadata: Metadata = { title: "Planejador de estudos" };
@@ -110,8 +111,10 @@ export default async function PlannerPage() {
                       className="flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-accent/50"
                     >
                       <span>
-                        <span className="text-muted-foreground">Semana {item.weekNumber}</span> —{" "}
-                        {item.title}
+                        <span className="text-muted-foreground">
+                          {formatDayNumber(item.curriculumIndex)}
+                        </span>{" "}
+                        — {stripWeekDayPrefix(item.title)}
                       </span>
                       <Badge variant="secondary">
                         {item.date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}

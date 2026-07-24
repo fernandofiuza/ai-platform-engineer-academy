@@ -25,11 +25,21 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { STATUS_BADGE_VARIANT, STATUS_LABELS } from "@/modules/curriculum/status";
-import { formatDateRange, stripWeekDayPrefix } from "@/modules/planning/format";
+import {
+  formatDateRange,
+  formatDayNumber,
+  formatScheduleDate,
+  stripWeekDayPrefix,
+} from "@/modules/planning/format";
 import type { ContentStatus } from "@/generated/prisma/enums";
 
-type PaceGroupLesson = { id: string; title: string; status: "completed" | "scheduled" };
-type PaceGroup = { index: number; startDate: string; endDate: string; lessons: PaceGroupLesson[] };
+type ScheduleItem = {
+  lessonId: string;
+  title: string;
+  date: string;
+  status: "completed" | "scheduled";
+  curriculumIndex: number;
+};
 
 type WeekSummary = {
   id: string;
@@ -65,22 +75,34 @@ type TrackKey = "FORMACAO" | "PRODUTO" | "PROFISSIONAL";
 export function RoadmapExplorer({
   phases,
   dateRangeByWeekNumber = {},
-  paceGroups,
+  scheduleItems,
 }: {
   phases: PhaseSummary[];
   /** Datas reais do cronograma dinâmico (calculadas a partir do Planejador), por número de
    * semana — ausente quando o aluno ainda não configurou um Planejador. Usado pelas trilhas
    * Produto/Profissional, que são inerentemente por semana do currículo (marcos 1:1 por Week). */
   dateRangeByWeekNumber?: Record<number, { start: string; end: string }>;
-  /** Aulas agrupadas por "semana de ritmo" (`paceWeekIndex` — grupos de exatamente
-   * `StudyPlan.availableDays.length` aulas cada, cruzando os limites das semanas fixas do
-   * currículo quando necessário). Usado pela Trilha Formação em vez de `phases[].weeks[]`
-   * quando o aluno tem um Planejador configurado — ver `docs/DECISIONS.md`. */
-  paceGroups?: PaceGroup[];
+  /** Aulas do cronograma dinâmico do aluno, em ordem sequencial (`curriculumIndex`). Usado pela
+   * Trilha Formação em vez de `phases[].weeks[]` quando há um Planejador configurado — sem
+   * nenhum agrupamento por "semana" (nem fixa do currículo, nem por ritmo): só a data real e o
+   * número sequencial do dia ("Dia N"), a pedido explícito do usuário. Ver `docs/DECISIONS.md`. */
+  scheduleItems?: ScheduleItem[];
 }) {
   const [track, setTrack] = React.useState<TrackKey>("FORMACAO");
   const [phaseFilter, setPhaseFilter] = React.useState<string>("ALL");
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
+
+  const dateGroups = React.useMemo(() => {
+    if (!scheduleItems || scheduleItems.length === 0) return [];
+    const map = new Map<string, { date: Date; items: ScheduleItem[] }>();
+    for (const item of scheduleItems) {
+      const date = new Date(item.date);
+      const key = date.toDateString();
+      if (!map.has(key)) map.set(key, { date, items: [] });
+      map.get(key)!.items.push(item);
+    }
+    return [...map.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [scheduleItems]);
 
   function dateLabelFor(weekNumber: number): string | null {
     const range = dateRangeByWeekNumber[weekNumber];
@@ -127,7 +149,7 @@ export function RoadmapExplorer({
       ),
     }));
 
-  const isPaceMode = track === "FORMACAO" && Boolean(paceGroups && paceGroups.length > 0);
+  const isScheduleMode = track === "FORMACAO" && dateGroups.length > 0;
 
   return (
     <div className="space-y-4">
@@ -158,18 +180,19 @@ export function RoadmapExplorer({
           marco definido aparecem como &ldquo;a definir&rdquo;.
         </p>
       ) : null}
-      {isPaceMode ? (
+      {isScheduleMode ? (
         <p className="text-sm text-muted-foreground">
-          Cada &ldquo;Semana&rdquo; aqui tem exatamente o número de dias configurado no seu{" "}
+          Aulas organizadas pelas datas reais do seu cronograma, numeradas sequencialmente
+          (&ldquo;Dia 01&rdquo;, &ldquo;Dia 02&rdquo;, ...) — configure ou ajuste sua
+          disponibilidade no{" "}
           <Link href="/planner" className="underline">
             Planejador
           </Link>{" "}
-          — não o número fixo de aulas da grade curricular. Mude sua disponibilidade lá para
-          recalcular tudo na hora.
+          para recalcular tudo na hora.
         </p>
       ) : null}
 
-      {isPaceMode ? null : (
+      {isScheduleMode ? null : (
         <div className="flex flex-wrap items-center gap-3">
           <Select value={phaseFilter} onValueChange={setPhaseFilter}>
             <SelectTrigger className="w-56">
@@ -214,37 +237,42 @@ export function RoadmapExplorer({
         </TabsList>
 
         <TabsContent value="list" className="mt-4 space-y-6">
-          {isPaceMode ? (
+          {isScheduleMode ? (
             <div className="space-y-6">
-              {paceGroups!.map((group) => (
-                <div key={group.index}>
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    Semana {group.index} — {formatDateRange(new Date(group.startDate), new Date(group.endDate))}
-                  </h3>
-                  <div className="mt-2 divide-y rounded-lg border">
-                    {group.lessons.map((lesson, dayIndex) => (
-                      <Link
-                        key={lesson.id}
-                        href={`/learn/${lesson.id}`}
-                        className="flex items-center justify-between gap-4 px-4 py-2.5 text-sm hover:bg-accent/50"
-                      >
-                        <span className="flex items-center gap-2">
-                          {lesson.status === "completed" ? (
-                            <CheckCircle2 className="size-4 text-primary" />
-                          ) : (
-                            <Circle className="size-4 text-muted-foreground" />
-                          )}
-                          <span className="text-muted-foreground">Dia {dayIndex + 1}</span> —{" "}
-                          {stripWeekDayPrefix(lesson.title)}
-                        </span>
-                        <Badge variant={lesson.status === "completed" ? "default" : "outline"}>
-                          {lesson.status === "completed" ? "Concluída" : "Planejada"}
-                        </Badge>
-                      </Link>
-                    ))}
+              {dateGroups.map((group) => {
+                const allCompleted = group.items.every((i) => i.status === "completed");
+                return (
+                  <div key={group.date.toDateString()}>
+                    <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      {allCompleted ? (
+                        <CheckCircle2 className="size-4 text-primary" />
+                      ) : (
+                        <Circle className="size-4" />
+                      )}
+                      {formatScheduleDate(group.date, "long")}
+                    </h3>
+                    <div className="mt-2 divide-y rounded-lg border">
+                      {group.items.map((item) => (
+                        <Link
+                          key={item.lessonId}
+                          href={`/learn/${item.lessonId}`}
+                          className="flex items-center justify-between gap-4 px-4 py-2.5 text-sm hover:bg-accent/50"
+                        >
+                          <span>
+                            <span className="text-muted-foreground">
+                              {formatDayNumber(item.curriculumIndex)}
+                            </span>{" "}
+                            — {stripWeekDayPrefix(item.title)}
+                          </span>
+                          <Badge variant={item.status === "completed" ? "default" : "outline"}>
+                            {item.status === "completed" ? "Concluída" : "Planejada"}
+                          </Badge>
+                        </Link>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             filteredPhases.map((phase) => (
@@ -282,28 +310,25 @@ export function RoadmapExplorer({
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-4 space-y-6">
-          {isPaceMode ? (
+          {isScheduleMode ? (
             <div className="flex flex-wrap gap-1.5">
-              {paceGroups!.map((group) => {
-                const allCompleted = group.lessons.every((l) => l.status === "completed");
-                return (
-                  <Link
-                    key={group.index}
-                    href={`/learn/${group.lessons[0]?.id}`}
-                    title={`Semana ${group.index} — ${formatDateRange(new Date(group.startDate), new Date(group.endDate))}: ${group.lessons.map((l) => stripWeekDayPrefix(l.title)).join(", ")}`}
+              {scheduleItems!.map((item) => (
+                <Link
+                  key={item.lessonId}
+                  href={`/learn/${item.lessonId}`}
+                  title={`${formatDayNumber(item.curriculumIndex)} — ${formatScheduleDate(new Date(item.date), "long")}: ${stripWeekDayPrefix(item.title)}`}
+                >
+                  <span
+                    className={cn(
+                      "flex size-7 items-center justify-center rounded-md border text-[11px] font-medium transition-colors hover:border-primary",
+                      item.status !== "completed" && "bg-muted text-muted-foreground",
+                      item.status === "completed" && "bg-primary/10 text-primary"
+                    )}
                   >
-                    <span
-                      className={cn(
-                        "flex size-7 items-center justify-center rounded-md border text-[11px] font-medium transition-colors hover:border-primary",
-                        !allCompleted && "bg-muted text-muted-foreground",
-                        allCompleted && "bg-primary/10 text-primary"
-                      )}
-                    >
-                      {group.index}
-                    </span>
-                  </Link>
-                );
-              })}
+                    {item.curriculumIndex + 1}
+                  </span>
+                </Link>
+              ))}
             </div>
           ) : (
             filteredPhases.map((phase) => (

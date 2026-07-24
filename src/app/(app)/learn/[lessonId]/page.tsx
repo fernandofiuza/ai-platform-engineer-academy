@@ -16,7 +16,7 @@ import { getLessonById, getLessonCompletion } from "@/modules/curriculum/queries
 import { LessonNotesPanel } from "@/modules/notes/components/lesson-notes-panel";
 import { getNotesForLesson } from "@/modules/notes/queries";
 import { getLessonSchedule } from "@/modules/planning/queries";
-import { formatScheduleDate, stripWeekDayPrefix } from "@/modules/planning/format";
+import { formatDayNumber, formatScheduleDate, stripWeekDayPrefix } from "@/modules/planning/format";
 
 export async function generateMetadata({
   params,
@@ -57,7 +57,9 @@ export default async function LessonDetailPage({
             Aprender
           </Link>
           <span>·</span>
-          <span>Semana {scheduleEntry?.paceWeekIndex ?? lesson.week.number}</span>
+          <span>
+            {scheduleEntry ? formatDayNumber(scheduleEntry.curriculumIndex) : `Semana ${lesson.week.number}`}
+          </span>
           {lesson.week.phase ? <span>· {lesson.week.phase.label}</span> : null}
           {scheduleEntry ? (
             <>

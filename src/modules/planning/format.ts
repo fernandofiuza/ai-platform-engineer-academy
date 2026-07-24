@@ -31,10 +31,19 @@ export function formatDateRange(start: Date, end: Date): string {
 /**
  * Remove o prefixo "Semana N" / "Semana N, Dia M — " gravado literalmente no título da aula na
  * importação (`grade-lessons.ts`) — esse texto se refere à semana FIXA do currículo (sempre 5
- * aulas), e fica incoerente ao lado da numeração por ritmo (`paceWeekIndex`), que pode agrupar
- * um número diferente de aulas por "semana". Títulos que não seguem esse padrão (ex.: as aulas
- * de demonstração da Semana 0) voltam inalterados. Ver `docs/DECISIONS.md`.
+ * aulas). Títulos que não seguem esse padrão (ex.: as aulas de demonstração da Semana 0) voltam
+ * inalterados. Ver `docs/DECISIONS.md`.
  */
 export function stripWeekDayPrefix(title: string): string {
   return title.replace(/^Semana\s+\d+(?:,\s*Dia\s+\d+)?\s*—\s*/, "");
+}
+
+/**
+ * "Dia N" sequencial do cronograma do aluno — `curriculumIndex + 1` (1-based), zero-padded a 2
+ * dígitos. Substitui por completo o conceito de "Semana N" (fixa do currículo ou por ritmo) na
+ * exibição do Planejador/Roadmap/Aprender, a pedido explícito do usuário — sem agrupamento por
+ * semana, só a contagem sequencial de dias de estudo. Ver `docs/DECISIONS.md`.
+ */
+export function formatDayNumber(curriculumIndex: number): string {
+  return `Dia ${String(curriculumIndex + 1).padStart(2, "0")}`;
 }

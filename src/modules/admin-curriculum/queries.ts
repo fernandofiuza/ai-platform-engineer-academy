@@ -17,7 +17,10 @@ export async function getWeekWithLessonsForAdmin(weekId: string) {
         include: {
           flashcards: true,
           assessments: { include: { questions: { include: { options: true } } } },
-          laboratories: { orderBy: { createdAt: "asc" } },
+          laboratories: {
+            orderBy: { laboratory: { createdAt: "asc" } },
+            include: { laboratory: true },
+          },
         },
       },
       productMilestone: true,

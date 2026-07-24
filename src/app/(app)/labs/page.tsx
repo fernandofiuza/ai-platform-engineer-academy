@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { getLaboratories } from "@/modules/laboratories/queries";
+import { describeLinkedWeeks } from "@/modules/laboratories/format";
 
 export const metadata: Metadata = { title: "Laboratórios" };
 
@@ -40,40 +41,42 @@ export default async function LabsPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {labs.map((lab) => (
-          <Link key={lab.id} href={`/labs/${lab.id}`}>
-            <Card className="h-full transition-colors hover:bg-accent/50">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                    <FlaskConical className="size-5" />
-                  </span>
-                  <div>
-                    <CardTitle className="text-base">{lab.title}</CardTitle>
-                    {lab.lesson ? (
-                      <CardDescription>
-                        Referente à Semana {lab.lesson.week.number}
-                        {lab.lesson.week.phase ? `, ${lab.lesson.week.phase.label}` : ""}: {lab.lesson.title}
-                      </CardDescription>
-                    ) : lab.objective ? (
-                      <CardDescription>{lab.objective}</CardDescription>
-                    ) : null}
+        {labs.map((lab) => {
+          const weeksLabel = describeLinkedWeeks(lab.lessons);
+          return (
+            <Link key={lab.id} href={`/labs/${lab.id}`}>
+              <Card className="h-full transition-colors hover:bg-accent/50">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                      <FlaskConical className="size-5" />
+                    </span>
+                    <div>
+                      <CardTitle className="text-base">{lab.title}</CardTitle>
+                      {weeksLabel ? (
+                        <CardDescription>Referente à {weeksLabel}</CardDescription>
+                      ) : lab.scenario ? (
+                        <CardDescription>{lab.scenario}</CardDescription>
+                      ) : lab.objective ? (
+                        <CardDescription>{lab.objective}</CardDescription>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between">
-                {completedIds.has(lab.id) ? (
-                  <span className="flex items-center gap-1 text-xs text-primary">
-                    <CheckCircle2 className="size-3.5" /> concluído
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Não iniciado</span>
-                )}
-                <ArrowRight className="size-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+                </CardHeader>
+                <CardContent className="flex items-center justify-between">
+                  {completedIds.has(lab.id) ? (
+                    <span className="flex items-center gap-1 text-xs text-primary">
+                      <CheckCircle2 className="size-3.5" /> concluído
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Não iniciado</span>
+                  )}
+                  <ArrowRight className="size-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

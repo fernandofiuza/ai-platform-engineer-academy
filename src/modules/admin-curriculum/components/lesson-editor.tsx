@@ -48,7 +48,9 @@ type Lesson = {
   assessments: {
     questions: { id: string; prompt: string; options: { id: string; text: string; isCorrect: boolean }[] }[];
   }[];
-  laboratories: { id: string; title: string; status: ContentStatus; aiGeneratedAt: Date | null }[];
+  laboratories: {
+    laboratory: { id: string; title: string; status: ContentStatus; aiGeneratedAt: Date | null };
+  }[];
 };
 
 export function LessonEditor({ weekId, lesson, nextOrder }: { weekId: string; lesson?: Lesson; nextOrder: number }) {
@@ -228,7 +230,10 @@ export function LessonEditor({ weekId, lesson, nextOrder }: { weekId: string; le
 
           {lesson ? (
             <div className="border-t pt-4">
-              <LessonLabPanel lessonId={lesson.id} laboratories={lesson.laboratories} />
+              <LessonLabPanel
+                lessonId={lesson.id}
+                laboratories={lesson.laboratories.map((ll) => ll.laboratory)}
+              />
             </div>
           ) : null}
 

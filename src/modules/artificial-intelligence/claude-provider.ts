@@ -27,7 +27,11 @@ async function callMessages(prompt: string, systemPrompt: string = DEFAULT_SYSTE
     },
     body: JSON.stringify({
       model,
-      max_tokens: 16000,
+      // Respostas longas (ex: laboratórios cobrindo várias semanas, com 15-20+ passos
+      // detalhados) podem gastar uma parte relevante do orçamento de tokens em blocos de
+      // "thinking" antes do texto final — 16000 já se mostrou insuficiente em alguns casos
+      // (resposta cortada no meio de uma frase). 32000 dá margem sem custo relevante adicional.
+      max_tokens: 32000,
       system: systemPrompt,
       messages: [{ role: "user", content: prompt }],
     }),

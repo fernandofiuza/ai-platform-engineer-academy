@@ -27,7 +27,11 @@ export function LessonLabPanel({
 
   function onGenerate(confirmOverwrite = false) {
     startTransition(async () => {
-      const result = await generateLabContentAction(lessonId, confirmOverwrite);
+      const result = await generateLabContentAction({
+        laboratoryId: lab?.id,
+        lessonIds: [lessonId],
+        confirmOverwrite,
+      });
       if (result?.error) {
         if (result.needsConfirmation && window.confirm(`${result.error}\n\nGerar mesmo assim?`)) {
           onGenerate(true);

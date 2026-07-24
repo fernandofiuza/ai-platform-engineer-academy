@@ -851,5 +851,89 @@ pergunta aparece na lista compartilhada.
 Ver `docs/IMPLEMENTATION_PLAN.md` (entrada correspondente) para o detalhe técnico do fix de CSS
 em `DialogContent`/`ask-professor-dialog.tsx`.
 
+## 2026-07-24 — Laboratórios: N:N com aulas + catálogo de cenários reais de produção
+
+**Decisão**: `Laboratory.lessonId` (FK única opcional) foi substituído por uma tabela de junção
+`LaboratoryLesson(laboratoryId, lessonId)` — um mesmo laboratório agora pode abranger várias
+aulas (inclusive de semanas/módulos diferentes), e uma aula pode ter vários laboratórios.
+Migration escrita manualmente (`20260724130000_laboratory_lesson_many_to_many`) em vez de
+`prisma migrate dev` interativo, porque havia 1 linha com
+`lessonId` não nulo que precisava ser preservada — o SQL faz `INSERT INTO laboratory_lessons
+SELECT ...` a partir do valor antigo antes de dropar a coluna, e foi aplicada via
+`prisma migrate deploy` (não-interativo). Nenhum dado foi perdido; verificado via query direta
+antes e depois.
+**Geração por IA revista**: `generateLabContentAction` deixou de operar sobre uma única
+`lessonId` e passou a aceitar `lessonIds[]` e/ou `weekNumbers[]` (resolvidos para lessonIds no
+servidor) + `title`/`scenario` explícitos — permitindo criar um laboratório "standalone" que
+cobre várias semanas de uma vez, além do fluxo rápido de 1 aula (usado dentro do editor de aula,
+`LessonLabPanel`, que passa `lessonIds: [lessonId]`). Novo componente `AdminLabGenerator` em
+`/admin/labs` expõe esse fluxo multi-semana (título opcional, cenário, "semanas: 20,21") para criar
+um laboratório novo; `AdminLabForm` (edição de um laboratório existente) ganhou um botão "Gerar
+novamente com IA" que reaproveita `laboratoryId`/`lessonIds`/`title`/`scenario` já salvos —
+sem isso não haveria como regenerar um laboratório multi-semana já criado pela UI administrativa.
+**Prompt reescrito por completo** (`buildLabGenerationMessage`) a partir do pedido explícito do
+usuário: (1) PROIBIDO usar "Labs IA"/"Apex" ou qualquer projeto interno como cenário — obrigatório
+usar uma situação real de empresa em produção (API interna, servidor Linux, Kubernetes, CI/CD,
+bancos de dados, observabilidade, auth, integração de serviços, dev/homolog/produção, redes/DNS/
+proxy/LB, backup/HA, automação de infra, troubleshooting de incidente); (2) tratar o aluno como
+leigo completo — nenhum passo pode ser pulado por trivial que pareça; (3) estrutura obrigatória em
+Markdown: `## Objetivo`, `## Cenário`, `## Pré-requisitos`, `## Passos` (numerados, cada um com
+"Resultado esperado:"), `## Validação final`, `## Erros comuns e troubleshooting` (mín. 4),
+`## Resumo e conceitos aplicados` (linkando de volta às aulas/semanas usadas como contexto).
+**Otimização de custo/latência**: o contexto enviado ao provider (`currentLessonContent`) foi
+reduzido de "conteúdo completo de cada aula concatenado" (podia passar de 100k caracteres quando
+um laboratório cobre 10 aulas de 2 semanas, e levou ~2min na primeira geração de teste) para um
+trecho de 400 caracteres por aula — os títulos/objetivos completos já vão no corpo do prompt via
+`buildLabGenerationMessage`, então o conteúdo integral da aula era redundante para uma tarefa que
+é "só prática, não repita a teoria".
+**Catálogo completo**: 35 laboratórios cobrindo **todos** os 24 módulos do currículo (não só os
+7 com conteúdo diário já aprofundado) — o usuário pediu explicitamente cobertura de todas as
+tecnologias estudadas, incluindo módulos ainda no formato legado (1 aula/semana), o que funciona
+normalmente porque o prompt de geração só precisa dos títulos/objetivos das aulas para saber quais
+tecnologias exercitar, não do conteúdo pedagógico aprofundado. Wave 1 (12 labs, semanas 1–49,
+módulos já em formato diário) + wave 2 (22 labs, semanas 50–104, Backend até Engenharia de
+Soluções) + 1 lab manual pré-existente (Fase 4, "Preparar o ambiente com Docker Compose") = 36
+laboratórios no banco, 35 gerados por IA e aprovados, 283 vínculos laboratório-aula. "Kubernetes"
+e "DevOps" (citados explicitamente pelo usuário) não são módulos próprios na grade curricular —
+viraram um laboratório dedicado usando a semana 70 (EKS, dentro do módulo AWS) e um laboratório de
+promoção de deploy entre ambientes (dev/homolog/produção) reaproveitando semanas de Docker+AWS já
+usadas por outros laboratórios (intencional: a mesma aula pode alimentar vários laboratórios).
+Catálogos definidos em `scripts/_lab_catalog*.json` (descartáveis, não commitados — mesmo padrão
+dos scripts `_apply_daily_module.ts` etc. usados para o conteúdo das aulas).
+**Motivo**: pedido explícito do usuário — vários laboratórios guiados passo a passo cobrindo todas
+as tecnologias estudadas (incluindo a lista explícita de módulos que ele forneceu), vinculados às
+aulas correspondentes, sem usar os projetos internos do curso como cenário, e sim situações reais
+de empresas em produção.
+
+## 2026-07-24 — Bug real: laboratórios truncados por orçamento de tokens insuficiente
+
+**O que aconteceu**: a primeira leva de laboratórios gerados (max_tokens: 16000, herdado do
+mesmo limite usado para aulas) produziu várias respostas cortadas no meio de uma frase antes de
+completar as seções obrigatórias (`## Validação final`, `## Erros comuns`, `## Resumo`) — o
+laboratório mais grave tinha apenas 15890 caracteres e terminava literalmente no meio de um
+comando `iptables`. Causa provável: modelos com "thinking" intercalado (ver decisão da Etapa 8
+sobre parsing da resposta da Claude) consomem parte do orçamento de `max_tokens` em blocos de
+raciocínio invisíveis antes do texto final, sobrando menos espaço para uma resposta de 20+ passos
+detalhados do que o esperado pelo tamanho em caracteres sozinho sugeriria.
+**Correção**: `max_tokens` subido de 16000 para 32000 em `claude-provider.ts` (afeta todas as
+chamadas via `callMessages`, não só laboratórios); prompt reforçado com uma regra explícita contra
+digressões/passos bônus não pedidos, para não desperdiçar orçamento em conteúdo fora do escopo.
+Todos os laboratórios afetados foram identificados por um script de verificação (regex por seção
+obrigatória, tolerante a headings com emoji) e regenerados com sucesso — confirmado: 0 laboratórios
+com seção faltando em toda a base.
+**Bug relacionado (ferramenta de automação, não do produto)**: o primeiro script de regeneração
+usava `getByRole("button", { name: "Gerar novamente com IA" }).first()` sem escopo — como esse
+botão aparece no cabeçalho de **todo** card de laboratório (visível mesmo com o card recolhido),
+`.first()` sempre clicava no primeiro laboratório da lista inteira, não no card do laboratório-alvo
+que tinha acabado de ser clicado para expandir. Isso regenerou repetidamente o laboratório errado
+("Configurando um servidor Linux...", por ser o mais antigo/primeiro da lista) 3 vezes seguidas,
+sem afetar os laboratórios realmente visados. Corrigido escopando a busca ao
+`[data-slot='card']` que contém o título exato do laboratório-alvo
+(`page.locator("[data-slot='card']").filter({ hasText: title })`) antes de procurar o botão.
+Nenhum dado real foi perdido (o laboratório afetado só teve seu próprio conteúdo regenerado/
+melhorado); lição registrada para scripts futuros de automação administrativa: nunca usar
+`.first()` em um seletor de botão que se repete em múltiplos cards da mesma página — sempre
+escopar ao contêiner do item-alvo primeiro.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

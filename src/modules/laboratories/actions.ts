@@ -67,12 +67,18 @@ export async function saveLaboratoryAction(input: SaveLaboratoryInput) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  const { laboratoryId, ...data } = parsed.data;
+  const { laboratoryId, lessonIds, ...data } = parsed.data;
 
   if (laboratoryId) {
     await db.laboratory.update({ where: { id: laboratoryId }, data: { ...data, isManuallyEdited: true } });
   } else {
-    await db.laboratory.create({ data: { ...data, isManuallyEdited: true } });
+    await db.laboratory.create({
+      data: {
+        ...data,
+        isManuallyEdited: true,
+        lessons: { create: lessonIds.map((lessonId) => ({ lessonId })) },
+      },
+    });
   }
 
   logger.info("admin_action", {
@@ -98,44 +104,114 @@ export async function archiveLaboratoryAction(laboratoryId: string) {
   return { error: null };
 }
 
-function buildLabGenerationMessage(lesson: { title: string; objective: string | null }) {
+function buildLabGenerationMessage(input: {
+  scenario: string;
+  lessons: { title: string; objective: string | null }[];
+}) {
+  const lessonList = input.lessons
+    .map((l, i) => `${i + 1}. ${l.title}${l.objective ? ` — ${l.objective}` : ""}`)
+    .join("\n");
+
   return [
-    `Crie um laboratório guiado, passo a passo, 100% prático, para a aula "${lesson.title}"`,
-    `(objetivo da aula: ${lesson.objective ?? "não informado"}).`,
-    "Use o conteúdo da aula fornecido como contexto para saber quais tópicos/tecnologias o",
-    "laboratório deve exercitar — mas não repita a teoria da aula aqui, o laboratório é só a",
-    "prática: comandos reais, passos numerados, resultado esperado de cada passo.",
-    "Estruture a resposta em Markdown com estas seções, nesta ordem: ## Objetivo (1-2 frases,",
-    "o que o aluno vai construir/praticar), ## Ambiente (o que precisa estar instalado/",
-    "configurado antes de começar), ## Passos (numerados, cada um com o comando ou ação real e",
-    "o resultado esperado daquele passo específico — use blocos de código para comandos),",
-    "## Resultado esperado (o estado final, o que o aluno deve conseguir mostrar/entregar),",
-    "## Validação (como o aluno confirma que fez certo), ## Troubleshooting (2-3 problemas",
-    "comuns e como resolver).",
-  ].join(" ");
+    `Crie um laboratório prático 100% guiado, passo a passo, para o seguinte cenário: "${input.scenario}".`,
+    "",
+    "Este laboratório está vinculado ao conteúdo das aulas abaixo — use-as como referência de",
+    "quais tecnologias e conceitos o laboratório precisa exercitar na prática (não repita a",
+    "teoria da aula, o laboratório é só a prática guiada):",
+    lessonList,
+    "",
+    "REGRAS OBRIGATÓRIAS:",
+    "- PROIBIDO usar os projetos internos do curso (ex: 'Labs IA', 'Apex' ou qualquer projeto",
+    "  interno do programa) como cenário. Use uma situação real e comum do dia a dia de uma",
+    "  empresa em produção — por exemplo: subir uma API interna, configurar um servidor Linux,",
+    "  publicar uma aplicação em Kubernetes, montar um pipeline de CI/CD, criar/gerenciar um",
+    "  banco de dados, implementar monitoramento e observabilidade, configurar autenticação e",
+    "  controle de acesso, integrar serviços entre si, fazer deploy em dev/homologação/produção,",
+    "  configurar redes/DNS/proxy/load balancer, backup e alta disponibilidade, automação de",
+    "  infraestrutura, ou resolver um incidente real em produção.",
+    "- Trate o aluno como uma pessoa completamente leiga em tecnologia: não assuma NENHUM",
+    "  conhecimento prévio. Antes de pedir para executar qualquer ação, explique o que ela",
+    "  significa e por que está sendo feita. Não pule nenhum passo por mais trivial que pareça",
+    "  (inclusive abrir um terminal, instalar uma ferramenta, criar uma pasta, etc).",
+    "- Cada passo precisa terminar com o resultado esperado daquele passo específico, para o",
+    "  aluno conferir se deu certo antes de seguir para o próximo.",
+    "- Seja disciplinado com o orçamento de resposta: não adicione passos extras, seções bônus",
+    "  ou digressões (ex: 'como isso seria em outra ferramenta') além do que foi pedido abaixo.",
+    "  Se algo relevante merecer uma nota rápida, inclua como uma frase dentro do passo",
+    "  relacionado — nunca como um passo ou seção adicional. É mais importante concluir todas as",
+    "  seções obrigatórias (principalmente Validação final, Erros comuns e Resumo) do que",
+    "  aprofundar demais nos Passos.",
+    "",
+    "Estruture a resposta em Markdown com exatamente estas seções, nesta ordem:",
+    "## Objetivo — 2-3 frases sobre o que o aluno vai construir/praticar e por que isso importa",
+    "no dia a dia de uma empresa real.",
+    "## Cenário — a situação de negócio/produção simulada, com contexto suficiente para o",
+    "laboratório fazer sentido (ex: 'você é o devops recém-contratado de uma empresa X e",
+    "precisa...').",
+    "## Pré-requisitos — tudo que precisa estar instalado/configurado/disponível antes de",
+    "começar (ferramentas, contas, acessos, versões mínimas).",
+    "## Passos — numerados ('Passo 1', 'Passo 2', ...), cada um com: o que fazer e por quê, o",
+    "comando ou ação exata (bloco de código quando for comando ou arquivo de configuração), e",
+    "uma linha 'Resultado esperado:' descrevendo o que o aluno deve ver/conferir para saber que",
+    "aquele passo específico funcionou antes de continuar.",
+    "## Validação final — um checklist prático confirmando que o cenário completo está",
+    "funcionando de ponta a ponta.",
+    "## Erros comuns e troubleshooting — pelo menos 4 problemas reais que costumam acontecer",
+    "neste tipo de tarefa, a causa provável de cada um, e como resolver.",
+    "## Resumo e conceitos aplicados — o que foi aprendido na prática neste laboratório e quais",
+    "conceitos das aulas listadas acima foram exercitados.",
+  ].join("\n");
 }
 
 /**
- * Gera um laboratório guiado passo a passo (persona Professor) vinculado a uma aula específica
- * — o laboratório sempre mostra a qual aula/semana ele se refere (`Laboratory.lessonId`).
- * Mesmo padrão de aprovação da Etapa 3: salva com `status = DRAFT` até um admin aprovar; recusa
- * se nenhum provider real estiver configurado (evita substituir por resumo genérico do Mock);
- * exige confirmação explícita para sobrescrever um laboratório editado manualmente.
+ * Gera um laboratório guiado passo a passo (persona Professor) vinculado a um conjunto de aulas
+ * — um mesmo laboratório pode abranger várias aulas (`LaboratoryLesson`), e uma aula pode ter
+ * vários laboratórios. Mesmo padrão de aprovação das demais gerações por IA: salva com
+ * `status = DRAFT` até um admin aprovar; recusa se nenhum provider real estiver configurado
+ * (evita substituir por resumo genérico do Mock); exige confirmação explícita para sobrescrever
+ * um laboratório editado manualmente.
  */
-export async function generateLabContentAction(lessonId: string, confirmOverwrite = false) {
+export async function generateLabContentAction(input: {
+  laboratoryId?: string;
+  lessonIds?: string[];
+  weekNumbers?: number[];
+  title?: string;
+  scenario?: string;
+  confirmOverwrite?: boolean;
+}) {
   const admin = await assertLabAdmin();
   if (!admin) return { error: "Apenas administradores podem gerenciar laboratórios." };
 
-  const lesson = await db.lesson.findUnique({ where: { id: lessonId } });
-  if (!lesson) return { error: "Aula não encontrada." };
+  let lessonIds = input.lessonIds ?? [];
+  if (input.weekNumbers?.length) {
+    const weekLessons = await db.lesson.findMany({
+      where: { week: { number: { in: input.weekNumbers } } },
+      select: { id: true },
+    });
+    lessonIds = [...new Set([...lessonIds, ...weekLessons.map((l) => l.id)])];
+  }
+  if (lessonIds.length === 0) {
+    return { error: "Selecione ao menos uma aula ou semana para vincular ao laboratório." };
+  }
 
-  const existing = await db.laboratory.findFirst({ where: { lessonId } });
-  if (existing?.isManuallyEdited && !confirmOverwrite) {
-    return {
-      error:
-        "Este laboratório foi editado manualmente. Confirme explicitamente para gerar e substituir mesmo assim.",
-      needsConfirmation: true,
-    };
+  const lessons = await db.lesson.findMany({
+    where: { id: { in: lessonIds } },
+    orderBy: [{ week: { number: "asc" } }, { order: "asc" }],
+    include: { week: true },
+  });
+  if (lessons.length === 0) return { error: "Nenhuma aula encontrada para os IDs/semanas informados." };
+
+  let existing = null;
+  if (input.laboratoryId) {
+    existing = await db.laboratory.findUnique({ where: { id: input.laboratoryId } });
+    if (!existing) return { error: "Laboratório não encontrado." };
+    if (existing.isManuallyEdited && !input.confirmOverwrite) {
+      return {
+        error:
+          "Este laboratório foi editado manualmente. Confirme explicitamente para gerar e substituir mesmo assim.",
+        needsConfirmation: true,
+      };
+    }
   }
 
   const provider = getProviderForPersona("PROFESSOR");
@@ -146,13 +222,26 @@ export async function generateLabContentAction(lessonId: string, confirmOverwrit
     };
   }
 
+  const scenario = input.scenario?.trim() || input.title?.trim() || lessons[0].title;
+  const title = input.title?.trim() || `Laboratório — ${lessons[0].title}`;
+
   try {
     const instructions = await provider.converse({
       persona: "PROFESSOR",
-      message: buildLabGenerationMessage(lesson),
+      message: buildLabGenerationMessage({
+        scenario,
+        lessons: lessons.map((l) => ({ title: l.title, objective: l.objective })),
+      }),
       context: {
-        currentLessonTitle: lesson.title,
-        currentLessonContent: lesson.contentMarkdown ?? undefined,
+        currentLessonTitle: lessons[0].title,
+        // Só um resumo curto de cada aula, não o conteúdo inteiro: os títulos/objetivos já vão
+        // no prompt (buildLabGenerationMessage), e o laboratório é só prática — não precisa da
+        // teoria completa das aulas como contexto. Manter isso pequeno evita prompts de 100k+
+        // caracteres quando um laboratório cobre muitas aulas de várias semanas.
+        currentLessonContent: lessons
+          .map((l) => (l.contentMarkdown ? `${l.title}: ${l.contentMarkdown.slice(0, 400)}...` : null))
+          .filter(Boolean)
+          .join("\n\n"),
         completedLessonTitles: [],
         openGoalTitles: [],
         recentQuizScores: [],
@@ -160,9 +249,8 @@ export async function generateLabContentAction(lessonId: string, confirmOverwrit
     });
 
     const data = {
-      lessonId,
-      title: `Laboratório — ${lesson.title}`,
-      objective: lesson.objective,
+      title,
+      scenario,
       instructions,
       isDemo: false,
       aiGeneratedAt: new Date(),
@@ -170,17 +258,35 @@ export async function generateLabContentAction(lessonId: string, confirmOverwrit
     };
 
     const lab = existing
-      ? await db.laboratory.update({ where: { id: existing.id }, data })
-      : await db.laboratory.create({ data });
+      ? await db.laboratory.update({
+          where: { id: existing.id },
+          data: {
+            ...data,
+            lessons: {
+              deleteMany: {},
+              create: lessonIds.map((lessonId) => ({ lessonId })),
+            },
+          },
+        })
+      : await db.laboratory.create({
+          data: { ...data, lessons: { create: lessonIds.map((lessonId) => ({ lessonId })) } },
+        });
 
-    logger.info("admin_action", { adminId: admin.id, action: "generate_lab_content", lessonId, laboratoryId: lab.id });
-    revalidatePath(`/admin/curriculum/${lesson.weekId}`);
+    logger.info("admin_action", {
+      adminId: admin.id,
+      action: "generate_lab_content",
+      lessonIds,
+      laboratoryId: lab.id,
+    });
+    for (const week of new Set(lessons.map((l) => l.weekId))) {
+      revalidatePath(`/admin/curriculum/${week}`);
+    }
     revalidatePath("/admin/labs");
     revalidatePath("/labs");
     revalidatePath(`/labs/${lab.id}`);
-    return { error: null };
+    return { error: null, laboratoryId: lab.id };
   } catch (error) {
-    logger.error("generate_lab_content failed", { lessonId, error: String(error) });
+    logger.error("generate_lab_content failed", { lessonIds, error: String(error) });
     return { error: "Não foi possível gerar o laboratório agora. Tente novamente em instantes." };
   }
 }
@@ -190,7 +296,10 @@ export async function approveLabContentAction(laboratoryId: string) {
   const admin = await assertLabAdmin();
   if (!admin) return { error: "Apenas administradores podem gerenciar laboratórios." };
 
-  const lab = await db.laboratory.findUnique({ where: { id: laboratoryId } });
+  const lab = await db.laboratory.findUnique({
+    where: { id: laboratoryId },
+    include: { lessons: { include: { lesson: true } } },
+  });
   if (!lab) return { error: "Laboratório não encontrado." };
   if (lab.status !== "DRAFT") return { error: "Este laboratório não está aguardando aprovação." };
 
@@ -199,9 +308,8 @@ export async function approveLabContentAction(laboratoryId: string) {
   logger.info("admin_action", { adminId: admin.id, action: "approve_lab_content", laboratoryId });
   revalidatePath("/admin/labs");
   revalidatePath("/labs");
-  if (lab.lessonId) {
-    const lesson = await db.lesson.findUnique({ where: { id: lab.lessonId } });
-    if (lesson) revalidatePath(`/admin/curriculum/${lesson.weekId}`);
+  for (const weekId of new Set(lab.lessons.map((ll) => ll.lesson.weekId))) {
+    revalidatePath(`/admin/curriculum/${weekId}`);
   }
   return { error: null };
 }

@@ -105,16 +105,21 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
   completo (nunca sobrescrito — cada solicitação cria uma linha nova); `score` é extraído por
   regex da resposta em texto livre da IA (`"Nota: X.X"`), fica `null` se não for possível
   extrair. Ver `docs/DECISIONS.md`.
-- **Laboratory**(lessonId?, title, objective?, environment?, prerequisites[], instructions?,
+- **Laboratory**(title, scenario?, objective?, environment?, prerequisites[], instructions?,
   commands?, expectedResult?, validation?, troubleshooting?, isDemo, isManuallyEdited,
-  aiGeneratedAt?, status) — `lessonId` (opcional, não único — várias labs podem, em tese,
-  referenciar a mesma aula) vincula o laboratório à aula/semana que o originou, sempre exibido
-  na UI ("Referente à Semana N: <aula>"). Labs gerados por IA (persona Professor, mesmo padrão
-  `isManuallyEdited`/`aiGeneratedAt`/`DRAFT` da Etapa 3) guardam o passo a passo completo em
-  `instructions` (Markdown renderizado, não mais texto puro); os demais campos
+  aiGeneratedAt?, status) — vinculado a aulas via `LaboratoryLesson` (N:N, ver abaixo), sempre
+  exibido na UI ("Referente à Semana N–M: <aula 1>, <aula 2>, ..."). Labs gerados por IA (persona
+  Professor, mesmo padrão `isManuallyEdited`/`aiGeneratedAt`/`DRAFT` da Etapa 3) guardam o passo a
+  passo completo em `instructions` (Markdown renderizado, não mais texto puro) — `scenario` é só
+  um resumo curto de uma linha para os cards de listagem, a versão completa do cenário fica na
+  seção `## Cenário` dentro de `instructions`; os demais campos
   (`environment`/`commands`/`expectedResult`/`validation`/`troubleshooting`) continuam
   disponíveis para labs criados manualmente pelo admin, mas ficam vazios nos gerados por IA
   (tudo já está em `instructions`). Ver `docs/DECISIONS.md`.
+- **LaboratoryLesson**(laboratoryId, lessonId, createdAt) — tabela de junção N:N: um mesmo
+  laboratório pode abranger o conteúdo de várias aulas (de semanas/módulos diferentes), e uma aula
+  pode ter vários laboratórios distintos. Substituiu um `Laboratory.lessonId` (FK única opcional)
+  da versão anterior — ver `docs/DECISIONS.md` para o motivo e a migration de dados.
 - **LaboratoryCompletion**(userId, laboratoryId, completedAt, evidenceUrl?, notes?) —
   `@@unique([userId, laboratoryId])`
 - ~~ProjectEvidence~~ — não implementado (ver acima)

@@ -443,4 +443,24 @@ produto foram entregues.
   topo. Verificado ao vivo via Playwright (resposta real de ~15k caracteres): `scrollHeight`
   (14849px) > `clientHeight` (380px) na área de resposta, dialog limitado a 612px de 720px de
   viewport.
+- **Feature: perguntas ao professor ficam salvas e visíveis para outros alunos.** Nova tabela
+  `LessonQuestion`; nova action `askProfessorAction`; `/learn/[lessonId]` lista as perguntas já
+  feitas por qualquer aluno naquela aula. Ver `docs/DECISIONS.md`.
+- **Reformulação completa de Laboratórios: N:N com aulas + catálogo cobrindo todos os 24
+  módulos.** `Laboratory.lessonId` (FK única) substituído por `LaboratoryLesson` (N:N) — um
+  laboratório pode abranger várias aulas de semanas/módulos diferentes. Prompt de geração
+  reescrito para produzir laboratórios 100% guiados, para leigo completo, baseados em cenários
+  reais de produção (API interna, servidor Linux, Kubernetes, CI/CD, bancos de dados,
+  observabilidade, segurança, integração de serviços, deploy multi-ambiente, redes, backup/HA,
+  troubleshooting) — proibido usar os projetos internos do curso ("Labs IA"/"Apex") como cenário.
+  Novo componente `AdminLabGenerator` (criação multi-semana) e botão "Gerar novamente com IA" em
+  `AdminLabForm` (regeneração de um laboratório existente). 35 laboratórios gerados por IA e
+  aprovados, cobrindo todos os 24 módulos do currículo (incluindo módulos ainda em formato
+  semanal legado) + 1 laboratório manual pré-existente = 36 no total, 283 vínculos
+  laboratório-aula. Bug real corrigido no meio do processo: `max_tokens` de 16000 causava
+  laboratórios truncados no meio de uma frase em cenários com 20+ passos (thinking consumindo
+  parte do orçamento) — subido para 32000, todos os laboratórios afetados foram identificados e
+  regenerados com sucesso. Confirmado por varredura completa: 0 laboratórios e 0 aulas em `DRAFT`
+  no banco. Ver `docs/DECISIONS.md` para o detalhe completo, incluindo um bug de automação
+  (seletor de botão sem escopo) encontrado e corrigido durante a regeneração.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

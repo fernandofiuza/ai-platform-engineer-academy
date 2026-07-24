@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AdminLabForm } from "@/modules/laboratories/components/admin-lab-form";
+import { AdminLabGenerator } from "@/modules/laboratories/components/admin-lab-generator";
 import { getAllLaboratoriesForAdmin } from "@/modules/laboratories/queries";
 
 export const metadata: Metadata = { title: "Laboratórios" };
@@ -16,6 +17,7 @@ export default async function AdminLabsPage() {
           Gerenciar os laboratórios técnicos disponíveis para os estudantes.
         </p>
       </div>
+      <AdminLabGenerator />
       <div className="space-y-3">
         {laboratories.map((lab) => (
           <AdminLabForm key={lab.id} laboratory={lab} />

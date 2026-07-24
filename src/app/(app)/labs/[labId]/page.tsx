@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Markdown } from "@/components/markdown";
 import { CompleteLabForm } from "@/modules/laboratories/components/complete-lab-form";
+import { describeLinkedWeeks } from "@/modules/laboratories/format";
 import { getCompletionForUser, getLaboratoryById } from "@/modules/laboratories/queries";
 
 export async function generateMetadata({
@@ -31,6 +32,7 @@ export default async function LaboratoryDetailPage({
   if (!lab) notFound();
 
   const completion = session?.user ? await getCompletionForUser(session.user.id, labId) : null;
+  const weeksLabel = describeLinkedWeeks(lab.lessons);
 
   const plainSections: { title: string; content: string | null }[] = [
     { title: "Ambiente", content: lab.environment },
@@ -47,19 +49,29 @@ export default async function LaboratoryDetailPage({
         {lab.objective ? <p className="mt-1 text-sm text-muted-foreground">{lab.objective}</p> : null}
       </div>
 
-      {lab.lesson ? (
-        <Link href={`/learn/${lab.lesson.id}`}>
-          <Card className="transition-colors hover:bg-accent/50">
-            <CardContent className="flex items-center justify-between gap-3 py-4">
-              <span className="flex items-center gap-2 text-sm">
-                <BookOpen className="size-4 text-muted-foreground" />
-                Referente à Semana {lab.lesson.week.number}
-                {lab.lesson.week.phase ? `, ${lab.lesson.week.phase.label}` : ""}: {lab.lesson.title}
-              </span>
-              <ArrowRight className="size-4 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
+      {lab.lessons.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <BookOpen className="size-4 text-muted-foreground" />
+              Referente à {weeksLabel}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 pt-0">
+            {lab.lessons.map((ll) => (
+              <Link
+                key={ll.lesson.id}
+                href={`/learn/${ll.lesson.id}`}
+                className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent/50"
+              >
+                <span>
+                  Semana {ll.lesson.week.number} — {ll.lesson.title}
+                </span>
+                <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" />
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
       ) : null}
 
       {lab.status === "DRAFT" ? (

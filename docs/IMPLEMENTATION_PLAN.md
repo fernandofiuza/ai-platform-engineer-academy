@@ -430,4 +430,17 @@ produto foram entregues.
 - **Módulo Python regenerado no formato por dia (semanas 38–44).** 35 aulas diárias geradas,
   aprofundadas pela persona Professor via Claude real e aprovadas. Confirmado por varredura
   completa: 0 aulas em `DRAFT` no banco.
+- **Módulo Banco regenerado no formato por dia (semanas 45–49).** 25 aulas diárias geradas,
+  aprofundadas pela persona Professor via Claude real e aprovadas. Confirmado por varredura
+  completa: 0 aulas em `DRAFT` no banco.
+- **Correção: diálogo "Pergunte ao Professor" sem barra de rolagem para respostas longas.**
+  `DialogContent` cresce ilimitadamente por padrão (sem `max-height`/`overflow`), então uma
+  resposta longa da IA (textos de 10k+ caracteres são comuns com `max_tokens: 16000`)
+  transbordava a viewport sem jeito de rolar. Corrigido em
+  `src/modules/artificial-intelligence/components/ask-professor-dialog.tsx`: o `DialogContent`
+  agora usa `flex max-h-[85vh] flex-col`, e a área de resposta (`Markdown` + disclaimer) fica em
+  um contêiner `flex-1 overflow-y-auto` separado da pergunta/botão, que permanecem fixos no
+  topo. Verificado ao vivo via Playwright (resposta real de ~15k caracteres): `scrollHeight`
+  (14849px) > `clientHeight` (380px) na área de resposta, dialog limitado a 612px de 720px de
+  viewport.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

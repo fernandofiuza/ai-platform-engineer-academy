@@ -50,7 +50,7 @@ export function AskProfessorDialog({ lessonId }: { lessonId: string }) {
       </Button>
 
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <GraduationCap className="size-4" /> Pergunte ao Professor
@@ -61,7 +61,7 @@ export function AskProfessorDialog({ lessonId }: { lessonId: string }) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3">
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -69,21 +69,23 @@ export function AskProfessorDialog({ lessonId }: { lessonId: string }) {
               rows={3}
               autoFocus
             />
-            <Button onClick={onAsk} disabled={isPending || !message.trim()}>
+            <Button onClick={onAsk} disabled={isPending || !message.trim()} className="w-fit">
               {isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
               Perguntar
             </Button>
 
-            {response ? (
-              <div className="space-y-2 rounded-lg border p-3">
-                <Markdown content={response} />
-              </div>
-            ) : null}
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+              {response ? (
+                <div className="space-y-2 rounded-lg border p-3">
+                  <Markdown content={response} />
+                </div>
+              ) : null}
 
-            <Alert>
-              <AlertTriangle className="size-4" />
-              <AlertDescription>{AI_DISCLAIMER}</AlertDescription>
-            </Alert>
+              <Alert>
+                <AlertTriangle className="size-4" />
+                <AlertDescription>{AI_DISCLAIMER}</AlertDescription>
+              </Alert>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

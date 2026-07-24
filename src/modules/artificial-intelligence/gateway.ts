@@ -84,6 +84,22 @@ export function getProviderForPersona(persona: AIPersona): AIProvider {
   return getProviderForTask(persona === "TECH_LEAD" ? "CODE_REVIEW" : "TEACH");
 }
 
+/**
+ * Provider fixo em Gemini, independente do roteamento por tarefa/persona — usado pelo diálogo
+ * "Pergunte ao Professor" (`askProfessorAction`) e pela geração de laboratórios
+ * (`generateLabContentAction`), a pedido explícito do usuário. Deliberadamente separado de
+ * `getProviderForPersona("PROFESSOR")`, que continua roteando para o provider de TEACH (Claude)
+ * — usado pela geração de conteúdo de aula e pelo `/ai-tutor` genérico, que não devem mudar de
+ * provider junto.
+ */
+export function getGeminiProvider(): AIProvider {
+  if (!isConfigured("gemini")) {
+    logger.warn("AI Gateway: gemini sem chave configurada — usando MockAIProvider");
+    return getMock();
+  }
+  return getReal("gemini");
+}
+
 /** Lista, para exibição/depuração, qual provider seria usado em cada tipo de tarefa hoje. */
 export function describeRouting(): Record<AITaskType, string> {
   return {

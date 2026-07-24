@@ -956,5 +956,55 @@ aqui: para contas free tier do Gemini, o alias `-latest` foi a única opção co
 (o oposto do padrão geralmente preferido de fixar uma versão exata) — vale reconferir
 periodicamente se a conta muda de tier.
 
+## 2026-07-24 — Pergunte ao Professor + geração de laboratórios passam a usar Gemini
+
+**Decisão**: a pedido explícito do usuário, o diálogo "Pergunte ao Professor"
+(`askProfessorAction`) e a geração de laboratórios (`generateLabContentAction`) deixaram de usar
+`getProviderForPersona("PROFESSOR")` (que resolve para Claude via o roteamento por tarefa TEACH)
+e passaram a usar um novo `getGeminiProvider()`, fixo em Gemini, exportado por `gateway.ts`.
+Deliberadamente **não** foi um swap global do `AI_TEACHING_PROVIDER` — isso teria arrastado junto
+a geração de conteúdo de aula (`generateLessonContentAction`) e o `/ai-tutor` genérico, que
+continuam em Claude, um pipeline já validado em 7 módulos e que o usuário não pediu para mudar.
+`getGeminiProvider()` reaproveita a mesma lógica de fallback-para-Mock se a chave não estiver
+configurada, mantendo a garantia de "nunca lança erro nem quebra o produto".
+**Ajuste de orçamento no Gemini**: `GeminiProvider.converse()` (usado por ambos os fluxos acima)
+tinha `maxOutputTokens: 700` — suficiente para uma resposta curta de tutor, mas nem perto do
+necessário para um laboratório de 20+ passos. Criado um parâmetro `maxOutputTokens` em
+`callGenerateContent`, com `converse()` passando 32000; os demais métodos do provider (resumo,
+quiz, etc, que devem continuar curtos/baratos) mantêm o default de 700.
+**Verificado**: pergunta real feita no diálogo confirmou `provider: "gemini"` gravado em
+`LessonQuestion`; um laboratório de teste gerado via Gemini teve qualidade equivalente à do
+Claude (todas as 7 seções obrigatórias, cenário realista, sem menção a Labs IA/Apex).
+
+## 2026-07-24 — Segunda rodada de laboratórios (35 novos) via Gemini + cota diária do free tier
+
+**O que aconteceu**: gerando a segunda leva de 35 laboratórios (desafios diferentes dos da
+primeira leva, mesma cobertura de módulos) via Gemini, os primeiros 20 foram gerados com sucesso
+e os 15 seguintes falharam com HTTP 429. O corpo do erro revelou
+`"quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"`, `"quotaValue": "20"` — ou seja,
+**cota diária** de 20 requisições (não por minuto) para o modelo específico por trás do alias
+`gemini-flash-latest` (resolvido para `gemini-3.6-flash` nesta conta). Um script de retry com
+cooldown de 70s foi tentado primeiro e não ajudou (esperado — cota diária não se recupera em
+segundos), então foi abortado.
+**Correção**: testados outros nomes de modelo via `GET /v1beta/models` em busca de cota
+independente; `gemini-flash-lite-latest` respondeu normalmente (cota separada, por ser um modelo
+diferente). `AI_GEMINI_MODEL` foi temporariamente trocado para esse modelo só para concluir esta
+leva de laboratórios, e revertido para `gemini-flash-latest` (melhor qualidade) assim que a leva
+terminou — o modelo lite fica reservado como plano B para quando a cota diária do flash normal
+esgotar.
+**Bug de qualidade encontrado e corrigido**: o modelo lite, ao contrário do Claude e do Gemini
+flash normal, copiava a descrição da instrução para dentro do próprio título da seção (ex: título
+saía como "## Objetivo — 2-3 frases sobre..." em vez de apenas "## Objetivo") — o prompt original
+usava "## Título — descrição" na mesma linha, o que modelos mais fracos interpretam como texto
+literal a reproduzir. Corrigido em `buildLabGenerationMessage` (`laboratories/actions.ts`):
+instruções viraram uma lista numerada separada dos títulos, com um exemplo explícito de como cada
+título deve aparecer sozinho na resposta ("## Objetivo", "## Cenário", etc). Resultado após o
+fix: 0 laboratórios com o problema, em nenhum dos dois modelos.
+**Resultado final**: 71 laboratórios no banco (36 da primeira leva incluindo o manual pré-
+existente + 35 da segunda leva), 581 vínculos laboratório-aula, 0 laboratórios e 0 aulas em
+`DRAFT`. Segunda leva com desafios de produção **diferentes** da primeira (não repete cenários),
+cobrindo os mesmos 24 módulos por outro ângulo (ex: primeira leva = "montar do zero", segunda
+leva = "investigar/corrigir um incidente" no mesmo módulo).
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

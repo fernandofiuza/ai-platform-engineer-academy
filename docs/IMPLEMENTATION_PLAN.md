@@ -463,4 +463,16 @@ produto foram entregues.
   regenerados com sucesso. Confirmado por varredura completa: 0 laboratórios e 0 aulas em `DRAFT`
   no banco. Ver `docs/DECISIONS.md` para o detalhe completo, incluindo um bug de automação
   (seletor de botão sem escopo) encontrado e corrigido durante a regeneração.
+- **"Pergunte ao Professor" e geração de laboratórios migrados para Gemini; segunda leva de 35
+  laboratórios com novos desafios de produção.** Novo `getGeminiProvider()` no gateway, usado só
+  por esses dois fluxos (conteúdo de aula continua em Claude). Segunda leva de laboratórios
+  cobre os mesmos 24 módulos por um ângulo diferente da primeira (investigação/correção de
+  incidentes, em vez de construir do zero). Bug real encontrado e corrigido: a cota gratuita do
+  Gemini é **por dia** (20 req/dia por modelo), não por minuto — 15 dos 35 laboratórios
+  precisaram ser gerados com um modelo alternativo (`gemini-flash-lite-latest`, cota separada)
+  após o esgotamento da cota do modelo principal; revertido ao modelo principal ao final. Bug de
+  qualidade também corrigido: o modelo lite copiava a descrição da instrução para dentro do
+  título da seção — prompt reestruturado para deixar título e instrução inequivocamente
+  separados. Resultado final: 71 laboratórios no banco, 581 vínculos laboratório-aula, 0
+  laboratórios e 0 aulas em `DRAFT`. Ver `docs/DECISIONS.md`.
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

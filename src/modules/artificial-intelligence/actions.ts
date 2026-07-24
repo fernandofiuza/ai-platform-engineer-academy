@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { buildContextForUser } from "./context";
-import { getProviderForPersona, getProviderForTask } from "./gateway";
+import { getGeminiProvider, getProviderForPersona, getProviderForTask } from "./gateway";
 import { PERSONA_LABELS } from "./personas";
 import { checkRateLimit } from "./rate-limit";
 import {
@@ -176,7 +176,7 @@ export async function askProfessorAction(input: ConverseInput) {
       throw new Error("Pergunta ao professor requer uma aula.");
     }
 
-    const provider = getProviderForPersona(parsed.persona);
+    const provider = getGeminiProvider();
     const context = await buildContextForUser(session!.user.id, parsed.lessonId);
 
     const response = await provider.converse({

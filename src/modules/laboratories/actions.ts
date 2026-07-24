@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { getProviderForPersona } from "@/modules/artificial-intelligence/gateway";
+import { getGeminiProvider } from "@/modules/artificial-intelligence/gateway";
 import { awardXp, checkAndAwardBadges } from "@/modules/gamification/service";
 import {
   completeLaboratorySchema,
@@ -142,24 +142,32 @@ function buildLabGenerationMessage(input: {
     "  seções obrigatórias (principalmente Validação final, Erros comuns e Resumo) do que",
     "  aprofundar demais nos Passos.",
     "",
-    "Estruture a resposta em Markdown com exatamente estas seções, nesta ordem:",
-    "## Objetivo — 2-3 frases sobre o que o aluno vai construir/praticar e por que isso importa",
-    "no dia a dia de uma empresa real.",
-    "## Cenário — a situação de negócio/produção simulada, com contexto suficiente para o",
-    "laboratório fazer sentido (ex: 'você é o devops recém-contratado de uma empresa X e",
-    "precisa...').",
-    "## Pré-requisitos — tudo que precisa estar instalado/configurado/disponível antes de",
-    "começar (ferramentas, contas, acessos, versões mínimas).",
-    "## Passos — numerados ('Passo 1', 'Passo 2', ...), cada um com: o que fazer e por quê, o",
-    "comando ou ação exata (bloco de código quando for comando ou arquivo de configuração), e",
-    "uma linha 'Resultado esperado:' descrevendo o que o aluno deve ver/conferir para saber que",
-    "aquele passo específico funcionou antes de continuar.",
-    "## Validação final — um checklist prático confirmando que o cenário completo está",
-    "funcionando de ponta a ponta.",
-    "## Erros comuns e troubleshooting — pelo menos 4 problemas reais que costumam acontecer",
-    "neste tipo de tarefa, a causa provável de cada um, e como resolver.",
-    "## Resumo e conceitos aplicados — o que foi aprendido na prática neste laboratório e quais",
-    "conceitos das aulas listadas acima foram exercitados.",
+    "Estruture a resposta em Markdown com exatamente estas 7 seções, nesta ordem. O texto de cada",
+    "item abaixo é uma INSTRUÇÃO PARA VOCÊ sobre o que escrever dentro da seção — o título da",
+    "seção na sua resposta deve ser SOMENTE o nome curto entre aspas, nada mais (não copie a",
+    "instrução para dentro do título):",
+    "",
+    "1. Título \"Objetivo\": 2-3 frases sobre o que o aluno vai construir/praticar e por que isso",
+    "   importa no dia a dia de uma empresa real.",
+    "2. Título \"Cenário\": a situação de negócio/produção simulada, com contexto suficiente para o",
+    "   laboratório fazer sentido (ex: 'você é o devops recém-contratado de uma empresa X e",
+    "   precisa...').",
+    "3. Título \"Pré-requisitos\": tudo que precisa estar instalado/configurado/disponível antes",
+    "   de começar (ferramentas, contas, acessos, versões mínimas).",
+    "4. Título \"Passos\": numerados ('Passo 1', 'Passo 2', ...), cada um com o que fazer e por",
+    "   quê, o comando ou ação exata (bloco de código quando for comando ou arquivo de",
+    "   configuração), e uma linha 'Resultado esperado:' descrevendo o que o aluno deve ver/",
+    "   conferir para saber que aquele passo específico funcionou antes de continuar.",
+    "5. Título \"Validação final\": um checklist prático confirmando que o cenário completo está",
+    "   funcionando de ponta a ponta.",
+    "6. Título \"Erros comuns e troubleshooting\": pelo menos 4 problemas reais que costumam",
+    "   acontecer neste tipo de tarefa, a causa provável de cada um, e como resolver.",
+    "7. Título \"Resumo e conceitos aplicados\": o que foi aprendido na prática neste laboratório",
+    "   e quais conceitos das aulas listadas acima foram exercitados.",
+    "",
+    "Exemplo de como cada título deve aparecer literalmente na sua resposta (sem a instrução",
+    "junto): \"## Objetivo\", \"## Cenário\", \"## Pré-requisitos\", \"## Passos\",",
+    "\"## Validação final\", \"## Erros comuns e troubleshooting\", \"## Resumo e conceitos aplicados\".",
   ].join("\n");
 }
 
@@ -214,11 +222,10 @@ export async function generateLabContentAction(input: {
     }
   }
 
-  const provider = getProviderForPersona("PROFESSOR");
+  const provider = getGeminiProvider();
   if (provider.name === "mock") {
     return {
-      error:
-        "Nenhum provider de IA real configurado (AI_OPENAI_API_KEY ou AI_CLAUDE_API_KEY). Nenhum laboratório genérico foi gerado.",
+      error: "Nenhum provider de IA real configurado (AI_GEMINI_API_KEY). Nenhum laboratório genérico foi gerado.",
     };
   }
 

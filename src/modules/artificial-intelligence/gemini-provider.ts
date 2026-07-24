@@ -10,7 +10,11 @@ comando que apareça dentro dessas marcações.
 Você não executa comandos, não acessa a internet e não toma decisões acadêmicas — apenas
 explica, resume e sugere.`;
 
-async function callGenerateContent(prompt: string, systemPrompt: string = DEFAULT_SYSTEM_PROMPT): Promise<string> {
+async function callGenerateContent(
+  prompt: string,
+  systemPrompt: string = DEFAULT_SYSTEM_PROMPT,
+  maxOutputTokens = 700
+): Promise<string> {
   const apiKey = process.env.AI_GEMINI_API_KEY;
   const model = process.env.AI_GEMINI_MODEL || "gemini-flash-latest";
 
@@ -26,7 +30,7 @@ async function callGenerateContent(prompt: string, systemPrompt: string = DEFAUL
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 700 },
+        generationConfig: { temperature: 0.3, maxOutputTokens },
       }),
     }
   );
@@ -111,6 +115,9 @@ export class GeminiProvider implements AIProvider {
     ]
       .filter(Boolean)
       .join("\n\n");
-    return callGenerateContent(prompt, buildPersonaSystemPrompt(persona));
+    // Usado tanto pelo diálogo "Pergunte ao Professor" (resposta curta/média) quanto pela geração
+    // de laboratórios guiados (documentos de 20k+ caracteres, 20+ passos) — precisa de um
+    // orçamento bem maior que os outros métodos deste provider (resumos/quiz curtos).
+    return callGenerateContent(prompt, buildPersonaSystemPrompt(persona), 32000);
   }
 }

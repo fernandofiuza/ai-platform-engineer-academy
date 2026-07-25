@@ -1351,5 +1351,68 @@ formulário; `/learn/[lessonId]` mostra os botões de tamanho de fonte funcionan
 correção, `/planner` mostra "Dia 03 → 03/08" (01 e 02/08 caem em fim de semana, fora dos dias
 disponíveis do plano) — nenhuma data anterior a 01/08 aparece em nenhuma tela.
 
+## 2026-07-25 — 4 funcionalidades novas: sync com GitHub, exportar `.ics`, Pomodoro e modo foco
+
+**O que aconteceu**: depois de uma conversa exploratória sobre possíveis funcionalidades novas, o
+usuário escolheu 4 para implementar: (1) retomar a integração com GitHub no Portfólio (só
+esboçada desde a Fase 4, nunca implementada); (2) exportar o cronograma do Planejador como
+`.ics`; (3) modo Pomodoro na sessão de estudo; (4) modo foco (esconder sidebar/topbar) na leitura
+de aula.
+
+**Decisão (sync com GitHub)**: `GitHubProvider` (interface já existia) ganhou uma implementação
+real (`RestGitHubProvider`) usando a API REST pública do GitHub — sem OAuth por usuário, só
+leitura pública do repositório informado manualmente. Sinais verificáveis objetivamente (README,
+licença, workflow de CI em `.github/workflows`, release mais recente, descrição) sincronizam para
+o checklist de qualidade via novo botão "Sincronizar com o GitHub" em cada item do Portfólio; os
+outros 9 itens do checklist continuam manuais, porque exigem julgamento de conteúdo que a API não
+responde com um simples existe/não existe (mesmo princípio de "não inventar o que não existe" já
+usado nas Certificações). Novos campos em `PortfolioItem` (`githubSyncedAt`,
+`githubDescription`, `githubOpenIssues`, `githubLatestRelease`) guardam a última sincronização —
+migration `20260725042615_portfolio_github_sync`. Token opcional `GITHUB_TOKEN` (só levanta o
+limite de requisições/hora; a API pública funciona sem ele para repositórios públicos). Comentário
+desatualizado em `projects/actions.ts` (dizia que `GitHubProvider` "nunca é chamado") corrigido —
+a revisão de código por IA continua sem ler o repositório, mas por decisão de escopo, não mais
+por a integração não existir.
+
+**Decisão (exportar `.ics`)**: novo `GET /api/planner/ics` (autenticado, só o dono do
+Planejador) gera um `.ics` (RFC 5545, com fold de linha) com 1 evento de dia inteiro por aula
+**agendada** (não concluída — aula concluída não é lembrete útil de calendário), usando a mesma
+`getLessonSchedule` do Planejador. Como o cronograma é dinâmico e nunca persistido, o arquivo é
+uma fotografia do momento do download, não um feed ao vivo — reimportar depois de reconfigurar o
+Planejador é a forma de atualizar (a maioria dos calendários atualiza em vez de duplicar, pelo
+mesmo `UID` por aula). Botão "Baixar .ics" adicionado ao card "Cronograma dinâmico" do
+Planejador.
+
+**Decisão (Pomodoro)**: em vez de criar um cronômetro paralelo, o modo Pomodoro
+(`session-timer.tsx`) pausa e retoma a MESMA `StudySession` já existente nos limites de
+foco/pausa (chamando as mesmas `pauseSessionAction`/`resumeSessionAction` que o botão manual de
+pausa já usa) — o tempo de pausa Pomodoro não conta como estudo, exatamente como uma pausa
+manual. Minutos de foco/pausa configuráveis (padrão 25/5), travados enquanto o ciclo está rodando
+para evitar duplicar a complexidade de reajustar uma contagem já em andamento.
+
+**Decisão (modo foco)**: novo `FocusModeProvider` (Context React, client-side, não persistido)
+envolve todo o `(app)/layout.tsx`; `AppShell` (novo client component) esconde `AppSidebar`/
+`AppTopbar` e remove o padding lateral quando ativo. Sai automaticamente ao navegar pra fora de
+`/learn/*` (ex.: botão voltar do navegador), pra nunca deixar o aluno sem navegação visível sem
+querer. Botão "Modo foco"/"Sair do modo foco" adicionado à mesma barra de ferramentas do
+`LessonContentReader` (junto dos controles de tamanho de fonte da sessão anterior).
+
+**Nota técnica**: o lint deste projeto (`react-hooks/set-state-in-effect`) proíbe chamar
+`setState` diretamente no corpo síncrono de um `useEffect` — mas permite normalmente dentro de um
+callback assíncrono (`setInterval`/`setTimeout`) registrado por um efeito, e permite o padrão
+"ajustar estado quando uma prop muda" do próprio React (comparar com `useState` anterior durante
+a renderização, não com `useRef` — acessar `.current` de um ref durante a renderização também é
+proibido pelo `react-hooks/refs` deste projeto). O cronômetro Pomodoro e o reset automático do
+modo foco seguem esses dois padrões.
+
+**Verificado ao vivo**: `RestGitHubProvider` testado contra um repositório público real
+(`vercel/next.js`) retornando dados corretos; sincronização de um item real do Portfólio refletiu
+README/licença/CI/release/descrição no checklist e nos metadados exibidos. `/api/planner/ics`
+retorna um `.ics` válido com `Content-Disposition: attachment`. Checkbox "Modo Pomodoro" e campos
+de minutos aparecem só com sessão ativa. Botão "Modo foco" testado em `/learn/[lessonId]`.
+(Durante a verificação, o servidor de desenvolvimento precisou ser reiniciado com `.next` limpo —
+o processo antigo não pegou o `PortfolioItem` regenerado pelo Prisma após a migration; não é um
+bug do código, é o comportamento normal de `prisma generate` + processo Node já em execução.)
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

@@ -703,14 +703,18 @@ model LaboratoryCompletion {
 }
 
 model PortfolioItem {
-  id               String        @id @default(cuid())
-  userId           String
-  projectId        String?
-  repoUrl          String
-  qualityChecklist Json
-  status           ContentStatus @default(AVAILABLE)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                  String        @id @default(cuid())
+  userId              String
+  projectId           String?
+  repoUrl             String
+  qualityChecklist    Json
+  status              ContentStatus @default(AVAILABLE)
+  githubSyncedAt      DateTime?
+  githubDescription   String?
+  githubOpenIssues    Int?
+  githubLatestRelease String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)

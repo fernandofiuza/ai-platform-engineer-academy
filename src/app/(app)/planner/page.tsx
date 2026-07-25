@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CalendarClock, CalendarRange, Target } from "lucide-react";
+import { ArrowRight, CalendarClock, CalendarRange, Download, Target } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { StudyGoals } from "@/modules/planning/components/study-goals";
 import { StudyPlanForm } from "@/modules/planning/components/study-plan-form";
@@ -66,6 +67,13 @@ export default async function PlannerPage() {
               não forem estudadas em um dia disponível são remarcadas sozinhas para a próxima
               data; concluir mais de uma aula no mesmo dia adianta a previsão.
             </CardDescription>
+            <CardAction>
+              <Button variant="outline" size="sm" asChild>
+                <a href="/api/planner/ics" download>
+                  <Download className="size-4" /> Baixar .ics
+                </a>
+              </Button>
+            </CardAction>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">

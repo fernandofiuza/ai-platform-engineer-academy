@@ -7,7 +7,9 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -24,6 +26,15 @@ import {
   resumeSessionAction,
   startSessionAction,
 } from "@/modules/study-sessions/actions";
+
+const DEFAULT_FOCUS_MINUTES = 25;
+const DEFAULT_BREAK_MINUTES = 5;
+
+function formatMinutesSeconds(totalSeconds: number) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
 
 type ActiveSession = {
   id: string;
@@ -52,9 +63,20 @@ export function SessionTimer({ initialSession }: { initialSession: ActiveSession
   const [notes, setNotes] = React.useState("");
   const [completedContent, setCompletedContent] = React.useState(false);
 
+  const [pomodoroOn, setPomodoroOn] = React.useState(false);
+  const [focusMinutes, setFocusMinutes] = React.useState(DEFAULT_FOCUS_MINUTES);
+  const [breakMinutes, setBreakMinutes] = React.useState(DEFAULT_BREAK_MINUTES);
+  const [pomodoroPhase, setPomodoroPhase] = React.useState<"focus" | "break">("focus");
+  const [pomodoroSecondsLeft, setPomodoroSecondsLeft] = React.useState(DEFAULT_FOCUS_MINUTES * 60);
+
   if (initialSession !== prevInitialSession) {
     setPrevInitialSession(initialSession);
     setActive(initialSession);
+    if (!initialSession && pomodoroOn) {
+      setPomodoroOn(false);
+      setPomodoroPhase("focus");
+      setPomodoroSecondsLeft(focusMinutes * 60);
+    }
   }
 
   React.useEffect(() => {
@@ -75,6 +97,50 @@ export function SessionTimer({ initialSession }: { initialSession: ActiveSession
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, [active]);
+
+  // Modo Pomodoro: alterna foco/pausa automaticamente pausando e retomando a MESMA sessão já
+  // existente (não cria sessões separadas) — o tempo de pausa não conta como estudo, igual a uma
+  // pausa manual. Conta o segundo só quando a fase realmente está "correndo": foco conta enquanto
+  // a sessão está ativa e não pausada manualmente; pausa conta sempre (a sessão já está pausada
+  // pelo próprio Pomodoro nesse momento).
+  React.useEffect(() => {
+    if (!pomodoroOn || !active) return;
+
+    const interval = setInterval(() => {
+      const isTicking = pomodoroPhase === "break" || !active.pausedAt;
+      if (!isTicking) return;
+
+      if (pomodoroSecondsLeft > 1) {
+        setPomodoroSecondsLeft(pomodoroSecondsLeft - 1);
+        return;
+      }
+
+      if (pomodoroPhase === "focus") {
+        onPause();
+        toast.message(`Pausa Pomodoro — descanse ${breakMinutes} min.`);
+        setPomodoroPhase("break");
+        setPomodoroSecondsLeft(breakMinutes * 60);
+      } else {
+        onResume();
+        toast.message("Fim da pausa — de volta ao foco.");
+        setPomodoroPhase("focus");
+        setPomodoroSecondsLeft(focusMinutes * 60);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onPause/onResume dependem só de `active`, já listado
+  }, [pomodoroOn, active, pomodoroPhase, pomodoroSecondsLeft, breakMinutes, focusMinutes]);
+
+  function onTogglePomodoro() {
+    if (pomodoroOn) {
+      setPomodoroOn(false);
+      return;
+    }
+    setPomodoroOn(true);
+    setPomodoroPhase("focus");
+    setPomodoroSecondsLeft(focusMinutes * 60);
+  }
 
   function onStart() {
     startTransition(async () => {
@@ -171,6 +237,62 @@ export function SessionTimer({ initialSession }: { initialSession: ActiveSession
             </Button>
           </div>
         )}
+
+        {active ? (
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="pomodoro-toggle" className="flex items-center gap-2 text-sm font-normal">
+                <Checkbox id="pomodoro-toggle" checked={pomodoroOn} onCheckedChange={onTogglePomodoro} />
+                Modo Pomodoro
+              </Label>
+              {pomodoroOn ? (
+                <span className="font-mono text-sm tabular-nums text-muted-foreground">
+                  {pomodoroPhase === "focus" ? "Foco" : "Pausa"} — {formatMinutesSeconds(pomodoroSecondsLeft)}
+                </span>
+              ) : null}
+            </div>
+
+            {!pomodoroOn ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="pomodoro-focus" className="text-xs text-muted-foreground">
+                    Minutos de foco
+                  </Label>
+                  <Input
+                    id="pomodoro-focus"
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={focusMinutes}
+                    onChange={(e) => setFocusMinutes(Math.max(1, Number(e.target.value) || 1))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pomodoro-break" className="text-xs text-muted-foreground">
+                    Minutos de pausa
+                  </Label>
+                  <Input
+                    id="pomodoro-break"
+                    type="number"
+                    min="1"
+                    max="60"
+                    value={breakMinutes}
+                    onChange={(e) => setBreakMinutes(Math.max(1, Number(e.target.value) || 1))}
+                  />
+                </div>
+              </div>
+            ) : (
+              <Progress
+                value={
+                  pomodoroPhase === "focus"
+                    ? ((focusMinutes * 60 - pomodoroSecondsLeft) / (focusMinutes * 60)) * 100
+                    : ((breakMinutes * 60 - pomodoroSecondsLeft) / (breakMinutes * 60)) * 100
+                }
+                className="h-2"
+              />
+            )}
+          </div>
+        ) : null}
 
         {active && showFinishForm ? (
           <div className="space-y-3 rounded-lg border p-4">

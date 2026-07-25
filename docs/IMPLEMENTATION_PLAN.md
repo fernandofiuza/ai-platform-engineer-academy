@@ -564,4 +564,17 @@ produto foram entregues.
   dado já corrompido no banco corrigido via script único. Verificado ao vivo. Ver
   `docs/DECISIONS.md`.
 
+- **4 funcionalidades novas: sync com GitHub no Portfólio, exportar `.ics` do Planejador, modo
+  Pomodoro na sessão de estudo, modo foco na leitura de aula.** `GitHubProvider` (só interface
+  desde a Fase 4) ganhou implementação real via API REST pública do GitHub — botão "Sincronizar"
+  em cada item do Portfólio preenche README/licença/CI/release/descrição no checklist e guarda um
+  snapshot (`githubSyncedAt` e afins, nova migration). Novo `GET /api/planner/ics` exporta o
+  cronograma dinâmico como arquivo `.ics` (eventos de dia inteiro, só aulas agendadas) pra
+  importar no Google/Outlook/Apple Calendar. Modo Pomodoro no cronômetro de sessão pausa/retoma a
+  mesma sessão nos limites de foco/pausa configuráveis (padrão 25/5), reaproveitando as ações de
+  pausar/retomar já existentes. Modo foco (novo `FocusModeProvider` + `AppShell`) esconde
+  sidebar/topbar durante a leitura de uma aula, com saída automática ao navegar pra fora de
+  `/learn/*`. Verificado ao vivo (incluindo teste real contra a API do GitHub). Ver
+  `docs/DECISIONS.md`.
+
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

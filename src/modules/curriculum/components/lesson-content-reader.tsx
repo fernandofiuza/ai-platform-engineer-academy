@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Minus, Plus } from "lucide-react";
+import { Maximize2, Minimize2, Minus, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Markdown, type MarkdownSize } from "@/components/markdown";
+import { useFocusMode } from "@/components/layout/focus-mode";
 
 const SIZES: MarkdownSize[] = ["sm", "base", "lg", "xl"];
 const SIZE_LABELS: Record<MarkdownSize, string> = {
@@ -47,6 +48,7 @@ function getServerSnapshot(): MarkdownSize {
  * lido no cliente. */
 export function LessonContentReader({ content }: { content: string }) {
   const size = React.useSyncExternalStore(subscribe, readStoredSize, getServerSnapshot);
+  const { focusMode, setFocusMode } = useFocusMode();
 
   function updateSize(next: MarkdownSize) {
     window.localStorage.setItem(STORAGE_KEY, next);
@@ -57,7 +59,16 @@ export function LessonContentReader({ content }: { content: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setFocusMode(!focusMode)}
+        >
+          {focusMode ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+          {focusMode ? "Sair do modo foco" : "Modo foco"}
+        </Button>
         <span className="text-xs text-muted-foreground">Tamanho do texto: {SIZE_LABELS[size]}</span>
         <div className="flex items-center gap-1">
           <Button

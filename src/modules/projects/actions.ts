@@ -114,11 +114,11 @@ function extractReviewScore(feedback: string): number | null {
 
 /**
  * Solicita uma revisão de código assistida por IA (persona Tech Lead, Etapa 2/6) para a
- * submissão do estudante. Como a integração real com GitHub segue não implementada (Fase 4,
- * `GitHubProvider` nunca chamado), a revisão é baseada nas informações que o estudante já
- * forneceu (URL do repositório, decisões técnicas, retrospectiva) e nos requisitos do projeto —
- * não em uma leitura linha a linha do código. Cada solicitação cria uma nova linha em
- * `CodeReview` (histórico completo, nunca sobrescrito).
+ * submissão do estudante. A revisão continua baseada nas informações que o estudante já forneceu
+ * (URL do repositório, decisões técnicas, retrospectiva) e nos requisitos do projeto — não em uma
+ * leitura linha a linha do código; a integração com `GitHubProvider` (usada pelo Portfólio para
+ * sincronizar README/licença/CI/release) não alimenta esta revisão. Cada solicitação cria uma
+ * nova linha em `CodeReview` (histórico completo, nunca sobrescrito).
  */
 export async function requestCodeReviewAction(projectId: string) {
   const session = await auth();

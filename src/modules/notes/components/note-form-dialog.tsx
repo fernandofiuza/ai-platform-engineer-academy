@@ -24,11 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { createNoteAction, updateNoteAction } from "@/modules/notes/actions";
 import { NOTE_TEMPLATE_LABELS } from "@/modules/notes/labels";
-
-type LessonOption = { id: string; title: string };
 
 type ExistingNote = {
   id: string;
@@ -40,16 +37,15 @@ type ExistingNote = {
 };
 
 export function NoteFormDialog({
-  lessonOptions,
   existingNote,
   trigger,
   fixedLessonId,
 }: {
-  lessonOptions: LessonOption[];
   existingNote?: ExistingNote;
   trigger?: React.ReactNode;
-  /** Quando informado, a anotação já nasce vinculada a essa aula e o seletor de aula fica
-   * oculto — usado ao embutir o formulário diretamente na página de uma aula específica. */
+  /** Anotações de aula só nascem vinculadas via a tela da própria aula — nunca por um seletor
+   * na tela geral de Anotações. Quando informado, a anotação já nasce/permanece vinculada a essa
+   * aula, sem nenhum campo de vínculo visível no formulário. */
   fixedLessonId?: string;
 }) {
   const router = useRouter();
@@ -59,7 +55,7 @@ export function NoteFormDialog({
   const [content, setContent] = React.useState(existingNote?.contentMarkdown ?? "");
   const [template, setTemplate] = React.useState(existingNote?.template ?? "SUMMARY");
   const [tags, setTags] = React.useState(existingNote?.tags.join(", ") ?? "");
-  const [lessonId, setLessonId] = React.useState(existingNote?.scopeId ?? fixedLessonId ?? "");
+  const lessonId = fixedLessonId ?? "";
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,7 +93,6 @@ export function NoteFormDialog({
         setTitle("");
         setContent("");
         setTags("");
-        setLessonId(fixedLessonId ?? "");
       }
       router.refresh();
     });
@@ -122,39 +117,20 @@ export function NoteFormDialog({
             <Input id="note-title" value={title} onChange={(e) => setTitle(e.target.value)} required />
           </div>
 
-          <div className={cn("grid gap-3", !fixedLessonId && "sm:grid-cols-2")}>
-            <div className="space-y-1.5">
-              <Label>Modelo</Label>
-              <Select value={template} onValueChange={setTemplate}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(NOTE_TEMPLATE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {fixedLessonId ? null : (
-              <div className="space-y-1.5">
-                <Label>Vincular a uma aula (opcional)</Label>
-                <Select value={lessonId} onValueChange={setLessonId}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Nenhuma" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lessonOptions.map((lesson) => (
-                      <SelectItem key={lesson.id} value={lesson.id}>
-                        {lesson.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+          <div className="space-y-1.5">
+            <Label>Modelo</Label>
+            <Select value={template} onValueChange={setTemplate}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(NOTE_TEMPLATE_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1.5">

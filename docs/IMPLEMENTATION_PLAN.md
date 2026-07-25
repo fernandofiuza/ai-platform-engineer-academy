@@ -552,4 +552,16 @@ produto foram entregues.
   renderização (`stripWeekDayHeading`), sem reescrever o conteúdo salvo. Verificado ao vivo. Ver
   `docs/DECISIONS.md`.
 
+- **Anotações gerais separadas das anotações de aula; tamanho de fonte na leitura; fix de fuso
+  horário no Planejador.** `/notes` agora só mostra/cria anotações `GENERAL` (o seletor de
+  vínculo com aula foi removido dali); anotações de aula continuam existindo só no painel
+  embutido em `/learn/[lessonId]`. Novo `LessonContentReader` adiciona controle de tamanho de
+  fonte (A-/A+, 4 níveis, persistido em `localStorage` via `useSyncExternalStore`) ao conteúdo
+  da aula. Corrigido um bug real de fuso horário: o campo de data do Planejador interpretava a
+  data escolhida como UTC em vez de local, fazendo o cronograma começar 1 dia antes do
+  configurado em fusos atrás de UTC (Brasil) — corrigido com `parseDateInputValue`/
+  `toDateInputValue` em `planning/format.ts`, aplicado também ao mesmo bug em metas de estudo;
+  dado já corrompido no banco corrigido via script único. Verificado ao vivo. Ver
+  `docs/DECISIONS.md`.
+
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

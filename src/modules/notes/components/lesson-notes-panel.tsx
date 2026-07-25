@@ -17,15 +17,11 @@ type LessonNote = {
 
 export function LessonNotesPanel({
   lessonId,
-  lessonTitle,
   notes,
 }: {
   lessonId: string;
-  lessonTitle: string;
   notes: LessonNote[];
 }) {
-  const lessonOptions = [{ id: lessonId, title: lessonTitle }];
-
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
@@ -38,12 +34,12 @@ export function LessonNotesPanel({
             este dia de estudo.
           </CardDescription>
         </div>
-        <NoteFormDialog lessonOptions={lessonOptions} fixedLessonId={lessonId} />
+        <NoteFormDialog fixedLessonId={lessonId} />
       </CardHeader>
       {notes.length > 0 ? (
         <CardContent className="space-y-3">
           {notes.map((note) => (
-            <NoteCard key={note.id} note={note} lessonOptions={lessonOptions} fixedLessonId={lessonId} />
+            <NoteCard key={note.id} note={note} fixedLessonId={lessonId} />
           ))}
         </CardContent>
       ) : null}

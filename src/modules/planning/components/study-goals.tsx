@@ -22,6 +22,7 @@ import {
   rescheduleGoalAction,
   setGoalStatusAction,
 } from "@/modules/planning/actions";
+import { parseDateInputValue, toDateInputValue } from "@/modules/planning/format";
 
 type Goal = {
   id: string;
@@ -46,7 +47,7 @@ export function StudyGoals({ goals, weekOptions }: { goals: Goal[]; weekOptions:
     startTransition(async () => {
       const result = await createGoalAction({
         title,
-        targetDate: targetDate ? new Date(targetDate) : undefined,
+        targetDate: targetDate ? parseDateInputValue(targetDate) : undefined,
         relatedWeekId: relatedWeekId || undefined,
       });
       if (result?.error) {
@@ -70,7 +71,7 @@ export function StudyGoals({ goals, weekOptions }: { goals: Goal[]; weekOptions:
   function onReschedule(goalId: string, value: string) {
     if (!value) return;
     startTransition(async () => {
-      await rescheduleGoalAction({ goalId, targetDate: new Date(value) });
+      await rescheduleGoalAction({ goalId, targetDate: parseDateInputValue(value) });
       router.refresh();
     });
   }
@@ -161,9 +162,7 @@ export function StudyGoals({ goals, weekOptions }: { goals: Goal[]; weekOptions:
                         type="date"
                         className="h-8 w-36"
                         aria-label="Reagendar"
-                        defaultValue={
-                          goal.targetDate ? goal.targetDate.toISOString().slice(0, 10) : ""
-                        }
+                        defaultValue={goal.targetDate ? toDateInputValue(goal.targetDate) : ""}
                         onChange={(e) => onReschedule(goal.id, e.target.value)}
                       />
                       <Button

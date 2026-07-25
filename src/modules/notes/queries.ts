@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 
+/** Só anotações gerais (`scopeType = GENERAL`) — anotações de aula têm sua própria tela
+ * (`getNotesForLesson`, embutida em `/learn/[lessonId]`) e não aparecem aqui. */
 export async function getNotes(
   userId: string,
   filters: { search?: string; tag?: string; favoriteOnly?: boolean } = {}
@@ -7,6 +9,7 @@ export async function getNotes(
   return db.note.findMany({
     where: {
       userId,
+      scopeType: "GENERAL",
       ...(filters.favoriteOnly ? { isFavorite: true } : {}),
       ...(filters.tag ? { tags: { has: filters.tag } } : {}),
       ...(filters.search

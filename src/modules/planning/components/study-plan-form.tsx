@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { saveStudyPlanAction } from "@/modules/planning/actions";
+import { parseDateInputValue, toDateInputValue } from "@/modules/planning/format";
 import { studyPlanSchema, type StudyPlanInput } from "@/modules/planning/schema";
 
 const WEEKDAYS = [
@@ -23,10 +24,6 @@ const WEEKDAYS = [
   { value: 5, label: "Sex" },
   { value: 6, label: "Sáb" },
 ];
-
-function toDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
 
 export function StudyPlanForm({
   initialPlan,
@@ -125,7 +122,7 @@ export function StudyPlanForm({
             id="startDate"
             type="date"
             defaultValue={toDateInputValue(form.getValues("startDate"))}
-            onChange={(e) => form.setValue("startDate", new Date(e.target.value))}
+            onChange={(e) => form.setValue("startDate", parseDateInputValue(e.target.value))}
           />
         </div>
       </div>

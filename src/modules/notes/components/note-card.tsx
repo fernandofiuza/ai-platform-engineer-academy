@@ -27,11 +27,9 @@ type Note = {
 
 export function NoteCard({
   note,
-  lessonOptions,
   fixedLessonId,
 }: {
   note: Note;
-  lessonOptions: { id: string; title: string }[];
   fixedLessonId?: string;
 }) {
   const router = useRouter();
@@ -76,7 +74,6 @@ export function NoteCard({
             <Star className={cn("size-4", note.isFavorite && "fill-primary text-primary")} />
           </Button>
           <NoteFormDialog
-            lessonOptions={lessonOptions}
             existingNote={note}
             fixedLessonId={fixedLessonId}
             trigger={

@@ -7,11 +7,11 @@ import { auth } from "@/lib/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Markdown } from "@/components/markdown";
 import { AskProfessorDialog } from "@/modules/artificial-intelligence/components/ask-professor-dialog";
 import { LessonQuestionsList } from "@/modules/artificial-intelligence/components/lesson-questions-list";
 import { getLessonQuestions } from "@/modules/artificial-intelligence/queries";
 import { LessonCompleteForm } from "@/modules/curriculum/components/lesson-complete-form";
+import { LessonContentReader } from "@/modules/curriculum/components/lesson-content-reader";
 import { getLessonById, getLessonCompletion } from "@/modules/curriculum/queries";
 import { LessonNotesPanel } from "@/modules/notes/components/lesson-notes-panel";
 import { getNotesForLesson } from "@/modules/notes/queries";
@@ -107,7 +107,7 @@ export default async function LessonDetailPage({
       {lesson.contentMarkdown ? (
         <Card>
           <CardContent className="pt-6">
-            <Markdown content={stripWeekDayHeading(lesson.contentMarkdown)} />
+            <LessonContentReader content={stripWeekDayHeading(lesson.contentMarkdown)} />
           </CardContent>
         </Card>
       ) : null}
@@ -138,7 +138,7 @@ export default async function LessonDetailPage({
       />
 
       {session?.user ? (
-        <LessonNotesPanel lessonId={lesson.id} lessonTitle={lesson.title} notes={notes} />
+        <LessonNotesPanel lessonId={lesson.id} notes={notes} />
       ) : null}
 
       {lesson.resources.length > 0 ? (

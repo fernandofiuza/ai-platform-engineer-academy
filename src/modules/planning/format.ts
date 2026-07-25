@@ -57,3 +57,25 @@ export function stripWeekDayHeading(markdown: string): string {
 export function formatDayNumber(curriculumIndex: number): string {
   return `Dia ${String(curriculumIndex + 1).padStart(2, "0")}`;
 }
+
+/**
+ * Converte o valor de um `<input type="date">` ("YYYY-MM-DD") para meia-noite no fuso LOCAL.
+ * `new Date("YYYY-MM-DD")` (string "date-only") é interpretado como UTC pelo padrão ECMAScript —
+ * em fusos atrás de UTC (ex.: Brasil, UTC-3), isso vira o dia anterior quando depois truncado em
+ * hora local (`startOfDay`, usado por `computeLessonSchedule`), fazendo o cronograma começar um
+ * dia antes da data escolhida no Planejador. Ver `docs/DECISIONS.md`.
+ */
+export function parseDateInputValue(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/** Inverso de `parseDateInputValue`: formata uma `Date` para o valor esperado por
+ * `<input type="date">`, usando os componentes de data LOCAIS — nunca `toISOString()`, que
+ * converte para UTC e pode voltar um dia em fusos à frente de UTC. */
+export function toDateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}

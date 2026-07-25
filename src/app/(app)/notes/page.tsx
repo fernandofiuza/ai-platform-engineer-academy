@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { getLessonsForLearnPage } from "@/modules/curriculum/queries";
 import { NoteFormDialog } from "@/modules/notes/components/note-form-dialog";
 import { NoteCard } from "@/modules/notes/components/note-card";
 import { getAllTagsForUser, getNotes } from "@/modules/notes/queries";
@@ -23,26 +22,23 @@ export default async function NotesPage({
   const session = await auth();
   const userId = session!.user.id;
 
-  const [notes, tags, lessons] = await Promise.all([
+  const [notes, tags] = await Promise.all([
     getNotes(userId, {
       search: params.q,
       tag: params.tag,
       favoriteOnly: params.favorite === "1",
     }),
     getAllTagsForUser(userId),
-    getLessonsForLearnPage(),
   ]);
-
-  const lessonOptions = lessons.map((l) => ({ id: l.id, title: l.title }));
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Anotações</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Seu caderno de anotações.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Suas anotações gerais — anotações de uma aula específica ficam na própria aula.</p>
         </div>
-        <NoteFormDialog lessonOptions={lessonOptions} />
+        <NoteFormDialog />
       </div>
 
       <form className="flex gap-2" action="/notes">
@@ -94,7 +90,7 @@ export default async function NotesPage({
       ) : (
         <div className="space-y-3">
           {notes.map((note) => (
-            <NoteCard key={note.id} note={note} lessonOptions={lessonOptions} />
+            <NoteCard key={note.id} note={note} />
           ))}
         </div>
       )}

@@ -1308,5 +1308,48 @@ a uma página com `<h1>Linux</h1>`, sem "Semana"; a aula "Semana 24, Dia 1 — L
 com título de página "Linux: Systemd" e o Markdown renderizado também começa com `# Linux:
 Systemd`, sem o heading duplicado antigo.
 
+## 2026-07-25 — Anotações gerais x anotações de aula; tamanho de fonte na leitura; bug de fuso
+## horário no Planejador
+
+**O que aconteceu**: o usuário pediu para separar claramente as anotações gerais (tela
+`/notes`) das anotações de aula (embutidas em `/learn/[lessonId]`) — a tela geral permitia
+vincular uma nova anotação a qualquer aula via seletor, o que misturava os dois escopos. Também
+pediu uma opção de aumentar a fonte para melhor leitura. Por fim, reportou um bug concreto: ao
+configurar a data de início do Planejador para 01/08, a "Aula 03" aparecia agendada para 31/07 —
+um dia **antes** da data de início configurada.
+**Decisão (anotações)**: `/notes` (`getNotes`) passou a filtrar só `scopeType = GENERAL`;
+anotações de aula não aparecem mais lá. O seletor "Vincular a uma aula (opcional)" foi removido
+do `NoteFormDialog` usado em `/notes` — anotações de aula só nascem/existem através do painel
+embutido na própria aula (`fixedLessonId`, sem seletor, sem alternativa). `lessonOptions` foi
+removido de `NoteFormDialog`/`NoteCard`/`LessonNotesPanel`/`/notes` por não ter mais uso.
+**Decisão (tamanho de fonte)**: `Markdown` (`src/components/markdown.tsx`) ganhou uma prop `size`
+(`sm | base | lg | xl`, mapeada para as classes `prose-{size}` do plugin de tipografia) — usa uma
+prop dedicada em vez de `className` livre porque `twMerge` não entende essas classes do plugin de
+tipografia para resolver conflito sozinho. Novo `LessonContentReader` (client component) envolve
+o conteúdo da aula com dois botões (A-/A+) que trocam o tamanho, persistido em `localStorage`
+(preferência de navegador, não de conta). Implementado com `useSyncExternalStore` em vez de
+`useState`+`useEffect` para ler o `localStorage` sem mismatch de hidratação (SSR sempre "vê" o
+tamanho padrão `sm`) e sem acionar o lint `react-hooks/set-state-in-effect`. Escopo: só a leitura
+de aula (`/learn/[lessonId]`) — o resto do app (labs, notas, admin) continua no tamanho padrão.
+**Decisão (bug de fuso horário no Planejador)**: causa raiz identificada — o campo de data do
+Planejador (`<input type="date">`) fazia `new Date(e.target.value)` sobre uma string
+"YYYY-MM-DD" (date-only), que o ECMAScript interpreta como **meia-noite UTC**, não meia-noite
+local. Em fuso atrás de UTC (Brasil, UTC-3, fuso do servidor de desenvolvimento — confirmado via
+`Intl.DateTimeFormat().resolvedOptions().timeZone`), meia-noite UTC de 01/08 é 21h de 31/07 no
+horário local; `computeLessonSchedule`/`startOfDay` truncam usando hora **local**, então o
+cronograma passava a começar em 31/07, um dia antes do pedido. Corrigido com dois helpers novos
+em `planning/format.ts` — `parseDateInputValue` (constrói a `Date` via `new Date(y, m-1, d)`,
+sempre meia-noite local) e `toDateInputValue` (inverso, usa getters locais em vez de
+`toISOString()`, que tem o mesmo problema no sentido oposto para fusos à frente de UTC) —
+aplicados em `study-plan-form.tsx` (data de início) e `study-goals.tsx` (data-alvo de metas, que
+tinha exatamente o mesmo bug). O `StudyPlan.startDate` já salvo com o valor incorreto (confirmado
+no banco: `2026-08-01T00:00:00Z` = 31/07 21:00 local) foi corrigido para a meia-noite local real
+de 01/08 via script único — dado real do usuário afetado pelo bug, não recalculável a partir do
+código corrigido sozinho.
+**Verificado ao vivo**: `/notes` mostra só a anotação geral existente, sem seletor de aula no
+formulário; `/learn/[lessonId]` mostra os botões de tamanho de fonte funcionando; após a
+correção, `/planner` mostra "Dia 03 → 03/08" (01 e 02/08 caem em fim de semana, fora dos dias
+disponíveis do plano) — nenhuma data anterior a 01/08 aparece em nenhuma tela.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

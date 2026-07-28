@@ -15,6 +15,7 @@
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
     "docker:db": "docker compose up -d db",
+    "start:local": "docker compose up -d --wait db && next dev",
     "docker:app": "docker compose --profile app up --build",
     "curriculum:import": "tsx scripts/import-curriculum.ts",
     "curriculum:preview-grade": "tsx scripts/preview-grade-import.ts",

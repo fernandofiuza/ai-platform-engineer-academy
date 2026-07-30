@@ -89,6 +89,22 @@ async function main() {
   console.log(`Aulas: ${weeksReplaced} semana(s) substituída(s), ${weeksSkipped} pulada(s).`);
   console.log("");
 
+  // Além das aulas que acabaram de ser (re)criadas acima, os laboratórios também podem apontar
+  // para semanas que já tinham aula em produção antes deste import (ex.: semanas 50+, que ainda
+  // só têm o esqueleto semanal) — sem isso, qualquer laboratório fora do range 1-49 ficaria sem
+  // aula para vincular e seria pulado incorretamente.
+  const labWeekNumbers = [...new Set(data.laboratories.flatMap((l) => l.weekOrderPairs.map((p) => p.weekNumber)))];
+  const missingWeekNumbers = labWeekNumbers.filter((n) => !weekNumbers.includes(n));
+  if (missingWeekNumbers.length > 0) {
+    const extraLessons = await db.lesson.findMany({
+      where: { week: { number: { in: missingWeekNumbers } } },
+      include: { week: true },
+    });
+    for (const l of extraLessons) {
+      lessonIdByWeekOrder.set(`${l.week.number}:${l.order}`, l.id);
+    }
+  }
+
   let labsCreated = 0;
   let labsSkipped = 0;
 

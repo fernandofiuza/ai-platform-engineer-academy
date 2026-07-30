@@ -25,6 +25,7 @@
     "curriculum:generate-labs-gemini": "tsx scripts/generate-labs-gemini.ts",
     "curriculum:export-real-content": "tsx scripts/export-real-content.ts",
     "curriculum:import-real-content": "tsx scripts/import-real-content.ts",
+    "curriculum:import-daily-lessons": "tsx scripts/import-daily-lessons.ts",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test": "npm run test:unit && npm run test:e2e"

@@ -59,7 +59,7 @@ async function main() {
   for (const weekNumber of weekNumbers) {
     const week = await db.week.findFirst({
       where: { number: weekNumber },
-      include: { lessons: true },
+      include: { lessons: { orderBy: { order: "asc" } } },
     });
 
     if (!week) {
@@ -68,48 +68,50 @@ async function main() {
       continue;
     }
 
-    const lesson = week.lessons.find((l) => !l.isDemo) ?? week.lessons[0];
-    if (!lesson) {
+    const lessons = week.lessons.filter((l) => !l.isDemo);
+    if (lessons.length === 0) {
       console.log(`Semana ${weekNumber}: sem aula cadastrada — pulando.`);
       skipped++;
       continue;
     }
 
-    if (lesson.isManuallyEdited && !force) {
-      console.log(`Semana ${weekNumber} (${lesson.title}): editada manualmente — pulando (use --force para sobrescrever).`);
-      skipped++;
-      continue;
+    for (const lesson of lessons) {
+      if (lesson.isManuallyEdited && !force) {
+        console.log(`Semana ${weekNumber} dia ${lesson.order} (${lesson.title}): editada manualmente — pulando (use --force para sobrescrever).`);
+        skipped++;
+        continue;
+      }
+
+      process.stdout.write(`Semana ${weekNumber} dia ${lesson.order} — ${stripWeekDayPrefix(lesson.title)} ... `);
+
+      try {
+        const content = await provider.converse({
+          persona: "PROFESSOR",
+          message: buildLessonGenerationMessage(lesson),
+          context: {
+            currentLessonTitle: stripWeekDayPrefix(lesson.title),
+            currentLessonContent: lesson.contentMarkdown ?? undefined,
+            completedLessonTitles: [],
+            openGoalTitles: [],
+            recentQuizScores: [],
+          },
+        });
+
+        await db.lesson.update({
+          where: { id: lesson.id },
+          data: { contentMarkdown: content, status: "AVAILABLE", aiGeneratedAt: new Date() },
+        });
+
+        console.log(`OK (${content.length} caracteres)`);
+        generated++;
+      } catch (error) {
+        console.log(`FALHOU: ${String(error)}`);
+        failed++;
+      }
+
+      // Espaça as chamadas para não estourar rate limit da API do Gemini.
+      await sleep(4000);
     }
-
-    process.stdout.write(`Semana ${weekNumber} — ${stripWeekDayPrefix(lesson.title)} ... `);
-
-    try {
-      const content = await provider.converse({
-        persona: "PROFESSOR",
-        message: buildLessonGenerationMessage(lesson),
-        context: {
-          currentLessonTitle: stripWeekDayPrefix(lesson.title),
-          currentLessonContent: lesson.contentMarkdown ?? undefined,
-          completedLessonTitles: [],
-          openGoalTitles: [],
-          recentQuizScores: [],
-        },
-      });
-
-      await db.lesson.update({
-        where: { id: lesson.id },
-        data: { contentMarkdown: content, status: "AVAILABLE", aiGeneratedAt: new Date() },
-      });
-
-      console.log(`OK (${content.length} caracteres)`);
-      generated++;
-    } catch (error) {
-      console.log(`FALHOU: ${String(error)}`);
-      failed++;
-    }
-
-    // Espaça as chamadas para não estourar rate limit da API do Gemini.
-    await sleep(4000);
   }
 
   console.log("");

@@ -59,7 +59,12 @@ async function main() {
   for (const weekNumber of weekNumbers) {
     const week = await db.week.findFirst({
       where: { number: weekNumber },
-      include: { lessons: { include: { laboratories: { include: { laboratory: true } } } } },
+      include: {
+        lessons: {
+          orderBy: { order: "asc" },
+          include: { laboratories: { include: { laboratory: true } } },
+        },
+      },
     });
 
     if (!week) {
@@ -68,21 +73,26 @@ async function main() {
       continue;
     }
 
-    const lesson = week.lessons.find((l) => !l.isDemo) ?? week.lessons[0];
-    if (!lesson) {
+    const lessons = week.lessons.filter((l) => !l.isDemo);
+    if (lessons.length === 0) {
       console.log(`Semana ${weekNumber}: sem aula cadastrada — pulando.`);
       skipped++;
       continue;
     }
 
-    const existingLab = lesson.laboratories[0]?.laboratory;
+    const existingLab = lessons.flatMap((l) => l.laboratories.map((ll) => ll.laboratory))[0];
     if (existingLab?.isManuallyEdited) {
-      console.log(`Semana ${weekNumber} (${lesson.title}): laboratório editado manualmente — pulando.`);
+      console.log(`Semana ${weekNumber}: laboratório editado manualmente — pulando.`);
+      skipped++;
+      continue;
+    }
+    if (existingLab) {
+      console.log(`Semana ${weekNumber}: já tem laboratório — pulando.`);
       skipped++;
       continue;
     }
 
-    const theme = stripWeekDayPrefix(lesson.title);
+    const theme = stripWeekDayPrefix(week.title ?? lessons[0].title);
     process.stdout.write(`Semana ${weekNumber} — ${theme} ... `);
 
     try {
@@ -90,33 +100,31 @@ async function main() {
         persona: "PROFESSOR",
         message: buildLabGenerationMessage({
           scenario: theme,
-          lessons: [{ title: theme, objective: lesson.objective }],
+          lessons: lessons.map((l) => ({ title: stripWeekDayPrefix(l.title), objective: l.objective })),
         }),
         context: {
           currentLessonTitle: theme,
-          currentLessonContent: lesson.contentMarkdown ?? undefined,
+          currentLessonContent: lessons
+            .map((l) => (l.contentMarkdown ? `${stripWeekDayPrefix(l.title)}: ${l.contentMarkdown.slice(0, 400)}...` : null))
+            .filter(Boolean)
+            .join("\n\n"),
           completedLessonTitles: [],
           openGoalTitles: [],
           recentQuizScores: [],
         },
       });
 
-      const data = {
-        title: `Laboratório — ${theme}`,
-        scenario: theme,
-        instructions,
-        isDemo: false,
-        aiGeneratedAt: new Date(),
-        status: "AVAILABLE" as const,
-      };
-
-      if (existingLab) {
-        await db.laboratory.update({ where: { id: existingLab.id }, data });
-      } else {
-        await db.laboratory.create({
-          data: { ...data, lessons: { create: [{ lessonId: lesson.id }] } },
-        });
-      }
+      await db.laboratory.create({
+        data: {
+          title: `Laboratório — ${theme}`,
+          scenario: theme,
+          instructions,
+          isDemo: false,
+          aiGeneratedAt: new Date(),
+          status: "AVAILABLE",
+          lessons: { create: lessons.map((l) => ({ lessonId: l.id })) },
+        },
+      });
 
       console.log(`OK (${instructions.length} caracteres)`);
       generated++;

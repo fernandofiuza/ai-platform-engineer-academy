@@ -18,6 +18,16 @@ export async function startSessionAction(input: StartSessionInput) {
     return { error: "Dados inválidos.", studySession: null };
   }
 
+  if (parsed.data.externalLessonId) {
+    const externalLesson = await db.externalLesson.findUnique({
+      where: { id: parsed.data.externalLessonId },
+      include: { module: { include: { course: true } } },
+    });
+    if (!externalLesson || externalLesson.module.course.userId !== session.user.id) {
+      return { error: "Aula não encontrada.", studySession: null };
+    }
+  }
+
   const existing = await db.studySession.findFirst({
     where: { userId: session.user.id, endedAt: null },
   });
@@ -26,7 +36,11 @@ export async function startSessionAction(input: StartSessionInput) {
   }
 
   const studySession = await db.studySession.create({
-    data: { userId: session.user.id, lessonId: parsed.data.lessonId },
+    data: {
+      userId: session.user.id,
+      lessonId: parsed.data.lessonId,
+      externalLessonId: parsed.data.externalLessonId,
+    },
   });
 
   revalidatePath("/sessions");
@@ -117,11 +131,15 @@ export async function finishSessionAction(input: FinishSessionInput) {
     },
   });
 
-  await awardXp(session.user.id, "session_finished", 5, {
-    type: "StudySession",
-    id: parsed.data.sessionId,
-  });
-  await checkAndAwardBadges(session.user.id);
+  // Sessões vinculadas a aulas de cursos externos (Study Hub) ficam fora da gamificação —
+  // só sessões de conteúdo nativo do APEX (ou livres) geram XP/badge.
+  if (!studySession.externalLessonId) {
+    await awardXp(session.user.id, "session_finished", 5, {
+      type: "StudySession",
+      id: parsed.data.sessionId,
+    });
+    await checkAndAwardBadges(session.user.id);
+  }
 
   revalidatePath("/sessions");
   revalidatePath("/calendar");

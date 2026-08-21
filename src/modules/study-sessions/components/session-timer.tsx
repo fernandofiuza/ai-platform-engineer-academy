@@ -42,6 +42,7 @@ type ActiveSession = {
   pausedAt: Date | null;
   totalPausedSeconds: number;
   lesson: { id: string; title: string } | null;
+  externalLesson?: { id: string; title: string } | null;
 };
 
 function formatElapsed(totalSeconds: number) {
@@ -51,7 +52,17 @@ function formatElapsed(totalSeconds: number) {
   return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
 }
 
-export function SessionTimer({ initialSession }: { initialSession: ActiveSession | null }) {
+export function SessionTimer({
+  initialSession,
+  contextLessonId,
+  contextExternalLessonId,
+}: {
+  initialSession: ActiveSession | null;
+  /** Ao iniciar uma sessão nova a partir desta página, vincula à aula nativa informada. */
+  contextLessonId?: string;
+  /** Mesmo padrão de `contextLessonId`, para aulas de cursos externos (Study Hub). */
+  contextExternalLessonId?: string;
+}) {
   const router = useRouter();
   const [prevInitialSession, setPrevInitialSession] = React.useState(initialSession);
   const [active, setActive] = React.useState(initialSession);
@@ -144,7 +155,10 @@ export function SessionTimer({ initialSession }: { initialSession: ActiveSession
 
   function onStart() {
     startTransition(async () => {
-      const result = await startSessionAction({});
+      const result = await startSessionAction({
+        lessonId: contextLessonId,
+        externalLessonId: contextExternalLessonId,
+      });
       if (result.error) {
         toast.error(result.error);
         return;
@@ -209,6 +223,11 @@ export function SessionTimer({ initialSession }: { initialSession: ActiveSession
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {active ? (
+          <p className="text-sm text-muted-foreground">
+            {active.lesson?.title ?? active.externalLesson?.title ?? "Estudo livre"}
+          </p>
+        ) : null}
         <div className="font-mono text-4xl font-semibold tabular-nums">
           {formatElapsed(elapsed)}
         </div>

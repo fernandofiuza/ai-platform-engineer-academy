@@ -48,7 +48,7 @@ export default async function SessionsPage() {
                     {s.startedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {s.lesson ? s.lesson.title : "Estudo livre"}
+                    {s.lesson?.title ?? s.externalLesson?.title ?? "Estudo livre"}
                     {s.notes ? (
                       <span className="ml-2 inline-flex items-center gap-1">
                         <MessageSquare className="size-3" /> {s.notes}

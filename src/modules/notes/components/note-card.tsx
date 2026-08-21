@@ -28,9 +28,11 @@ type Note = {
 export function NoteCard({
   note,
   fixedLessonId,
+  fixedExternalLessonId,
 }: {
   note: Note;
   fixedLessonId?: string;
+  fixedExternalLessonId?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
@@ -76,6 +78,7 @@ export function NoteCard({
           <NoteFormDialog
             existingNote={note}
             fixedLessonId={fixedLessonId}
+            fixedExternalLessonId={fixedExternalLessonId}
             trigger={
               <Button variant="ghost" size="sm">
                 Editar

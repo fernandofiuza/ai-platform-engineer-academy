@@ -40,6 +40,7 @@ export function NoteFormDialog({
   existingNote,
   trigger,
   fixedLessonId,
+  fixedExternalLessonId,
 }: {
   existingNote?: ExistingNote;
   trigger?: React.ReactNode;
@@ -47,6 +48,8 @@ export function NoteFormDialog({
    * na tela geral de Anotações. Quando informado, a anotação já nasce/permanece vinculada a essa
    * aula, sem nenhum campo de vínculo visível no formulário. */
   fixedLessonId?: string;
+  /** Mesmo padrão de `fixedLessonId`, para anotações de aulas de cursos externos (Study Hub). */
+  fixedExternalLessonId?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -56,6 +59,7 @@ export function NoteFormDialog({
   const [template, setTemplate] = React.useState(existingNote?.template ?? "SUMMARY");
   const [tags, setTags] = React.useState(existingNote?.tags.join(", ") ?? "");
   const lessonId = fixedLessonId ?? "";
+  const externalLessonId = fixedExternalLessonId ?? "";
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,6 +82,7 @@ export function NoteFormDialog({
           | "COMMAND",
         tags: parsedTags,
         lessonId: lessonId || undefined,
+        externalLessonId: externalLessonId || undefined,
       };
       const result = existingNote
         ? await updateNoteAction({ noteId: existingNote.id, ...payload })

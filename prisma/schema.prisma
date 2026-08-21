@@ -31,10 +31,12 @@ model User {
   passwordResetTokens   PasswordResetToken[]
   checklistItemProgress ChecklistItemProgress[]
   lessonCompletions     LessonCompletion[]
+  lessonReviewMarks     LessonReviewMark[]
   studyPlan             StudyPlan?
   studyGoals            StudyGoal[]
   studySessions         StudySession[]
   notes                 Note[]
+  externalCourses       ExternalCourse[]
   assessmentAttempts    AssessmentAttempt[]
   flashcardReviews      FlashcardReview[]
   skillProgress         UserSkillProgress[]
@@ -238,6 +240,7 @@ model Lesson {
   week         Week               @relation(fields: [weekId], references: [id], onDelete: Cascade)
   resources    Resource[]
   completions  LessonCompletion[]
+  reviewMarks  LessonReviewMark[]
   sessions     StudySession[]
   assessments  Assessment[]
   flashcards   Flashcard[]
@@ -379,6 +382,7 @@ model StudySession {
   id                 String    @id @default(cuid())
   userId             String
   lessonId           String?
+  externalLessonId   String?
   startedAt          DateTime  @default(now())
   pausedAt           DateTime?
   totalPausedSeconds Int       @default(0)
@@ -390,8 +394,9 @@ model StudySession {
   completedContent   Boolean   @default(false)
   createdAt          DateTime  @default(now())
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson         Lesson?         @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  externalLesson ExternalLesson? @relation(fields: [externalLessonId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@map("study_sessions")
@@ -401,6 +406,7 @@ enum NoteScope {
   LESSON
   WEEK
   GENERAL
+  EXTERNAL_LESSON
 }
 
 enum NoteTemplate {
@@ -529,6 +535,90 @@ model FlashcardReview {
 
   @@index([userId, nextReviewAt])
   @@map("flashcard_reviews")
+}
+
+// ---------------------------------------------------------------------------
+// Study Hub: acompanhamento pessoal de estudos. Camada de progresso sobre o
+// currículo nativo (LessonReviewMark, reaproveitando LessonCompletion/StudySession/
+// Note já existentes) + cursos externos (ExternalCourse/Module/Lesson, sem análogo
+// nativo). ExternalLesson nasce privado de um único usuário (diferente de Lesson,
+// que é global e compartilhado), por isso o progresso fica direto no registro, sem
+// uma tabela de progresso por usuário separada — ver docs do plano Study Hub Fase 1.
+// ---------------------------------------------------------------------------
+
+model LessonReviewMark {
+  id        String   @id @default(cuid())
+  userId    String
+  lessonId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_review_marks")
+}
+
+enum ExternalCourseStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+}
+
+model ExternalCourse {
+  id          String               @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  platform    String?
+  instructor  String?
+  url         String?
+  imageUrl    String?
+  category    String?
+  startDate   DateTime?
+  targetDate  DateTime?
+  status      ExternalCourseStatus @default(NOT_STARTED)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modules ExternalModule[]
+
+  @@index([userId])
+  @@map("external_courses")
+}
+
+model ExternalModule {
+  id       String @id @default(cuid())
+  courseId String
+  title    String
+  order    Int
+
+  course  ExternalCourse   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons ExternalLesson[]
+
+  @@unique([courseId, order])
+  @@map("external_modules")
+}
+
+model ExternalLesson {
+  id              String    @id @default(cuid())
+  moduleId        String
+  title           String
+  order           Int
+  completed       Boolean   @default(false)
+  completedAt     DateTime?
+  markedForReview Boolean   @default(false)
+  lastAccessedAt  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  module   ExternalModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  sessions StudySession[]
+
+  @@unique([moduleId, order])
+  @@map("external_lessons")
 }
 
 // ---------------------------------------------------------------------------

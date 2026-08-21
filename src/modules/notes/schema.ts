@@ -16,6 +16,7 @@ export const createNoteSchema = z.object({
   template: z.enum(noteTemplates),
   tags: z.array(z.string()).default([]),
   lessonId: z.string().optional(),
+  externalLessonId: z.string().optional(),
 });
 
 export const updateNoteSchema = createNoteSchema.extend({

@@ -1,8 +1,13 @@
 import { z } from "zod";
 
-export const startSessionSchema = z.object({
-  lessonId: z.string().optional(),
-});
+export const startSessionSchema = z
+  .object({
+    lessonId: z.string().optional(),
+    externalLessonId: z.string().optional(),
+  })
+  .refine((data) => !(data.lessonId && data.externalLessonId), {
+    message: "Uma sessão só pode estar vinculada a uma aula por vez.",
+  });
 
 export const finishSessionSchema = z.object({
   sessionId: z.string().min(1),

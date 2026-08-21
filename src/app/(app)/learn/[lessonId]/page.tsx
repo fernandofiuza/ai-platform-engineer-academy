@@ -15,6 +15,10 @@ import { LessonContentReader } from "@/modules/curriculum/components/lesson-cont
 import { getLessonById, getLessonCompletion } from "@/modules/curriculum/queries";
 import { LessonNotesPanel } from "@/modules/notes/components/lesson-notes-panel";
 import { getNotesForLesson } from "@/modules/notes/queries";
+import { LessonReviewToggle } from "@/modules/study-hub/components/lesson-review-toggle";
+import { isLessonMarkedForReview } from "@/modules/study-hub/queries";
+import { SessionTimer } from "@/modules/study-sessions/components/session-timer";
+import { getActiveSession } from "@/modules/study-sessions/queries";
 import { getLessonSchedule } from "@/modules/planning/queries";
 import {
   formatDayNumber,
@@ -45,11 +49,13 @@ export default async function LessonDetailPage({
     notFound();
   }
 
-  const [completion, questions, notes, schedule] = await Promise.all([
+  const [completion, questions, notes, schedule, markedForReview, activeSession] = await Promise.all([
     session?.user ? getLessonCompletion(session.user.id, lessonId) : Promise.resolve(null),
     getLessonQuestions(lessonId),
     session?.user ? getNotesForLesson(session.user.id, lessonId) : Promise.resolve([]),
     session?.user ? getLessonSchedule(session.user.id) : Promise.resolve(null),
+    session?.user ? isLessonMarkedForReview(session.user.id, lessonId) : Promise.resolve(false),
+    session?.user ? getActiveSession(session.user.id) : Promise.resolve(null),
   ]);
 
   const scheduleEntry = schedule?.items.find((i) => i.lessonId === lessonId) ?? null;
@@ -83,6 +89,9 @@ export default async function LessonDetailPage({
           </h1>
           {lesson.isDemo ? <Badge variant="secondary">demonstrativa</Badge> : null}
           {completion ? <Badge>concluída</Badge> : null}
+          {session?.user ? (
+            <LessonReviewToggle lessonId={lesson.id} initialMarked={markedForReview} />
+          ) : null}
         </div>
         {lesson.objective ? (
           <p className="mt-2 text-sm text-muted-foreground">{lesson.objective}</p>
@@ -136,6 +145,10 @@ export default async function LessonDetailPage({
           createdAt: q.createdAt,
         }))}
       />
+
+      {session?.user ? (
+        <SessionTimer initialSession={activeSession} contextLessonId={lesson.id} />
+      ) : null}
 
       {session?.user ? (
         <LessonNotesPanel lessonId={lesson.id} notes={notes} />

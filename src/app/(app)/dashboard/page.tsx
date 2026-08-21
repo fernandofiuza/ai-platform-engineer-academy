@@ -23,6 +23,12 @@ import { getAllBadgesWithUserStatus } from "@/modules/gamification/queries";
 import { getXpAndLevel } from "@/modules/gamification/service";
 import { CommitCountEditor } from "@/modules/dashboard/components/commit-count-editor";
 import { SKILL_LEVEL_PROGRESS } from "@/modules/skills/labels";
+import { ContinueStudyingCard } from "@/modules/study-hub/components/continue-studying-card";
+import {
+  getContinueStudying,
+  getNativeCurriculumProgress,
+  getReviewItems,
+} from "@/modules/study-hub/queries";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -45,8 +51,7 @@ export default async function DashboardPage() {
 
   const [
     dbUser,
-    totalLessons,
-    completedLessons,
+    nativeProgress,
     totalMinutes,
     sessionsForStreak,
     openGoals,
@@ -56,10 +61,11 @@ export default async function DashboardPage() {
     profile,
     skills,
     skillProgress,
+    continueStudying,
+    reviewItems,
   ] = await Promise.all([
     db.user.findUnique({ where: { id: user.id }, select: { name: true, createdAt: true } }),
-    db.lesson.count({ where: { status: "AVAILABLE" } }),
-    db.lessonCompletion.count({ where: { userId: user.id } }),
+    getNativeCurriculumProgress(user.id),
     getTotalStudyMinutes(user.id),
     db.studySession.findMany({
       where: { userId: user.id, endedAt: { not: null } },
@@ -72,12 +78,15 @@ export default async function DashboardPage() {
     db.profile.findUnique({ where: { userId: user.id }, select: { manualCommitCount: true } }),
     db.skill.findMany({ select: { id: true } }),
     db.userSkillProgress.findMany({ where: { userId: user.id }, select: { skillId: true, level: true } }),
+    getContinueStudying(user.id),
+    getReviewItems(user.id),
   ]);
+
+  const { totalLessons, completedLessons, progressPercent } = nativeProgress;
+  const topReviewItems = reviewItems.slice(0, 3);
 
   const firstName = (dbUser?.name ?? user.name ?? "").split(" ")[0];
   const streak = computeStreak(sessionsForStreak.map((s) => s.startedAt));
-  const progressPercent =
-    totalLessons > 0 ? Math.round((Math.min(completedLessons, totalLessons) / totalLessons) * 100) : 0;
 
   const progressBySkillId = new Map(skillProgress.map((p) => [p.skillId, p.level]));
   const skillPercentages = skills.map((s) => SKILL_LEVEL_PROGRESS[progressBySkillId.get(s.id) ?? "NOT_STARTED"]);
@@ -95,6 +104,43 @@ export default async function DashboardPage() {
           Bem-vindo(a) à AI Platform Engineer Academy. Sua conta foi criada em{" "}
           {dbUser?.createdAt.toLocaleDateString("pt-BR")}.
         </p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ContinueStudyingCard item={continueStudying} />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Para revisar</CardTitle>
+            <CardDescription>
+              Aulas marcadas para revisão — nativas e de cursos externos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topReviewItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nada marcado para revisão ainda.</p>
+            ) : (
+              <ul className="space-y-2">
+                {topReviewItems.map((item) => (
+                  <li key={`${item.type}-${item.id}`}>
+                    <Link
+                      href={item.href}
+                      className="flex items-center justify-between gap-2 text-sm hover:underline"
+                    >
+                      <span>{item.title}</span>
+                      <span className="text-xs text-muted-foreground">{item.contextLabel}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link
+              href="/study-hub/review"
+              className="mt-3 inline-block text-xs text-muted-foreground hover:underline"
+            >
+              Ver todas em Study Hub
+            </Link>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

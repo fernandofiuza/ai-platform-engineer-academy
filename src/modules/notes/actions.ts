@@ -22,13 +22,18 @@ export async function createNoteAction(input: CreateNoteInput) {
       contentMarkdown: parsed.data.contentMarkdown,
       template: parsed.data.template,
       tags: parsed.data.tags,
-      scopeType: parsed.data.lessonId ? "LESSON" : "GENERAL",
-      scopeId: parsed.data.lessonId || null,
+      scopeType: parsed.data.lessonId
+        ? "LESSON"
+        : parsed.data.externalLessonId
+          ? "EXTERNAL_LESSON"
+          : "GENERAL",
+      scopeId: parsed.data.lessonId || parsed.data.externalLessonId || null,
     },
   });
 
   revalidatePath("/notes");
   if (parsed.data.lessonId) revalidatePath(`/learn/${parsed.data.lessonId}`);
+  if (parsed.data.externalLessonId) revalidatePath("/study-hub", "layout");
   return { error: null };
 }
 
@@ -57,14 +62,23 @@ export async function updateNoteAction(input: UpdateNoteInput) {
       contentMarkdown: parsed.data.contentMarkdown,
       template: parsed.data.template,
       tags: parsed.data.tags,
-      scopeType: parsed.data.lessonId ? "LESSON" : "GENERAL",
-      scopeId: parsed.data.lessonId || null,
+      scopeType: parsed.data.lessonId
+        ? "LESSON"
+        : parsed.data.externalLessonId
+          ? "EXTERNAL_LESSON"
+          : "GENERAL",
+      scopeId: parsed.data.lessonId || parsed.data.externalLessonId || null,
     },
   });
 
   revalidatePath("/notes");
   if (parsed.data.lessonId) revalidatePath(`/learn/${parsed.data.lessonId}`);
-  if (note.scopeId && note.scopeId !== parsed.data.lessonId) revalidatePath(`/learn/${note.scopeId}`);
+  if (note.scopeType === "LESSON" && note.scopeId && note.scopeId !== parsed.data.lessonId) {
+    revalidatePath(`/learn/${note.scopeId}`);
+  }
+  if (parsed.data.externalLessonId || note.scopeType === "EXTERNAL_LESSON") {
+    revalidatePath("/study-hub", "layout");
+  }
   return { error: null };
 }
 
@@ -90,5 +104,6 @@ export async function deleteNoteAction(noteId: string) {
   await db.note.delete({ where: { id: noteId } });
   revalidatePath("/notes");
   if (note.scopeType === "LESSON" && note.scopeId) revalidatePath(`/learn/${note.scopeId}`);
+  if (note.scopeType === "EXTERNAL_LESSON") revalidatePath("/study-hub", "layout");
   return { error: null };
 }

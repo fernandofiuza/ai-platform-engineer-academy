@@ -16,7 +16,7 @@ import {
   previewImportFromJsonAction,
   previewImportFromTextAction,
 } from "@/modules/study-hub/actions";
-import { isFolderImportSupported, scanCourseFolder } from "@/modules/study-hub/folder-scan";
+import { isFolderImportSupported, isSecureContext, scanCourseFolder } from "@/modules/study-hub/folder-scan";
 
 function downloadTextFile(filename: string, content: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
@@ -106,6 +106,11 @@ export function ImportPreviewForm() {
     () => () => {},
     isFolderImportSupported,
     () => false
+  );
+  const secureContext = React.useSyncExternalStore(
+    () => () => {},
+    isSecureContext,
+    () => true
   );
 
   async function pickFolder() {
@@ -309,6 +314,12 @@ export function ImportPreviewForm() {
                   Selecionar pasta
                 </Button>
               </>
+            ) : !secureContext ? (
+              <p className="text-sm text-muted-foreground">
+                Essa opção só funciona em uma conexão segura (HTTPS) — o site atual está em HTTP
+                puro, então o navegador não libera esse recurso mesmo no Chrome/Edge. Use a aba
+                Texto ou JSON por aqui, ou acesse o Apex por um domínio com HTTPS.
+              </p>
             ) : (
               <p className="text-sm text-muted-foreground">
                 Essa opção depende de um recurso disponível só no Chrome e no Edge — use a aba

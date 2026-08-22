@@ -15,6 +15,14 @@ export function isFolderImportSupported() {
   return typeof window !== "undefined" && typeof window.showDirectoryPicker === "function";
 }
 
+/** A File System Access API só é exposta em "contexto seguro" (HTTPS, ou `localhost`) — mesmo
+ * em Chrome/Edge, `showDirectoryPicker` simplesmente não existe em HTTP servido por IP direto
+ * (ex.: `http://192.168.x.x`). Usado pra dar uma mensagem certa em vez de só "use Chrome/Edge"
+ * quando o problema real é falta de HTTPS. */
+export function isSecureContext() {
+  return typeof window !== "undefined" && window.isSecureContext;
+}
+
 /** Só remove o que vem depois do último ponto se parecer mesmo uma extensão de arquivo — começa
  * com letra, até 5 caracteres (ex.: "mp4", "m4v", "pdf", "docx"; começar com letra é o que
  * diferencia de um número de versão puro, ex.: "Formação AWS 5.0" não deve virar "Formação AWS 5"

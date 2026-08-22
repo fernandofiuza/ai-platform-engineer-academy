@@ -40,7 +40,7 @@ export default function LandingPage() {
             Formação em construção · conteúdo aberto e vivo
           </Badge>
           <h1 className="text-balance text-4xl font-extrabold tracking-tighter text-white sm:text-6xl">
-            AI Platform Engineer Academy
+            Apex
           </h1>
           <p className="mt-3 text-lg text-white/70">
             Da infraestrutura à inteligência artificial.

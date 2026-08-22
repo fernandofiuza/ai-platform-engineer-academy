@@ -18,11 +18,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "AI Platform Engineer Academy",
-    template: "%s · AI Platform Engineer Academy",
+    default: "Apex",
+    template: "%s · Apex",
   },
   description:
-    "Plataforma de estudos da formação AI Platform Engineer Academy — da infraestrutura à inteligência artificial.",
+    "Plataforma de estudos da formação Apex — da infraestrutura à inteligência artificial.",
 };
 
 export default function RootLayout({

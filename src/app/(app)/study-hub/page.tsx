@@ -79,7 +79,7 @@ export default async function StudyHubPage() {
             <Card className="h-full transition-colors hover:border-primary/40">
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-base">Formação AI Platform Engineer</CardTitle>
+                  <CardTitle className="text-base">Formação Apex</CardTitle>
                   <Badge>APEX</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">Currículo oficial do APEX</p>

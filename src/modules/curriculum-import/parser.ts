@@ -50,7 +50,7 @@ export type ParseResult = {
 };
 
 const DEFAULT_PROGRAM: ParsedProgram = {
-  name: "AI Platform Engineer Academy",
+  name: "Apex",
   subtitle: "Da Infraestrutura à Inteligência Artificial",
   durationMonths: 24,
   totalWeeks: 104,

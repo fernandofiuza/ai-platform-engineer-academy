@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { GraduationCap, Menu } from "lucide-react";
+import { Menu, Mountain } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,9 +36,9 @@ export function MobileNav() {
               className="flex items-center gap-2 font-semibold tracking-tight text-sidebar-foreground"
             >
               <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <GraduationCap className="size-4.5" />
+                <Mountain className="size-4.5" />
               </span>
-              AI Platform Engineer
+              Apex
             </Link>
           </SheetTitle>
         </SheetHeader>

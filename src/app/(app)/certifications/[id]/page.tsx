@@ -40,7 +40,7 @@ export default async function CertificationDetailPage({
           </p>
           <p className="font-mono text-xs text-muted-foreground">Código: {certification.code}</p>
           <p className="mx-auto max-w-md text-xs text-muted-foreground">
-            Este é um certificado interno da AI Platform Engineer Academy, emitido ao concluir as
+            Este é um certificado interno da Apex, emitido ao concluir as
             semanas obrigatórias, o projeto final e a avaliação final desta fase — não é uma
             certificação de mercado nem substitui certificações oficiais de tecnologia.
           </p>

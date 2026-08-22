@@ -52,7 +52,7 @@ export function buildPlannerIcs(items: IcsLessonItem[], baseUrl: string): string
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//AI Platform Engineer Academy//Planejador//PT",
+    "PRODID:-//Apex//Planejador//PT",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "X-WR-CALNAME:Cronograma de estudos",

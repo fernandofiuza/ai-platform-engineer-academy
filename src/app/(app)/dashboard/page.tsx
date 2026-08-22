@@ -101,7 +101,7 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Olá, {firstName} 👋</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Bem-vindo(a) à AI Platform Engineer Academy. Sua conta foi criada em{" "}
+          Bem-vindo(a) à Apex. Sua conta foi criada em{" "}
           {dbUser?.createdAt.toLocaleDateString("pt-BR")}.
         </p>
       </div>

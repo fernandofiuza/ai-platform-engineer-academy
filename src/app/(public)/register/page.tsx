@@ -12,7 +12,7 @@ export default function RegisterPage() {
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-2xl">Criar conta</CardTitle>
-          <CardDescription>Comece sua jornada na AI Platform Engineer Academy.</CardDescription>
+          <CardDescription>Comece sua jornada na Apex.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <RegisterForm />

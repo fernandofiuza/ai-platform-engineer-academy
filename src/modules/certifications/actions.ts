@@ -34,7 +34,7 @@ export async function requestCertificationAction(phaseId: string) {
     };
   }
 
-  const code = `APEA-S${eligibility.phase.order}-${randomUUID().split("-")[0].toUpperCase()}`;
+  const code = `APEX-S${eligibility.phase.order}-${randomUUID().split("-")[0].toUpperCase()}`;
   const certification = await db.certification.create({
     data: { userId: session.user.id, phaseId, code },
   });

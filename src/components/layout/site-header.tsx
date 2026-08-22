@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GraduationCap } from "lucide-react";
+import { Mountain } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -10,10 +10,9 @@ export function SiteHeader() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight text-white">
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <GraduationCap className="size-4.5" />
+            <Mountain className="size-4.5" />
           </span>
-          <span className="hidden sm:inline">AI Platform Engineer Academy</span>
-          <span className="sm:hidden">APEA</span>
+          <span>Apex</span>
         </Link>
 
         <div className="flex items-center gap-2">

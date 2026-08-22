@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Sparkles, Trash2, X } from "lucide-react";
+import { Download, FolderOpen, Loader2, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   commitExternalCourseImportAction,
-  previewImportFromAiAction,
   previewImportFromJsonAction,
   previewImportFromTextAction,
 } from "@/modules/study-hub/actions";
+import { isFolderImportSupported, scanCourseFolder } from "@/modules/study-hub/folder-scan";
+
+function downloadTextFile(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 const TEXT_EXAMPLE = `CURSO:
 Formação AWS 5.0
@@ -52,26 +64,68 @@ const JSON_EXAMPLE = `{
   ]
 }`;
 
-type PreviewModule = { title: string; lessons: { title: string }[] };
+type PreviewModule = { title: string; lessons: { title: string }[]; modules: PreviewModule[] };
 type Preview = { title: string; modules: PreviewModule[] };
+
+function countLessons(modules: PreviewModule[]): number {
+  return modules.reduce((sum, m) => sum + m.lessons.length + countLessons(m.modules), 0);
+}
+
+function findEmptyModule(modules: PreviewModule[]): PreviewModule | null {
+  for (const m of modules) {
+    if (m.lessons.length === 0 && m.modules.length === 0) return m;
+    const nested = findEmptyModule(m.modules);
+    if (nested) return nested;
+  }
+  return null;
+}
+
+function removeModuleAtPath(modules: PreviewModule[], path: number[]): PreviewModule[] {
+  const [index, ...rest] = path;
+  if (rest.length === 0) return modules.filter((_, i) => i !== index);
+  return modules.map((m, i) => (i === index ? { ...m, modules: removeModuleAtPath(m.modules, rest) } : m));
+}
+
+function removeLessonAtPath(modules: PreviewModule[], modulePath: number[], lessonIndex: number): PreviewModule[] {
+  const [index, ...rest] = modulePath;
+  return modules.map((m, i) => {
+    if (i !== index) return m;
+    if (rest.length === 0) return { ...m, lessons: m.lessons.filter((_, j) => j !== lessonIndex) };
+    return { ...m, modules: removeLessonAtPath(m.modules, rest, lessonIndex) };
+  });
+}
 
 export function ImportPreviewForm() {
   const router = useRouter();
   const [rawText, setRawText] = React.useState("");
   const [rawJson, setRawJson] = React.useState("");
-  const [topic, setTopic] = React.useState("");
   const [preview, setPreview] = React.useState<Preview | null>(null);
   const [isPending, startTransition] = React.useTransition();
+  const [isScanningFolder, setIsScanningFolder] = React.useState(false);
+  const folderSupported = React.useSyncExternalStore(
+    () => () => {},
+    isFolderImportSupported,
+    () => false
+  );
 
-  function generateWithAi() {
-    startTransition(async () => {
-      const result = await previewImportFromAiAction({ topic });
-      if (result.error || !result.preview) {
-        toast.error(result.error ?? "Não consegui gerar a estrutura.");
+  async function pickFolder() {
+    if (!window.showDirectoryPicker) return;
+    setIsScanningFolder(true);
+    try {
+      const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+      const result = await scanCourseFolder(dirHandle);
+      if (result.modules.length === 0) {
+        toast.error("Nenhum arquivo encontrado nessa pasta.");
         return;
       }
-      setPreview(result.preview);
-    });
+      setPreview(result);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("[study-hub] falha ao ler pasta local:", err);
+      toast.error("Não consegui ler a pasta selecionada.");
+    } finally {
+      setIsScanningFolder(false);
+    }
   }
 
   function analyzeText() {
@@ -96,28 +150,25 @@ export function ImportPreviewForm() {
     });
   }
 
-  function removeModule(index: number) {
+  function removeModule(path: number[]) {
     if (!preview) return;
-    setPreview({ ...preview, modules: preview.modules.filter((_, i) => i !== index) });
+    setPreview({ ...preview, modules: removeModuleAtPath(preview.modules, path) });
   }
 
-  function removeLesson(moduleIndex: number, lessonIndex: number) {
+  function removeLesson(modulePath: number[], lessonIndex: number) {
     if (!preview) return;
-    const modules = preview.modules.map((m, i) =>
-      i === moduleIndex ? { ...m, lessons: m.lessons.filter((_, j) => j !== lessonIndex) } : m
-    );
-    setPreview({ ...preview, modules });
+    setPreview({ ...preview, modules: removeLessonAtPath(preview.modules, modulePath, lessonIndex) });
   }
 
   function confirmImport() {
     if (!preview) return;
-    const emptyModule = preview.modules.find((m) => m.lessons.length === 0);
-    if (emptyModule) {
-      toast.error(`O módulo "${emptyModule.title}" ficou sem aulas. Remova-o ou adicione aulas.`);
-      return;
-    }
     if (preview.modules.length === 0) {
       toast.error("Adicione ao menos um módulo antes de confirmar.");
+      return;
+    }
+    const emptyModule = findEmptyModule(preview.modules);
+    if (emptyModule) {
+      toast.error(`O módulo "${emptyModule.title}" ficou sem aulas. Remova-o ou adicione aulas.`);
       return;
     }
     startTransition(async () => {
@@ -131,7 +182,56 @@ export function ImportPreviewForm() {
     });
   }
 
-  const totalLessons = preview?.modules.reduce((sum, m) => sum + m.lessons.length, 0) ?? 0;
+  const totalLessons = preview ? countLessons(preview.modules) : 0;
+
+  function renderModuleTree(mod: PreviewModule, path: number[]) {
+    const depth = path.length - 1;
+    return (
+      <div
+        key={path.join("-")}
+        className={depth > 0 ? "border-l pl-3" : "rounded-lg border p-3"}
+        style={depth > 0 ? { marginLeft: depth * 16 } : undefined}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="text-sm font-medium">{mod.title}</h4>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Remover módulo "${mod.title}"`}
+            onClick={() => removeModule(path)}
+          >
+            <Trash2 className="size-3.5 text-muted-foreground" />
+          </Button>
+        </div>
+        {mod.lessons.length > 0 ? (
+          <ul className="mt-2 space-y-1">
+            {mod.lessons.map((lesson, lessonIndex) => (
+              <li
+                key={lessonIndex}
+                className="flex items-center justify-between gap-2 text-sm text-muted-foreground"
+              >
+                {lesson.title}
+                <button
+                  type="button"
+                  aria-label={`Remover aula "${lesson.title}"`}
+                  onClick={() => removeLesson(path, lessonIndex)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {mod.modules.length > 0 ? (
+          <div className="mt-3 space-y-3">
+            {mod.modules.map((child, childIndex) => renderModuleTree(child, [...path, childIndex]))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   if (preview) {
     return (
@@ -157,40 +257,7 @@ export function ImportPreviewForm() {
           </p>
 
           <div className="space-y-4">
-            {preview.modules.map((courseModule, moduleIndex) => (
-              <div key={moduleIndex} className="rounded-lg border p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-medium">{courseModule.title}</h4>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Remover módulo "${courseModule.title}"`}
-                    onClick={() => removeModule(moduleIndex)}
-                  >
-                    <Trash2 className="size-3.5 text-muted-foreground" />
-                  </Button>
-                </div>
-                <ul className="mt-2 space-y-1">
-                  {courseModule.lessons.map((lesson, lessonIndex) => (
-                    <li
-                      key={lessonIndex}
-                      className="flex items-center justify-between gap-2 text-sm text-muted-foreground"
-                    >
-                      {lesson.title}
-                      <button
-                        type="button"
-                        aria-label={`Remover aula "${lesson.title}"`}
-                        onClick={() => removeLesson(moduleIndex, lessonIndex)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {preview.modules.map((courseModule, moduleIndex) => renderModuleTree(courseModule, [moduleIndex]))}
           </div>
 
           <div className="flex gap-2">
@@ -214,31 +281,40 @@ export function ImportPreviewForm() {
           <Sparkles className="size-4" /> Importar curso externo
         </CardTitle>
         <CardDescription>
-          Deixe a IA montar a estrutura a partir de um tópico, ou cole o texto/JSON à mão — sempre
-          com prévia editável antes de importar.
+          Selecione a pasta do curso, ou cole o texto/JSON à mão — sempre com prévia editável
+          antes de importar.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="ai">
+        <Tabs defaultValue="folder">
           <TabsList>
-            <TabsTrigger value="ai">IA</TabsTrigger>
+            <TabsTrigger value="folder">Pasta local</TabsTrigger>
             <TabsTrigger value="text">Texto</TabsTrigger>
             <TabsTrigger value="json">JSON</TabsTrigger>
           </TabsList>
-          <TabsContent value="ai" className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="import-ai-topic">Curso ou tópico</Label>
-              <Input
-                id="import-ai-topic"
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder="Ex.: AWS Certified Solutions Architect, Docker para iniciantes..."
-              />
-            </div>
-            <Button type="button" onClick={generateWithAi} disabled={isPending || !topic.trim()}>
-              {isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-              Gerar estrutura com IA
-            </Button>
+          <TabsContent value="folder" className="space-y-3">
+            {folderSupported ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Selecione a pasta do curso no seu computador — o Apex lê os nomes dos arquivos
+                  (vídeos, PDFs, imagens, o que tiver) e monta a estrutura automaticamente. Nenhum
+                  arquivo é enviado a lugar nenhum, só os nomes são lidos.
+                </p>
+                <Button type="button" onClick={pickFolder} disabled={isScanningFolder}>
+                  {isScanningFolder ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <FolderOpen className="size-4" />
+                  )}
+                  Selecionar pasta
+                </Button>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Essa opção depende de um recurso disponível só no Chrome e no Edge — use a aba
+                Texto ou JSON por aqui.
+              </p>
+            )}
           </TabsContent>
           <TabsContent value="text" className="space-y-3">
             <Textarea
@@ -248,10 +324,19 @@ export function ImportPreviewForm() {
               rows={12}
               className="font-mono text-sm"
             />
-            <Button type="button" onClick={analyzeText} disabled={isPending || !rawText.trim()}>
-              {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-              Analisar
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" onClick={analyzeText} disabled={isPending || !rawText.trim()}>
+                {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+                Analisar
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => downloadTextFile("modelo-curso.txt", TEXT_EXAMPLE, "text/plain")}
+              >
+                <Download className="size-4" /> Baixar modelo
+              </Button>
+            </div>
           </TabsContent>
           <TabsContent value="json" className="space-y-3">
             <Textarea
@@ -261,10 +346,19 @@ export function ImportPreviewForm() {
               rows={12}
               className="font-mono text-sm"
             />
-            <Button type="button" onClick={analyzeJson} disabled={isPending || !rawJson.trim()}>
-              {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-              Analisar
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" onClick={analyzeJson} disabled={isPending || !rawJson.trim()}>
+                {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+                Analisar
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => downloadTextFile("modelo-curso.json", JSON_EXAMPLE, "application/json")}
+              >
+                <Download className="size-4" /> Baixar modelo
+              </Button>
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>

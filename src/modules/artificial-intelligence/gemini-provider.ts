@@ -97,11 +97,6 @@ export class GeminiProvider implements AIProvider {
     return callGenerateContent(prompt);
   }
 
-  async generateCourseOutline({ topic }: { topic: string }) {
-    const prompt = `${wrapContent("TOPICO", topic)}\n\nGere a estrutura de um curso sobre o tópico acima, dividida em módulos e aulas. Responda APENAS com um JSON válido, sem nenhum texto antes ou depois, exatamente neste formato: {"course": "Nome do curso", "modules": [{"name": "Nome do módulo", "lessons": ["Aula 1", "Aula 2"]}]}. Use de 3 a 8 módulos, cada um com 3 a 8 aulas, títulos curtos e diretos em português.`;
-    return callGenerateContent(prompt, DEFAULT_SYSTEM_PROMPT, 2000);
-  }
-
   async explainConcept({ content, question }: { content: string; question?: string }) {
     const prompt = [
       wrapContent("CONTEUDO", content),

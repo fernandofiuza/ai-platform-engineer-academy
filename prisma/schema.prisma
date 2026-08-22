@@ -590,16 +590,23 @@ model ExternalCourse {
   @@map("external_courses")
 }
 
+/// Módulos podem se aninhar em qualquer profundidade (`parentModuleId`), pra espelhar a
+/// hierarquia real de pastas de um curso externo importado — não é mais uma lista plana por
+/// curso. `courseId` continua presente em todo módulo (raiz ou aninhado), então queries que
+/// filtram aula por `lesson.module.courseId` continuam funcionando sem atravessar a árvore.
 model ExternalModule {
-  id       String @id @default(cuid())
-  courseId String
-  title    String
-  order    Int
+  id             String  @id @default(cuid())
+  courseId       String
+  parentModuleId String?
+  title          String
+  order          Int
 
-  course  ExternalCourse   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons ExternalLesson[]
+  course   ExternalCourse   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  parent   ExternalModule?  @relation("ModuleChildren", fields: [parentModuleId], references: [id], onDelete: Cascade)
+  children ExternalModule[] @relation("ModuleChildren")
+  lessons  ExternalLesson[]
 
-  @@unique([courseId, order])
+  @@index([courseId, parentModuleId])
   @@map("external_modules")
 }
 

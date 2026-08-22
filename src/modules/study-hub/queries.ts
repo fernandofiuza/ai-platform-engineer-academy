@@ -1,6 +1,55 @@
+import type { ExternalLesson, ExternalModule } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { getStudyPlan } from "@/modules/planning/queries";
 import { getSessionsInRange } from "@/modules/study-sessions/queries";
+
+export type ExternalModuleTree = ExternalModule & {
+  lessons: ExternalLesson[];
+  modules: ExternalModuleTree[];
+};
+
+/** Remonta a árvore de módulos em memória a partir de listas planas — Prisma não suporta
+ * `include` recursivo de profundidade arbitrária, então busco tudo achatado (uma query pros
+ * módulos do curso, outra pras aulas) e agrupo por `parentModuleId`/`moduleId` aqui. */
+function buildModuleTree(modules: ExternalModule[], lessons: ExternalLesson[]): ExternalModuleTree[] {
+  const lessonsByModule = new Map<string, ExternalLesson[]>();
+  for (const lesson of lessons) {
+    const arr = lessonsByModule.get(lesson.moduleId) ?? [];
+    arr.push(lesson);
+    lessonsByModule.set(lesson.moduleId, arr);
+  }
+  for (const arr of lessonsByModule.values()) arr.sort((a, b) => a.order - b.order);
+
+  const childrenByParent = new Map<string | null, ExternalModule[]>();
+  for (const mod of modules) {
+    const key = mod.parentModuleId;
+    const arr = childrenByParent.get(key) ?? [];
+    arr.push(mod);
+    childrenByParent.set(key, arr);
+  }
+  for (const arr of childrenByParent.values()) arr.sort((a, b) => a.order - b.order);
+
+  function build(parentId: string | null): ExternalModuleTree[] {
+    return (childrenByParent.get(parentId) ?? []).map((mod) => ({
+      ...mod,
+      lessons: lessonsByModule.get(mod.id) ?? [],
+      modules: build(mod.id),
+    }));
+  }
+
+  return build(null);
+}
+
+/** Percorre a árvore em profundidade (mesma ordem em que o checklist exibe módulo → aulas →
+ * submódulos), gerando a lista plana usada pra navegação "próxima/anterior aula". */
+function flattenLessons(tree: ExternalModuleTree[]): ExternalLesson[] {
+  const result: ExternalLesson[] = [];
+  for (const mod of tree) {
+    result.push(...mod.lessons);
+    result.push(...flattenLessons(mod.modules));
+  }
+  return result;
+}
 
 export function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -221,17 +270,30 @@ export async function getExternalCourses(userId: string) {
   const courses = await db.externalCourse.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
-    include: {
-      modules: {
-        select: { lessons: { select: { completed: true } } },
-      },
-    },
   });
+  const courseIds = courses.map((c) => c.id);
+
+  // Conta aulas direto por `lesson.module.courseId` (presente em todo módulo, raiz ou aninhado)
+  // em vez de atravessar `course.modules[].lessons` — assim funciona em qualquer profundidade
+  // de submódulo sem precisar remontar a árvore inteira só pra contar.
+  const lessons =
+    courseIds.length > 0
+      ? await db.externalLesson.findMany({
+          where: { module: { courseId: { in: courseIds } } },
+          select: { completed: true, module: { select: { courseId: true } } },
+        })
+      : [];
+
+  const statsByCourse = new Map<string, { total: number; completed: number }>();
+  for (const lesson of lessons) {
+    const stat = statsByCourse.get(lesson.module.courseId) ?? { total: 0, completed: 0 };
+    stat.total += 1;
+    if (lesson.completed) stat.completed += 1;
+    statsByCourse.set(lesson.module.courseId, stat);
+  }
 
   return courses.map((course) => {
-    const lessons = course.modules.flatMap((m) => m.lessons);
-    const totalLessons = lessons.length;
-    const completedLessons = lessons.filter((l) => l.completed).length;
+    const stat = statsByCourse.get(course.id) ?? { total: 0, completed: 0 };
     return {
       id: course.id,
       title: course.title,
@@ -241,32 +303,28 @@ export async function getExternalCourses(userId: string) {
       url: course.url,
       category: course.category,
       status: course.status,
-      totalLessons,
-      completedLessons,
-      progressPercent:
-        totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0,
+      totalLessons: stat.total,
+      completedLessons: stat.completed,
+      progressPercent: stat.total > 0 ? Math.round((stat.completed / stat.total) * 100) : 0,
     };
   });
 }
 
 export async function getExternalCourseDetail(userId: string, courseId: string) {
-  const course = await db.externalCourse.findUnique({
-    where: { id: courseId },
-    include: {
-      modules: {
-        orderBy: { order: "asc" },
-        include: { lessons: { orderBy: { order: "asc" } } },
-      },
-    },
-  });
+  const course = await db.externalCourse.findUnique({ where: { id: courseId } });
   if (!course || course.userId !== userId) return null;
 
-  const allLessons = course.modules.flatMap((m) => m.lessons);
-  const totalLessons = allLessons.length;
-  const completedLessons = allLessons.filter((l) => l.completed).length;
+  const [modules, lessons] = await Promise.all([
+    db.externalModule.findMany({ where: { courseId } }),
+    db.externalLesson.findMany({ where: { module: { courseId } } }),
+  ]);
+
+  const moduleTree = buildModuleTree(modules, lessons);
+  const totalLessons = lessons.length;
+  const completedLessons = lessons.filter((l) => l.completed).length;
 
   return {
-    course,
+    course: { ...course, modules: moduleTree },
     totalLessons,
     completedLessons,
     progressPercent: totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0,
@@ -276,24 +334,17 @@ export async function getExternalCourseDetail(userId: string, courseId: string) 
 export async function getExternalLessonDetail(userId: string, lessonId: string) {
   const lesson = await db.externalLesson.findUnique({
     where: { id: lessonId },
-    include: {
-      module: {
-        include: {
-          course: {
-            include: {
-              modules: {
-                orderBy: { order: "asc" },
-                include: { lessons: { orderBy: { order: "asc" } } },
-              },
-            },
-          },
-        },
-      },
-    },
+    include: { module: { include: { course: true } } },
   });
   if (!lesson || lesson.module.course.userId !== userId) return null;
 
-  const flatLessons = lesson.module.course.modules.flatMap((m) => m.lessons);
+  const courseId = lesson.module.courseId;
+  const [modules, lessons] = await Promise.all([
+    db.externalModule.findMany({ where: { courseId } }),
+    db.externalLesson.findMany({ where: { module: { courseId } } }),
+  ]);
+
+  const flatLessons = flattenLessons(buildModuleTree(modules, lessons));
   const index = flatLessons.findIndex((l) => l.id === lessonId);
   const prev = index > 0 ? flatLessons[index - 1] : null;
   const next = index >= 0 && index < flatLessons.length - 1 ? flatLessons[index + 1] : null;

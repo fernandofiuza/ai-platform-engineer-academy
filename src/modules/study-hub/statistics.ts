@@ -30,11 +30,11 @@ export async function getStudyHubStatistics(userId: string) {
     db.lessonCompletion.findMany({ where: { userId }, select: { completedAt: true } }),
     db.externalLesson.findMany({
       where: { module: { course: { userId } } },
-      select: { completed: true, completedAt: true },
+      select: { completed: true, completedAt: true, module: { select: { courseId: true } } },
     }),
     db.externalCourse.findMany({
       where: { userId },
-      select: { status: true, modules: { select: { lessons: { select: { completed: true } } } } },
+      select: { id: true, status: true },
     }),
   ]);
 
@@ -44,10 +44,19 @@ export async function getStudyHubStatistics(userId: string) {
   const distinctWeeks = new Set(allSessions.map((s) => dateKey(startOfWeek(s.startedAt)))).size;
   const externalCompletedCount = externalLessons.filter((l) => l.completed).length;
 
+  // Agrupa aulas por `module.courseId` (presente em todo módulo, raiz ou aninhado) em vez de
+  // atravessar `course.modules[].lessons` — assim conta certo em qualquer profundidade.
+  const lessonsByCourse = new Map<string, { total: number; completed: number }>();
+  for (const lesson of externalLessons) {
+    const stat = lessonsByCourse.get(lesson.module.courseId) ?? { total: 0, completed: 0 };
+    stat.total += 1;
+    if (lesson.completed) stat.completed += 1;
+    lessonsByCourse.set(lesson.module.courseId, stat);
+  }
   const courseProgressPercentages = externalCourses.map((course) => {
-    const lessons = course.modules.flatMap((m) => m.lessons);
-    if (lessons.length === 0) return 0;
-    return (lessons.filter((l) => l.completed).length / lessons.length) * 100;
+    const stat = lessonsByCourse.get(course.id);
+    if (!stat || stat.total === 0) return 0;
+    return (stat.completed / stat.total) * 100;
   });
 
   const tiles = {

@@ -102,18 +102,6 @@ export class MockAIProvider implements AIProvider {
     return `${intro}\n${bullets}`;
   }
 
-  /** Estrutura heurística fixa (2 módulos, 3 aulas cada) usando o tópico informado — não é
-   * inteligente, só garante que a importação por IA funcione mesmo sem chave configurada. */
-  async generateCourseOutline({ topic }: { topic: string }): Promise<string> {
-    return JSON.stringify({
-      course: topic,
-      modules: [
-        { name: "Introdução", lessons: ["Visão geral", "Conceitos fundamentais", "Primeiros passos"] },
-        { name: "Aprofundamento", lessons: ["Tópicos intermediários", "Boas práticas", "Estudo de caso"] },
-      ],
-    });
-  }
-
   async converse({
     persona,
     message,

@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { logger } from "@/lib/logger";
-import { getGeminiProvider } from "@/modules/artificial-intelligence/gateway";
 import { logActivity } from "./activity";
 import { parseCourseText } from "./import-parser";
 import { searchStudyHub } from "./queries";
@@ -14,7 +12,6 @@ import {
   createExternalCourseSchema,
   createExternalLessonSchema,
   createExternalModuleSchema,
-  generateWithAiSchema,
   importJsonPayloadSchema,
   importJsonSchema,
   importTextSchema,
@@ -25,17 +22,25 @@ import {
   type CreateExternalCourseInput,
   type CreateExternalLessonInput,
   type CreateExternalModuleInput,
-  type GenerateWithAiInput,
   type ImportJsonInput,
+  type ImportPreviewModule,
   type ImportTextInput,
   type UpdateExternalCourseInput,
   type UpdateExternalLessonInput,
   type UpdateExternalModuleInput,
 } from "./schema";
 
-/** Reaproveitado por `previewImportFromJsonAction` (JSON colado à mão) e
- * `previewImportFromAiAction` (JSON gerado pela IA) — mesma validação, mesmo mapeamento
- * pro formato de prévia usado pela tela de importação. */
+function toPreviewModule(m: { name: string; lessons: string[]; modules: unknown[] }): ImportPreviewModule {
+  const nested = m.modules as { name: string; lessons: string[]; modules: unknown[] }[];
+  return {
+    title: m.name,
+    lessons: m.lessons.map((title) => ({ title })),
+    modules: nested.map(toPreviewModule),
+  };
+}
+
+/** Valida e mapeia o JSON colado (formato `{course, modules:[{name, lessons}]}`, recursivo) pro
+ * formato de prévia usado pela tela de importação. */
 function buildPreviewFromJsonPayload(raw: unknown) {
   const validated = importJsonPayloadSchema.safeParse(raw);
   if (!validated.success) {
@@ -49,10 +54,7 @@ function buildPreviewFromJsonPayload(raw: unknown) {
     error: null,
     preview: {
       title: validated.data.course,
-      modules: validated.data.modules.map((m) => ({
-        title: m.name,
-        lessons: m.lessons.map((title) => ({ title })),
-      })),
+      modules: validated.data.modules.map(toPreviewModule),
     },
   };
 }
@@ -150,9 +152,21 @@ export async function createExternalModuleAction(input: CreateExternalModuleInpu
   const course = await assertOwnedCourse(session.user.id, parsed.data.courseId);
   if (!course) return { error: "Curso não encontrado." };
 
-  const count = await db.externalModule.count({ where: { courseId: parsed.data.courseId } });
+  if (parsed.data.parentModuleId) {
+    const parent = await assertOwnedModule(session.user.id, parsed.data.parentModuleId);
+    if (!parent || parent.courseId !== parsed.data.courseId) return { error: "Módulo pai não encontrado." };
+  }
+
+  const count = await db.externalModule.count({
+    where: { courseId: parsed.data.courseId, parentModuleId: parsed.data.parentModuleId ?? null },
+  });
   await db.externalModule.create({
-    data: { courseId: parsed.data.courseId, title: parsed.data.title, order: count + 1 },
+    data: {
+      courseId: parsed.data.courseId,
+      parentModuleId: parsed.data.parentModuleId,
+      title: parsed.data.title,
+      order: count + 1,
+    },
   });
 
   revalidatePath(`/study-hub/courses/${parsed.data.courseId}`);
@@ -396,41 +410,31 @@ export async function previewImportFromJsonAction(input: ImportJsonInput) {
   return buildPreviewFromJsonPayload(raw);
 }
 
-export async function previewImportFromAiAction(input: GenerateWithAiInput) {
-  const session = await auth();
-  if (!session?.user) return { error: "Sessão expirada.", preview: null };
+/** Cria um módulo (e recursivamente seus submódulos) sob um curso/módulo pai já existente.
+ * Feito como criações simples nível a nível (em vez de um único `create` aninhado do Prisma)
+ * pra evitar a complicação dos dois formatos de input gerados pelo Prisma pra relação
+ * auto-referenciada (um formato pro nível de baixo de `course.modules.create`, outro pros
+ * níveis mais fundos de `children.create`) — volume de dados é pequeno (um curso importado por
+ * vez), não há necessidade de otimizar pra uma única query. */
+async function createModuleTree(
+  courseId: string,
+  parentModuleId: string | null,
+  mod: ImportPreviewModule,
+  order: number
+): Promise<void> {
+  const createdModule = await db.externalModule.create({
+    data: { courseId, parentModuleId, title: mod.title, order },
+  });
 
-  const parsed = generateWithAiSchema.safeParse(input);
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos.", preview: null };
+  if (mod.lessons.length > 0) {
+    await db.externalLesson.createMany({
+      data: mod.lessons.map((lesson, i) => ({ moduleId: createdModule.id, title: lesson.title, order: i + 1 })),
+    });
   }
 
-  const provider = getGeminiProvider();
-
-  let answer: string;
-  try {
-    answer = await provider.generateCourseOutline({ topic: parsed.data.topic });
-  } catch (error) {
-    logger.error("study hub AI course generation failed", { error: String(error) });
-    return { error: "A IA não respondeu agora. Tente novamente em instantes.", preview: null };
+  for (let i = 0; i < mod.modules.length; i++) {
+    await createModuleTree(courseId, createdModule.id, mod.modules[i], i + 1);
   }
-
-  const jsonText = answer
-    .replace(/```json/gi, "")
-    .replace(/```/g, "")
-    .trim();
-
-  let raw: unknown;
-  try {
-    raw = JSON.parse(jsonText);
-  } catch {
-    return {
-      error: "A IA não retornou uma estrutura válida. Tente novamente ou reformule o tópico.",
-      preview: null,
-    };
-  }
-
-  return buildPreviewFromJsonPayload(raw);
 }
 
 export async function commitExternalCourseImportAction(input: CommitImportInput) {
@@ -453,23 +457,13 @@ export async function commitExternalCourseImportAction(input: CommitImportInput)
   }
 
   const course = await db.externalCourse.create({
-    data: {
-      userId: session.user.id,
-      title: parsed.data.title,
-      modules: {
-        create: parsed.data.modules.map((courseModule, moduleIndex) => ({
-          title: courseModule.title,
-          order: moduleIndex + 1,
-          lessons: {
-            create: courseModule.lessons.map((lesson, lessonIndex) => ({
-              title: lesson.title,
-              order: lessonIndex + 1,
-            })),
-          },
-        })),
-      },
-    },
+    data: { userId: session.user.id, title: parsed.data.title },
   });
+
+  for (let i = 0; i < parsed.data.modules.length; i++) {
+    await createModuleTree(course.id, null, parsed.data.modules[i], i + 1);
+  }
+
   await logActivity(session.user.id, "COURSE_STARTED", course.title, `/study-hub/courses/${course.id}`);
 
   revalidatePath("/study-hub");

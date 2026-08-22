@@ -1,6 +1,8 @@
 export type ParsedImportModule = {
   title: string;
   lessons: { title: string }[];
+  /** O formato de texto CURSO:/PASTA:/AULAS: só gera 1 nível — sempre vazio. */
+  modules: [];
 };
 
 export type ParsedImport = {
@@ -56,7 +58,7 @@ export function parseCourseText(rawText: string): ParseResult {
     }
 
     if (mode === "expect-module") {
-      currentModule = { title: line, lessons: [] };
+      currentModule = { title: line, lessons: [], modules: [] };
       modules.push(currentModule);
       mode = "none";
       continue;

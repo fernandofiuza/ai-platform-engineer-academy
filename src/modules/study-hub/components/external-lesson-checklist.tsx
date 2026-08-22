@@ -31,7 +31,205 @@ type Module = {
   id: string;
   title: string;
   lessons: Lesson[];
+  /** Submódulos — espelha a hierarquia de pastas de uma importação por pasta local. */
+  modules: Module[];
 };
+
+function LessonRow({ courseId, lesson }: { courseId: string; lesson: Lesson }) {
+  const router = useRouter();
+  const [optimistic, setOptimistic] = React.useState<boolean | null>(null);
+  const [isPending, setIsPending] = React.useState(false);
+  const completed = optimistic ?? lesson.completed;
+
+  async function toggle() {
+    setOptimistic(!completed);
+    setIsPending(true);
+    const result = await toggleExternalLessonCompletionAction(lesson.id);
+    setIsPending(false);
+    if (result?.error) {
+      toast.error(result.error);
+      setOptimistic(lesson.completed);
+      return;
+    }
+    router.refresh();
+  }
+
+  function remove() {
+    if (!window.confirm(`Excluir a aula "${lesson.title}"?`)) return;
+    setIsPending(true);
+    void deleteExternalLessonAction(lesson.id).then((result) => {
+      setIsPending(false);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="flex items-center gap-3 px-3 py-2.5">
+      <Checkbox
+        checked={completed}
+        onCheckedChange={() => void toggle()}
+        aria-label={`Marcar "${lesson.title}" como concluída`}
+      />
+      <Link
+        href={`/study-hub/courses/${courseId}/lessons/${lesson.id}`}
+        className={cn("flex-1 text-sm hover:underline", completed && "text-muted-foreground line-through")}
+      >
+        {lesson.title}
+      </Link>
+      {lesson.markedForReview ? (
+        <Badge variant="outline" className="gap-1">
+          <RefreshCw className="size-3" /> revisar
+        </Badge>
+      ) : null}
+      {isPending ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : null}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Excluir aula "${lesson.title}"`}
+        onClick={remove}
+      >
+        <Trash2 className="size-3.5 text-muted-foreground" />
+      </Button>
+    </div>
+  );
+}
+
+function ModuleNode({
+  courseId,
+  courseModule,
+  depth,
+}: {
+  courseId: string;
+  courseModule: Module;
+  depth: number;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = React.useTransition();
+  const [newLessonTitle, setNewLessonTitle] = React.useState("");
+  const [newSubmoduleTitle, setNewSubmoduleTitle] = React.useState("");
+  const [showSubmoduleForm, setShowSubmoduleForm] = React.useState(false);
+
+  function addLesson(e: React.FormEvent) {
+    e.preventDefault();
+    const title = newLessonTitle.trim();
+    if (!title) return;
+    startTransition(async () => {
+      const result = await createExternalLessonAction({ moduleId: courseModule.id, title });
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      setNewLessonTitle("");
+      router.refresh();
+    });
+  }
+
+  function addSubmodule(e: React.FormEvent) {
+    e.preventDefault();
+    const title = newSubmoduleTitle.trim();
+    if (!title) return;
+    startTransition(async () => {
+      const result = await createExternalModuleAction({
+        courseId,
+        title,
+        parentModuleId: courseModule.id,
+      });
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      setNewSubmoduleTitle("");
+      setShowSubmoduleForm(false);
+      router.refresh();
+    });
+  }
+
+  function removeModule() {
+    if (!window.confirm(`Excluir o módulo "${courseModule.title}" e tudo dentro dele?`)) return;
+    startTransition(async () => {
+      const result = await deleteExternalModuleAction(courseModule.id);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  return (
+    <div style={depth > 0 ? { marginLeft: 20 } : undefined} className={depth > 0 ? "border-l pl-4" : undefined}>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-medium">{courseModule.title}</h3>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Excluir módulo "${courseModule.title}"`}
+          onClick={removeModule}
+        >
+          <Trash2 className="size-3.5 text-muted-foreground" />
+        </Button>
+      </div>
+
+      {courseModule.lessons.length > 0 ? (
+        <div className="mt-2 divide-y rounded-lg border">
+          {courseModule.lessons.map((lesson) => (
+            <LessonRow key={lesson.id} courseId={courseId} lesson={lesson} />
+          ))}
+        </div>
+      ) : null}
+
+      <form className="mt-2 flex gap-2" onSubmit={addLesson}>
+        <Input
+          value={newLessonTitle}
+          onChange={(e) => setNewLessonTitle(e.target.value)}
+          placeholder="Nova aula..."
+          className="h-8 text-sm"
+        />
+        <Button type="submit" size="sm" variant="outline" disabled={isPending}>
+          <Plus className="size-3.5" /> Aula
+        </Button>
+      </form>
+
+      {courseModule.modules.length > 0 ? (
+        <div className="mt-4 space-y-4">
+          {courseModule.modules.map((child) => (
+            <ModuleNode key={child.id} courseId={courseId} courseModule={child} depth={depth + 1} />
+          ))}
+        </div>
+      ) : null}
+
+      {showSubmoduleForm ? (
+        <form className="mt-2 flex gap-2" style={{ marginLeft: 20 }} onSubmit={addSubmodule}>
+          <Input
+            value={newSubmoduleTitle}
+            onChange={(e) => setNewSubmoduleTitle(e.target.value)}
+            placeholder="Novo submódulo..."
+            className="h-8 text-sm"
+            autoFocus
+          />
+          <Button type="submit" size="sm" variant="outline" disabled={isPending}>
+            <Plus className="size-3.5" /> Submódulo
+          </Button>
+        </form>
+      ) : (
+        <button
+          type="button"
+          className="mt-2 text-xs text-muted-foreground hover:text-foreground hover:underline"
+          style={{ marginLeft: 20 }}
+          onClick={() => setShowSubmoduleForm(true)}
+        >
+          + Adicionar submódulo
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function ExternalLessonChecklist({
   courseId,
@@ -47,77 +245,20 @@ export function ExternalLessonChecklist({
   progressPercent: number;
 }) {
   const router = useRouter();
-  const [pendingLesson, setPendingLesson] = React.useState<string | null>(null);
-  const [optimistic, setOptimistic] = React.useState<Record<string, boolean>>({});
   const [isPending, startTransition] = React.useTransition();
   const [newModuleTitle, setNewModuleTitle] = React.useState("");
-  const [newLessonTitle, setNewLessonTitle] = React.useState<Record<string, string>>({});
-
-  function isCompleted(lesson: Lesson) {
-    return optimistic[lesson.id] ?? lesson.completed;
-  }
-
-  async function toggleLesson(lesson: Lesson) {
-    setOptimistic((prev) => ({ ...prev, [lesson.id]: !isCompleted(lesson) }));
-    setPendingLesson(lesson.id);
-    const result = await toggleExternalLessonCompletionAction(lesson.id);
-    setPendingLesson(null);
-    if (result?.error) {
-      toast.error(result.error);
-      setOptimistic((prev) => ({ ...prev, [lesson.id]: lesson.completed }));
-      return;
-    }
-    router.refresh();
-  }
 
   function addModule(e: React.FormEvent) {
     e.preventDefault();
-    if (!newModuleTitle.trim()) return;
+    const title = newModuleTitle.trim();
+    if (!title) return;
     startTransition(async () => {
-      const result = await createExternalModuleAction({ courseId, title: newModuleTitle.trim() });
+      const result = await createExternalModuleAction({ courseId, title });
       if (result?.error) {
         toast.error(result.error);
         return;
       }
       setNewModuleTitle("");
-      router.refresh();
-    });
-  }
-
-  function addLesson(moduleId: string) {
-    const title = (newLessonTitle[moduleId] ?? "").trim();
-    if (!title) return;
-    startTransition(async () => {
-      const result = await createExternalLessonAction({ moduleId, title });
-      if (result?.error) {
-        toast.error(result.error);
-        return;
-      }
-      setNewLessonTitle((prev) => ({ ...prev, [moduleId]: "" }));
-      router.refresh();
-    });
-  }
-
-  function removeModule(moduleId: string) {
-    if (!window.confirm("Excluir este módulo e todas as aulas dele?")) return;
-    startTransition(async () => {
-      const result = await deleteExternalModuleAction(moduleId);
-      if (result?.error) {
-        toast.error(result.error);
-        return;
-      }
-      router.refresh();
-    });
-  }
-
-  function removeLesson(lessonId: string) {
-    if (!window.confirm("Excluir esta aula?")) return;
-    startTransition(async () => {
-      const result = await deleteExternalLessonAction(lessonId);
-      if (result?.error) {
-        toast.error(result.error);
-        return;
-      }
       router.refresh();
     });
   }
@@ -137,83 +278,11 @@ export function ExternalLessonChecklist({
         </p>
       ) : null}
 
-      {modules.map((courseModule) => (
-        <div key={courseModule.id}>
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-medium">{courseModule.title}</h3>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Excluir módulo "${courseModule.title}"`}
-              onClick={() => removeModule(courseModule.id)}
-            >
-              <Trash2 className="size-3.5 text-muted-foreground" />
-            </Button>
-          </div>
-
-          <div className="mt-2 divide-y rounded-lg border">
-            {courseModule.lessons.length === 0 ? (
-              <p className="px-3 py-2.5 text-sm text-muted-foreground">Nenhuma aula ainda.</p>
-            ) : null}
-            {courseModule.lessons.map((lesson) => (
-              <div key={lesson.id} className="flex items-center gap-3 px-3 py-2.5">
-                <Checkbox
-                  checked={isCompleted(lesson)}
-                  onCheckedChange={() => void toggleLesson(lesson)}
-                  aria-label={`Marcar "${lesson.title}" como concluída`}
-                />
-                <Link
-                  href={`/study-hub/courses/${courseId}/lessons/${lesson.id}`}
-                  className={cn(
-                    "flex-1 text-sm hover:underline",
-                    isCompleted(lesson) && "text-muted-foreground line-through"
-                  )}
-                >
-                  {lesson.title}
-                </Link>
-                {lesson.markedForReview ? (
-                  <Badge variant="outline" className="gap-1">
-                    <RefreshCw className="size-3" /> revisar
-                  </Badge>
-                ) : null}
-                {pendingLesson === lesson.id ? (
-                  <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
-                ) : null}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Excluir aula "${lesson.title}"`}
-                  onClick={() => removeLesson(lesson.id)}
-                >
-                  <Trash2 className="size-3.5 text-muted-foreground" />
-                </Button>
-              </div>
-            ))}
-          </div>
-
-          <form
-            className="mt-2 flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              addLesson(courseModule.id);
-            }}
-          >
-            <Input
-              value={newLessonTitle[courseModule.id] ?? ""}
-              onChange={(e) =>
-                setNewLessonTitle((prev) => ({ ...prev, [courseModule.id]: e.target.value }))
-              }
-              placeholder="Nova aula..."
-              className="h-8 text-sm"
-            />
-            <Button type="submit" size="sm" variant="outline" disabled={isPending}>
-              <Plus className="size-3.5" /> Aula
-            </Button>
-          </form>
-        </div>
-      ))}
+      <div className="space-y-6">
+        {modules.map((courseModule) => (
+          <ModuleNode key={courseModule.id} courseId={courseId} courseModule={courseModule} depth={0} />
+        ))}
+      </div>
 
       <form onSubmit={addModule} className="flex gap-2 border-t pt-4">
         <Input

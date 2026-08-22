@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
+import { getGeminiProvider } from "@/modules/artificial-intelligence/gateway";
 import { logActivity } from "./activity";
 import { parseCourseText } from "./import-parser";
 import { searchStudyHub } from "./queries";
@@ -12,6 +14,7 @@ import {
   createExternalCourseSchema,
   createExternalLessonSchema,
   createExternalModuleSchema,
+  generateWithAiSchema,
   importJsonPayloadSchema,
   importJsonSchema,
   importTextSchema,
@@ -22,12 +25,37 @@ import {
   type CreateExternalCourseInput,
   type CreateExternalLessonInput,
   type CreateExternalModuleInput,
+  type GenerateWithAiInput,
   type ImportJsonInput,
   type ImportTextInput,
   type UpdateExternalCourseInput,
   type UpdateExternalLessonInput,
   type UpdateExternalModuleInput,
 } from "./schema";
+
+/** Reaproveitado por `previewImportFromJsonAction` (JSON colado à mão) e
+ * `previewImportFromAiAction` (JSON gerado pela IA) — mesma validação, mesmo mapeamento
+ * pro formato de prévia usado pela tela de importação. */
+function buildPreviewFromJsonPayload(raw: unknown) {
+  const validated = importJsonPayloadSchema.safeParse(raw);
+  if (!validated.success) {
+    return {
+      error: `JSON no formato errado: ${validated.error.issues[0]?.message ?? "estrutura inválida"}.`,
+      preview: null,
+    };
+  }
+
+  return {
+    error: null,
+    preview: {
+      title: validated.data.course,
+      modules: validated.data.modules.map((m) => ({
+        title: m.name,
+        lessons: m.lessons.map((title) => ({ title })),
+      })),
+    },
+  };
+}
 
 async function assertOwnedCourse(userId: string, courseId: string) {
   const course = await db.externalCourse.findUnique({ where: { id: courseId } });
@@ -365,24 +393,44 @@ export async function previewImportFromJsonAction(input: ImportJsonInput) {
     return { error: "JSON inválido — verifique a sintaxe (vírgulas, chaves, aspas).", preview: null };
   }
 
-  const validated = importJsonPayloadSchema.safeParse(raw);
-  if (!validated.success) {
+  return buildPreviewFromJsonPayload(raw);
+}
+
+export async function previewImportFromAiAction(input: GenerateWithAiInput) {
+  const session = await auth();
+  if (!session?.user) return { error: "Sessão expirada.", preview: null };
+
+  const parsed = generateWithAiSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos.", preview: null };
+  }
+
+  const provider = getGeminiProvider();
+
+  let answer: string;
+  try {
+    answer = await provider.generateCourseOutline({ topic: parsed.data.topic });
+  } catch (error) {
+    logger.error("study hub AI course generation failed", { error: String(error) });
+    return { error: "A IA não respondeu agora. Tente novamente em instantes.", preview: null };
+  }
+
+  const jsonText = answer
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(jsonText);
+  } catch {
     return {
-      error: `JSON no formato errado: ${validated.error.issues[0]?.message ?? "estrutura inválida"}.`,
+      error: "A IA não retornou uma estrutura válida. Tente novamente ou reformule o tópico.",
       preview: null,
     };
   }
 
-  return {
-    error: null,
-    preview: {
-      title: validated.data.course,
-      modules: validated.data.modules.map((m) => ({
-        title: m.name,
-        lessons: m.lessons.map((title) => ({ title })),
-      })),
-    },
-  };
+  return buildPreviewFromJsonPayload(raw);
 }
 
 export async function commitExternalCourseImportAction(input: CommitImportInput) {

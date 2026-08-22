@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   commitExternalCourseImportAction,
+  previewImportFromAiAction,
   previewImportFromJsonAction,
   previewImportFromTextAction,
 } from "@/modules/study-hub/actions";
@@ -58,8 +59,20 @@ export function ImportPreviewForm() {
   const router = useRouter();
   const [rawText, setRawText] = React.useState("");
   const [rawJson, setRawJson] = React.useState("");
+  const [topic, setTopic] = React.useState("");
   const [preview, setPreview] = React.useState<Preview | null>(null);
   const [isPending, startTransition] = React.useTransition();
+
+  function generateWithAi() {
+    startTransition(async () => {
+      const result = await previewImportFromAiAction({ topic });
+      if (result.error || !result.preview) {
+        toast.error(result.error ?? "Não consegui gerar a estrutura.");
+        return;
+      }
+      setPreview(result.preview);
+    });
+  }
 
   function analyzeText() {
     startTransition(async () => {
@@ -201,15 +214,32 @@ export function ImportPreviewForm() {
           <Sparkles className="size-4" /> Importar curso externo
         </CardTitle>
         <CardDescription>
-          Cole a estrutura do curso (gerada por IA ou escrita à mão) e revise antes de importar.
+          Deixe a IA montar a estrutura a partir de um tópico, ou cole o texto/JSON à mão — sempre
+          com prévia editável antes de importar.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="text">
+        <Tabs defaultValue="ai">
           <TabsList>
+            <TabsTrigger value="ai">IA</TabsTrigger>
             <TabsTrigger value="text">Texto</TabsTrigger>
             <TabsTrigger value="json">JSON</TabsTrigger>
           </TabsList>
+          <TabsContent value="ai" className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="import-ai-topic">Curso ou tópico</Label>
+              <Input
+                id="import-ai-topic"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="Ex.: AWS Certified Solutions Architect, Docker para iniciantes..."
+              />
+            </div>
+            <Button type="button" onClick={generateWithAi} disabled={isPending || !topic.trim()}>
+              {isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              Gerar estrutura com IA
+            </Button>
+          </TabsContent>
           <TabsContent value="text" className="space-y-3">
             <Textarea
               value={rawText}

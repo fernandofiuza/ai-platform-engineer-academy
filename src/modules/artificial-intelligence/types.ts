@@ -32,6 +32,9 @@ export interface AIProvider {
   suggestNextActivity(input: { context: AIContext }): Promise<string>;
   explainConcept(input: { content: string; question?: string }): Promise<string>;
   converse(input: { persona: AIPersona; message: string; context: AIContext }): Promise<string>;
+  /** Gera a estrutura (módulos + aulas) de um curso sobre um tópico, como texto — o chamador
+   * (Study Hub) faz o parse/validação do JSON, igual já faz para importação manual. */
+  generateCourseOutline(input: { topic: string }): Promise<string>;
 }
 
 export const MAX_INPUT_LENGTH = 4000;

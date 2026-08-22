@@ -56,6 +56,10 @@ export const importJsonSchema = z.object({
   rawJson: z.string().trim().min(1, "Cole o JSON do curso."),
 });
 
+export const generateWithAiSchema = z.object({
+  topic: z.string().trim().min(2, "Descreva o curso ou tópico que você quer estudar.").max(200),
+});
+
 export const importJsonPayloadSchema = z.object({
   course: z.string().trim().min(1, 'Falta o campo "course".'),
   modules: z
@@ -83,5 +87,6 @@ export type CreateExternalLessonInput = z.infer<typeof createExternalLessonSchem
 export type UpdateExternalLessonInput = z.infer<typeof updateExternalLessonSchema>;
 export type ImportTextInput = z.infer<typeof importTextSchema>;
 export type ImportJsonInput = z.infer<typeof importJsonSchema>;
+export type GenerateWithAiInput = z.infer<typeof generateWithAiSchema>;
 export type CommitImportInput = z.infer<typeof commitImportSchema>;
 export type ImportPreview = CommitImportInput;

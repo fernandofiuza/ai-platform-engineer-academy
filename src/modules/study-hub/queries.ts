@@ -1,4 +1,53 @@
 import { db } from "@/lib/db";
+import { getStudyPlan } from "@/modules/planning/queries";
+import { getSessionsInRange } from "@/modules/study-sessions/queries";
+
+export function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+export function addDays(d: Date, days: number) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
+}
+
+/** Semana começando na segunda-feira (a semana de estudo em si é sempre seg-dom,
+ * independente do rótulo de dia usado em `planning/format.ts`). */
+export function startOfWeek(d: Date) {
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  return addDays(startOfDay(d), diff);
+}
+
+/** Reaproveita `StudyPlan.dailyHours`/`availableDays` (já editável em `/planner`) como meta
+ * de minutos — sem tabela nova. Retorna `null` se o usuário ainda não configurou um plano. */
+export async function getGoalProgress(userId: string) {
+  const plan = await getStudyPlan(userId);
+  if (!plan) return null;
+
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayEnd = addDays(todayStart, 1);
+  const weekStart = startOfWeek(now);
+  const weekEnd = addDays(weekStart, 7);
+
+  const [todaySessions, weekSessions] = await Promise.all([
+    getSessionsInRange(userId, todayStart, todayEnd),
+    getSessionsInRange(userId, weekStart, weekEnd),
+  ]);
+
+  const sumMinutes = (sessions: { durationMinutes: number | null }[]) =>
+    sessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
+
+  const dailyTargetMinutes = Math.round(plan.dailyHours * 60);
+  const weeklyTargetMinutes = dailyTargetMinutes * Math.max(plan.availableDays.length, 1);
+
+  return {
+    dailyTargetMinutes,
+    dailyActualMinutes: sumMinutes(todaySessions),
+    weeklyTargetMinutes,
+    weeklyActualMinutes: sumMinutes(weekSessions),
+  };
+}
 
 /** Reaproveitada pelo dashboard principal (aulas concluídas) e pelo Study Hub (continuar
  * estudando) — mesma base de cálculo (LessonCompletion / Lesson disponíveis), num só lugar. */

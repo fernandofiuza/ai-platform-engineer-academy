@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { awardXp, checkAndAwardBadges } from "@/modules/gamification/service";
+import { logActivity } from "@/modules/study-hub/activity";
 import { finishSessionSchema, startSessionSchema, type FinishSessionInput, type StartSessionInput } from "./schema";
 
 export async function startSessionAction(input: StartSessionInput) {
@@ -48,7 +49,10 @@ export async function startSessionAction(input: StartSessionInput) {
 }
 
 async function assertOwnedActiveSession(userId: string, sessionId: string) {
-  const studySession = await db.studySession.findUnique({ where: { id: sessionId } });
+  const studySession = await db.studySession.findUnique({
+    where: { id: sessionId },
+    include: { lesson: true, externalLesson: { include: { module: true } } },
+  });
   if (!studySession || studySession.userId !== userId || studySession.endedAt) {
     return null;
   }
@@ -140,6 +144,16 @@ export async function finishSessionAction(input: FinishSessionInput) {
     });
     await checkAndAwardBadges(session.user.id);
   }
+
+  const sessionTitle = studySession.lesson?.title ?? studySession.externalLesson?.title ?? "Estudo livre";
+  const sessionHref = studySession.lesson
+    ? `/learn/${studySession.lesson.id}`
+    : studySession.externalLesson
+      ? `/study-hub/courses/${studySession.externalLesson.module.courseId}/lessons/${studySession.externalLesson.id}`
+      : undefined;
+  await logActivity(session.user.id, "SESSION_FINISHED", sessionTitle, sessionHref, {
+    durationMinutes,
+  });
 
   revalidatePath("/sessions");
   revalidatePath("/calendar");

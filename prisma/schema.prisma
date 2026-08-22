@@ -37,6 +37,7 @@ model User {
   studySessions         StudySession[]
   notes                 Note[]
   externalCourses       ExternalCourse[]
+  activityLogEntries    ActivityLogEntry[]
   assessmentAttempts    AssessmentAttempt[]
   flashcardReviews      FlashcardReview[]
   skillProgress         UserSkillProgress[]
@@ -619,6 +620,34 @@ model ExternalLesson {
 
   @@unique([moduleId, order])
   @@map("external_lessons")
+}
+
+enum ActivityType {
+  LESSON_COMPLETED
+  LESSON_REOPENED
+  SESSION_FINISHED
+  LESSON_MARKED_REVIEW
+  LESSON_UNMARKED_REVIEW
+  COURSE_STARTED
+  COURSE_COMPLETED
+}
+
+/// Log de eventos do Study Hub (histórico de atividades). `title`/`href` ficam
+/// denormalizados na própria linha em vez de FK polimórfica pra Lesson/ExternalLesson/
+/// ExternalCourse — o histórico nunca precisa de join pra exibir.
+model ActivityLogEntry {
+  id        String       @id @default(cuid())
+  userId    String
+  type      ActivityType
+  title     String
+  href      String?
+  metadata  Json?
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("activity_log_entries")
 }
 
 // ---------------------------------------------------------------------------

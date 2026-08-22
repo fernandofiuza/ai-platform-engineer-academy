@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { logActivity } from "./activity";
 import { parseCourseText } from "./import-parser";
 import { searchStudyHub } from "./queries";
 import {
@@ -64,6 +65,7 @@ export async function createExternalCourseAction(input: CreateExternalCourseInpu
   const course = await db.externalCourse.create({
     data: { userId: session.user.id, ...parsed.data },
   });
+  await logActivity(session.user.id, "COURSE_STARTED", course.title, `/study-hub/courses/${course.id}`);
 
   revalidatePath("/study-hub");
   revalidatePath("/study-hub/courses");
@@ -84,6 +86,9 @@ export async function updateExternalCourseAction(input: UpdateExternalCourseInpu
 
   const { courseId, ...data } = parsed.data;
   await db.externalCourse.update({ where: { id: courseId }, data });
+  if (data.status === "COMPLETED" && course.status !== "COMPLETED") {
+    await logActivity(session.user.id, "COURSE_COMPLETED", data.title, `/study-hub/courses/${courseId}`);
+  }
 
   revalidatePath("/study-hub");
   revalidatePath("/study-hub/courses");
@@ -232,6 +237,13 @@ export async function toggleExternalLessonCompletionAction(lessonId: string) {
       lastAccessedAt: new Date(),
     },
   });
+  const lessonHref = `/study-hub/courses/${lesson.module.courseId}/lessons/${lessonId}`;
+  await logActivity(
+    session.user.id,
+    completed ? "LESSON_COMPLETED" : "LESSON_REOPENED",
+    lesson.title,
+    lessonHref
+  );
 
   revalidatePath(`/study-hub/courses/${lesson.module.courseId}`);
   revalidatePath(`/study-hub/courses/${lesson.module.courseId}/lessons/${lessonId}`);
@@ -244,14 +256,25 @@ export async function toggleLessonReviewMarkAction(lessonId: string) {
   const session = await auth();
   if (!session?.user) return { error: "Sessão expirada.", marked: false };
 
-  const existing = await db.lessonReviewMark.findUnique({
-    where: { userId_lessonId: { userId: session.user.id, lessonId } },
-  });
+  const [existing, lesson] = await Promise.all([
+    db.lessonReviewMark.findUnique({
+      where: { userId_lessonId: { userId: session.user.id, lessonId } },
+    }),
+    db.lesson.findUnique({ where: { id: lessonId }, select: { title: true } }),
+  ]);
 
   if (existing) {
     await db.lessonReviewMark.delete({ where: { id: existing.id } });
   } else {
     await db.lessonReviewMark.create({ data: { userId: session.user.id, lessonId } });
+  }
+  if (lesson) {
+    await logActivity(
+      session.user.id,
+      existing ? "LESSON_UNMARKED_REVIEW" : "LESSON_MARKED_REVIEW",
+      lesson.title,
+      `/learn/${lessonId}`
+    );
   }
 
   revalidatePath(`/learn/${lessonId}`);
@@ -266,10 +289,17 @@ export async function toggleExternalLessonReviewAction(lessonId: string) {
   const lesson = await assertOwnedLesson(session.user.id, lessonId);
   if (!lesson) return { error: "Aula não encontrada." };
 
+  const markedForReview = !lesson.markedForReview;
   await db.externalLesson.update({
     where: { id: lessonId },
-    data: { markedForReview: !lesson.markedForReview },
+    data: { markedForReview },
   });
+  await logActivity(
+    session.user.id,
+    markedForReview ? "LESSON_MARKED_REVIEW" : "LESSON_UNMARKED_REVIEW",
+    lesson.title,
+    `/study-hub/courses/${lesson.module.courseId}/lessons/${lessonId}`
+  );
 
   revalidatePath(`/study-hub/courses/${lesson.module.courseId}`);
   revalidatePath(`/study-hub/courses/${lesson.module.courseId}/lessons/${lessonId}`);
@@ -392,6 +422,7 @@ export async function commitExternalCourseImportAction(input: CommitImportInput)
       },
     },
   });
+  await logActivity(session.user.id, "COURSE_STARTED", course.title, `/study-hub/courses/${course.id}`);
 
   revalidatePath("/study-hub");
   revalidatePath("/study-hub/courses");

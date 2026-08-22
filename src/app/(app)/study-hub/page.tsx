@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, RefreshCw, Upload } from "lucide-react";
+import { ArrowRight, BarChart3, History, RefreshCw, Upload } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +41,17 @@ export default async function StudyHubPage() {
             Sua jornada de estudos — conteúdo do APEX e cursos externos, num só lugar.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/study-hub/historico">
+              <History className="size-4" /> Histórico
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/study-hub/estatisticas">
+              <BarChart3 className="size-4" /> Estatísticas
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link href="/study-hub/import">
               <Upload className="size-4" /> Importar

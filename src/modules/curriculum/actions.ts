@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger";
 import { importCurriculum } from "@/modules/curriculum-import/service";
 import { awardXp, checkAndAwardBadges } from "@/modules/gamification/service";
 import { recomputeSkillsForLesson } from "@/modules/skills/service";
+import { logActivity } from "@/modules/study-hub/activity";
 import {
   checklistItemUpdateSchema,
   completeLessonSchema,
@@ -102,6 +103,12 @@ export async function completeLessonAction(input: CompleteLessonInput) {
 
   if (!existing) {
     await awardXp(session.user.id, "lesson_completed", 10, { type: "Lesson", id: parsed.data.lessonId });
+    await logActivity(
+      session.user.id,
+      "LESSON_COMPLETED",
+      lesson.title,
+      `/learn/${parsed.data.lessonId}`
+    );
   }
   await recomputeSkillsForLesson(session.user.id, parsed.data.lessonId);
   await checkAndAwardBadges(session.user.id);
@@ -132,6 +139,8 @@ export async function uncompleteLessonAction(lessonId: string) {
     return { error: "Esta aula ainda não foi concluída." };
   }
 
+  const lesson = await db.lesson.findUnique({ where: { id: lessonId }, select: { title: true } });
+
   await db.lessonCompletion.delete({
     where: { userId_lessonId: { userId: session.user.id, lessonId } },
   });
@@ -139,6 +148,9 @@ export async function uncompleteLessonAction(lessonId: string) {
     where: { userId: session.user.id, kind: "lesson_completed", refType: "Lesson", refId: lessonId },
   });
   await recomputeSkillsForLesson(session.user.id, lessonId);
+  if (lesson) {
+    await logActivity(session.user.id, "LESSON_REOPENED", lesson.title, `/learn/${lessonId}`);
+  }
 
   revalidatePath("/learn");
   revalidatePath(`/learn/${lessonId}`);

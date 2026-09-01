@@ -11,21 +11,25 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { useBreadcrumbLabels } from "@/components/layout/breadcrumb-labels";
 import { ALL_NAV_ITEMS } from "@/lib/nav-config";
 
 const EXTRA_LABELS: Record<string, string> = {
   profile: "Perfil",
   settings: "Configurações",
   admin: "Administração",
+  courses: "Meus cursos",
+  lessons: "Aulas",
 };
 
-function labelFor(segment: string) {
+function labelFor(segment: string, dynamicLabels: Record<string, string>) {
   const navItem = ALL_NAV_ITEMS.find((item) => item.href === `/${segment}`);
-  return navItem?.title ?? EXTRA_LABELS[segment] ?? segment;
+  return navItem?.title ?? EXTRA_LABELS[segment] ?? dynamicLabels[segment] ?? segment;
 }
 
 export function Breadcrumbs() {
   const pathname = usePathname();
+  const dynamicLabels = useBreadcrumbLabels();
   const segments = pathname.split("/").filter(Boolean);
 
   if (segments.length === 0) {
@@ -48,10 +52,10 @@ export function Breadcrumbs() {
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 {isLast ? (
-                  <BreadcrumbPage>{labelFor(segment)}</BreadcrumbPage>
+                  <BreadcrumbPage>{labelFor(segment, dynamicLabels)}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
-                    <Link href={href}>{labelFor(segment)}</Link>
+                    <Link href={href}>{labelFor(segment, dynamicLabels)}</Link>
                   </BreadcrumbLink>
                 )}
               </BreadcrumbItem>

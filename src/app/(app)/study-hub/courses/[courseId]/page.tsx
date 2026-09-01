@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
+import { BreadcrumbLabel } from "@/components/layout/breadcrumb-labels";
 import { ExternalCourseDeleteButton } from "@/modules/study-hub/components/external-course-delete-button";
 import { ExternalCourseFormDialog } from "@/modules/study-hub/components/external-course-form-dialog";
 import { ExternalLessonChecklist } from "@/modules/study-hub/components/external-lesson-checklist";
@@ -43,6 +44,7 @@ export default async function ExternalCourseDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <BreadcrumbLabel segment={course.id} label={course.title} />
       <div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Link href="/study-hub/courses" className="hover:underline">

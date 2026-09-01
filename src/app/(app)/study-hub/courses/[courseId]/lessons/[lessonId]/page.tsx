@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 
 import { auth } from "@/lib/auth";
+import { BreadcrumbLabel } from "@/components/layout/breadcrumb-labels";
 import { ExternalLessonCompleteToggle } from "@/modules/study-hub/components/external-lesson-complete-toggle";
 import { ExternalLessonNotesPanel } from "@/modules/study-hub/components/external-lesson-notes-panel";
 import { ExternalLessonReviewToggle } from "@/modules/study-hub/components/external-lesson-review-toggle";
@@ -48,6 +49,8 @@ export default async function ExternalLessonDetailPage({
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <LessonViewRecorder lessonId={lessonId} />
+      <BreadcrumbLabel segment={courseId} label={course.title} />
+      <BreadcrumbLabel segment={lessonId} label={lesson.title} />
 
       <div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">

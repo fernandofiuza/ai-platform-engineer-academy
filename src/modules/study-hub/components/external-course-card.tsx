@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { ExternalCourseDeleteButton } from "@/modules/study-hub/components/external-course-delete-button";
 import {
   EXTERNAL_COURSE_STATUS_BADGE_VARIANT,
   EXTERNAL_COURSE_STATUS_LABELS,
@@ -30,9 +31,12 @@ export function ExternalCourseCard({
         <CardHeader>
           <div className="flex items-start justify-between gap-2">
             <CardTitle className="text-base">{course.title}</CardTitle>
-            <Badge variant={EXTERNAL_COURSE_STATUS_BADGE_VARIANT[course.status]}>
-              {EXTERNAL_COURSE_STATUS_LABELS[course.status]}
-            </Badge>
+            <div className="flex shrink-0 items-center gap-1">
+              <Badge variant={EXTERNAL_COURSE_STATUS_BADGE_VARIANT[course.status]}>
+                {EXTERNAL_COURSE_STATUS_LABELS[course.status]}
+              </Badge>
+              <ExternalCourseDeleteButton courseId={course.id} courseTitle={course.title} />
+            </div>
           </div>
           {course.platform ? (
             <p className="text-sm text-muted-foreground">{course.platform}</p>

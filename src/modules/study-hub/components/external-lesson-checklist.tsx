@@ -24,8 +24,16 @@ type Lesson = {
   id: string;
   title: string;
   completed: boolean;
+  completedAt: Date | string | null;
   markedForReview: boolean;
 };
+
+function formatCompletedAt(completedAt: Date | string) {
+  const date = new Date(completedAt);
+  const day = date.toLocaleDateString("pt-BR");
+  const time = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return `${day} às ${time}`;
+}
 
 type Module = {
   id: string;
@@ -74,6 +82,11 @@ function LessonRow({ courseId, lesson }: { courseId: string; lesson: Lesson }) {
         onCheckedChange={() => void toggle()}
         aria-label={`Marcar "${lesson.title}" como concluída`}
       />
+      {completed && lesson.completedAt ? (
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {formatCompletedAt(lesson.completedAt)}
+        </span>
+      ) : null}
       <Link
         href={`/study-hub/courses/${courseId}/lessons/${lesson.id}`}
         className={cn("flex-1 text-sm hover:underline", completed && "text-muted-foreground line-through")}

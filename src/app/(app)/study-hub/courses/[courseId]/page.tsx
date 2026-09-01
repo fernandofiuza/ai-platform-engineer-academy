@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
+import { ExternalCourseDeleteButton } from "@/modules/study-hub/components/external-course-delete-button";
 import { ExternalCourseFormDialog } from "@/modules/study-hub/components/external-course-form-dialog";
 import { ExternalLessonChecklist } from "@/modules/study-hub/components/external-lesson-checklist";
 import { getExternalCourseDetail } from "@/modules/study-hub/queries";
@@ -67,6 +68,7 @@ export default async function ExternalCourseDetailPage({
                 </button>
               }
             />
+            <ExternalCourseDeleteButton courseId={course.id} courseTitle={course.title} />
           </div>
         </div>
         {course.description ? (

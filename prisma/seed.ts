@@ -61,7 +61,7 @@ async function seedDemoLessons() {
     create: {
       weekId: weekZero.id,
       order: 0,
-      title: "Bem-vindo à AI Platform Engineer Academy",
+      title: "Bem-vindo à Apex",
       objective: "Entender o que é a formação, sua duração e o que ela vai cobrir.",
       durationMinutes: 15,
       isDemo: true,

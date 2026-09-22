@@ -23,9 +23,9 @@ test("fluxo crítico: registro/login, aula, sessão de estudo, conclusão e prog
 
   // Abrir aula
   await page.goto("/learn");
-  await page.getByText("Bem-vindo à AI Platform Engineer Academy").click();
+  await page.getByText("Bem-vindo à Apex").click();
   await page.waitForURL("**/learn/**");
-  await expect(page.getByRole("heading", { name: "Bem-vindo à AI Platform Engineer Academy" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bem-vindo à Apex" })).toBeVisible();
 
   // Registrar estudo (sessão de estudo persistente)
   await page.goto("/sessions");
@@ -37,7 +37,7 @@ test("fluxo crítico: registro/login, aula, sessão de estudo, conclusão e prog
 
   // Concluir aula
   await page.goto("/learn/");
-  await page.getByText("Bem-vindo à AI Platform Engineer Academy").click();
+  await page.getByText("Bem-vindo à Apex").click();
   await page.waitForURL("**/learn/**");
   await page.locator("textarea#whatLearned").fill("Testei o fluxo crítico end-to-end.");
   await page.getByRole("button", { name: /Concluir aula/ }).click();

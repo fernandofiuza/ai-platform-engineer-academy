@@ -1,5 +1,6 @@
 import type { ExternalLesson, ExternalModule } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { getNoteCountsByScope } from "@/modules/notes/queries";
 import { getStudyPlan } from "@/modules/planning/queries";
 import { getSessionsInRange } from "@/modules/study-sessions/queries";
 
@@ -310,6 +311,27 @@ export async function getExternalCourses(userId: string) {
   });
 }
 
+type ModuleTreeWithNoteCounts = ExternalModule & {
+  lessons: (ExternalLesson & { noteCount: number })[];
+  modules: ModuleTreeWithNoteCounts[];
+};
+
+/** Anota cada aula da árvore com sua contagem de anotações (`noteCount`), pra exibir o indicador
+ * "tem anotação" na listagem em árvore do Study Hub sem N+1 query. */
+function withNoteCounts(
+  tree: ExternalModuleTree[],
+  countsByLessonId: Record<string, number>
+): ModuleTreeWithNoteCounts[] {
+  return tree.map((mod) => ({
+    ...mod,
+    lessons: mod.lessons.map((lesson) => ({
+      ...lesson,
+      noteCount: countsByLessonId[lesson.id] ?? 0,
+    })),
+    modules: withNoteCounts(mod.modules, countsByLessonId),
+  }));
+}
+
 export async function getExternalCourseDetail(userId: string, courseId: string) {
   const course = await db.externalCourse.findUnique({ where: { id: courseId } });
   if (!course || course.userId !== userId) return null;
@@ -319,7 +341,13 @@ export async function getExternalCourseDetail(userId: string, courseId: string) 
     db.externalLesson.findMany({ where: { module: { courseId } } }),
   ]);
 
-  const moduleTree = buildModuleTree(modules, lessons);
+  const noteCounts = await getNoteCountsByScope(
+    userId,
+    "EXTERNAL_LESSON",
+    lessons.map((l) => l.id)
+  );
+
+  const moduleTree = withNoteCounts(buildModuleTree(modules, lessons), noteCounts);
   const totalLessons = lessons.length;
   const completedLessons = lessons.filter((l) => l.completed).length;
 

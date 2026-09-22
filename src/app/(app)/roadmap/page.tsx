@@ -14,6 +14,7 @@ import {
   getWeekById,
 } from "@/modules/curriculum/queries";
 import { getLessonSchedule } from "@/modules/planning/queries";
+import { getTopicNoteCountsByName } from "@/modules/topics/queries";
 
 export const metadata: Metadata = { title: "Roadmap" };
 
@@ -56,6 +57,7 @@ export default async function RoadmapPage() {
   );
 
   const schedule = session?.user ? await getLessonSchedule(session.user.id) : null;
+  const topicNoteCounts = session?.user ? await getTopicNoteCountsByName(session.user.id) : {};
   const dateRangeByWeekNumber = new Map<number, { start: Date; end: Date }>();
   for (const item of schedule?.items ?? []) {
     const existing = dateRangeByWeekNumber.get(item.weekNumber);
@@ -74,7 +76,7 @@ export default async function RoadmapPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           {program.name} — {program.totalWeeks} semanas em {program.phases.length} fases.{" "}
           {definedWeeks} de {totalWeeks} semanas já têm conteúdo definido; as demais estão
-          marcadas como <Badge variant="secondary">Planejado</Badge>.
+          marcadas como <Badge variant="neutral">Planejado</Badge>.
         </p>
       </div>
 
@@ -111,6 +113,7 @@ export default async function RoadmapPage() {
 
       <RoadmapExplorer
         phases={program.phases}
+        topicNoteCounts={topicNoteCounts}
         dateRangeByWeekNumber={Object.fromEntries(
           [...dateRangeByWeekNumber.entries()].map(([weekNumber, range]) => [
             weekNumber,

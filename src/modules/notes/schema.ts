@@ -17,6 +17,10 @@ export const createNoteSchema = z.object({
   tags: z.array(z.string()).default([]),
   lessonId: z.string().optional(),
   externalLessonId: z.string().optional(),
+  weekId: z.string().optional(),
+  /** Vínculo com tema/subtema (`Topic`) — independente de lesson/externalLesson/week, uma
+   * anotação pode ter zero, um ou vários temas ao mesmo tempo. */
+  topicIds: z.array(z.string()).default([]),
 });
 
 export const updateNoteSchema = createNoteSchema.extend({

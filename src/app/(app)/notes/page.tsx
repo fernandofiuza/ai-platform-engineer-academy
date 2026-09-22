@@ -10,25 +10,30 @@ import { Input } from "@/components/ui/input";
 import { NoteFormDialog } from "@/modules/notes/components/note-form-dialog";
 import { NoteCard } from "@/modules/notes/components/note-card";
 import { getAllTagsForUser, getNotes } from "@/modules/notes/queries";
+import { getAllTopics } from "@/modules/topics/queries";
+import { getWeekOptions } from "@/modules/planning/queries";
 
 export const metadata: Metadata = { title: "Anotações" };
 
 export default async function NotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tag?: string; favorite?: string }>;
+  searchParams: Promise<{ q?: string; tag?: string; favorite?: string; topic?: string }>;
 }) {
   const params = await searchParams;
   const session = await auth();
   const userId = session!.user.id;
 
-  const [notes, tags] = await Promise.all([
+  const [notes, tags, topics, weekOptions] = await Promise.all([
     getNotes(userId, {
       search: params.q,
       tag: params.tag,
       favoriteOnly: params.favorite === "1",
+      topicId: params.topic,
     }),
     getAllTagsForUser(userId),
+    getAllTopics(),
+    getWeekOptions(),
   ]);
 
   return (
@@ -38,7 +43,7 @@ export default async function NotesPage({
           <h1 className="text-2xl font-semibold tracking-tight">Anotações</h1>
           <p className="mt-1 text-sm text-muted-foreground">Suas anotações gerais — anotações de uma aula específica ficam na própria aula.</p>
         </div>
-        <NoteFormDialog />
+        <NoteFormDialog availableTopics={topics} weekOptions={weekOptions} />
       </div>
 
       <form className="flex gap-2" action="/notes">
@@ -76,12 +81,28 @@ export default async function NotesPage({
         </div>
       ) : null}
 
+      {topics.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-muted-foreground">Temas:</span>
+          {topics.map((topic) => (
+            <Link key={topic.id} href={`/notes?topic=${topic.id}`}>
+              <Badge variant={params.topic === topic.id ? "default" : "outline"}>{topic.name}</Badge>
+            </Link>
+          ))}
+          {params.topic ? (
+            <Link href="/notes">
+              <Badge variant="secondary">limpar filtro</Badge>
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
       {notes.length === 0 ? (
         <Card className="border-dashed">
           <CardHeader>
             <CardTitle>Nenhuma anotação encontrada</CardTitle>
             <CardDescription>
-              {params.q || params.tag || params.favorite
+              {params.q || params.tag || params.favorite || params.topic
                 ? "Tente outro filtro ou crie uma nova anotação."
                 : "Crie sua primeira anotação com o botão acima."}
             </CardDescription>
@@ -90,7 +111,7 @@ export default async function NotesPage({
       ) : (
         <div className="space-y-3">
           {notes.map((note) => (
-            <NoteCard key={note.id} note={note} />
+            <NoteCard key={note.id} note={note} availableTopics={topics} weekOptions={weekOptions} />
           ))}
         </div>
       )}

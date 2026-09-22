@@ -30,14 +30,22 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-apea}:${POSTGRES_PASSWORD:-apea_dev_password}@db:5432/${POSTGRES_DB:-apea}?schema=public
       AUTH_SECRET: ${AUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-      AI_PROVIDER: ${AI_PROVIDER:-mock}
-      AI_API_KEY: ${AI_API_KEY:-}
-      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+      AI_TEACHING_PROVIDER: ${AI_TEACHING_PROVIDER:-openai}
+      AI_OPENAI_API_KEY: ${AI_OPENAI_API_KEY:-}
+      AI_OPENAI_MODEL: ${AI_OPENAI_MODEL:-gpt-4o-mini}
+      AI_CLAUDE_API_KEY: ${AI_CLAUDE_API_KEY:-}
+      AI_CLAUDE_MODEL: ${AI_CLAUDE_MODEL:-claude-sonnet-5}
+      AI_GEMINI_API_KEY: ${AI_GEMINI_API_KEY:-}
+      AI_GEMINI_MODEL: ${AI_GEMINI_MODEL:-gemini-flash-latest}
       NODE_ENV: production
+      NOTES_STORAGE_DIR: /app/storage/note-attachments
     ports:
       - "3000:3000"
+    volumes:
+      - notes_storage:/app/storage/note-attachments
     profiles:
       - app
 
 volumes:
   db_data:
+  notes_storage:

@@ -71,6 +71,7 @@ export function RoadmapExplorer({
   phases,
   dateRangeByWeekNumber = {},
   scheduleItems,
+  topicNoteCounts = {},
 }: {
   phases: PhaseSummary[];
   /** Datas reais do cronograma dinâmico (calculadas a partir do Planejador), por número de
@@ -81,6 +82,9 @@ export function RoadmapExplorer({
    * visual, `RoadmapPath`) para colorir o progresso de cada módulo e marcar "você está aqui" —
    * ver `docs/DECISIONS.md`. */
   scheduleItems?: ScheduleItem[];
+  /** Contagem de anotações do aluno por nome de tema/módulo (`Topic`) — usado pela Trilha
+   * Formação para sinalizar módulos com anotação vinculada. */
+  topicNoteCounts?: Record<string, { topicId: string; count: number }>;
 }) {
   const [track, setTrack] = React.useState<TrackKey>("FORMACAO");
   const [phaseFilter, setPhaseFilter] = React.useState<string>("ALL");
@@ -149,7 +153,7 @@ export function RoadmapExplorer({
             </Link>
             ; clique em qualquer módulo para ver as aulas daquela semana.
           </p>
-          <RoadmapPath phases={phases} scheduleItems={scheduleItems} />
+          <RoadmapPath phases={phases} scheduleItems={scheduleItems} topicNoteCounts={topicNoteCounts} />
         </>
       ) : (
         <>
@@ -247,7 +251,7 @@ export function RoadmapExplorer({
               {filteredPhases.map((phase) => (
                 <div key={phase.id} className="flex gap-4">
                   <div className="flex flex-col items-center">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
                       {phase.order}
                     </span>
                     <span className="mt-1 w-px flex-1 bg-border" />

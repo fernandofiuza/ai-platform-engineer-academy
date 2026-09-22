@@ -88,7 +88,7 @@ export default async function LessonDetailPage({
             {scheduleEntry ? stripWeekDayPrefix(lesson.title) : lesson.title}
           </h1>
           {lesson.isDemo ? <Badge variant="secondary">demonstrativa</Badge> : null}
-          {completion ? <Badge>concluída</Badge> : null}
+          {completion ? <Badge variant="sage">concluída</Badge> : null}
           {session?.user ? (
             <LessonReviewToggle lessonId={lesson.id} initialMarked={markedForReview} />
           ) : null}

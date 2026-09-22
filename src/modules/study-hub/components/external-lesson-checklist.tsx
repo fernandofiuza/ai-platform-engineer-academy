@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Loader2, Plus, RefreshCw, StickyNote, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ type Lesson = {
   completed: boolean;
   completedAt: Date | string | null;
   markedForReview: boolean;
+  noteCount?: number;
 };
 
 function formatCompletedAt(completedAt: Date | string) {
@@ -93,6 +94,15 @@ function LessonRow({ courseId, lesson }: { courseId: string; lesson: Lesson }) {
       >
         {lesson.title}
       </Link>
+      {lesson.noteCount ? (
+        <span
+          className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
+          title={lesson.noteCount === 1 ? "1 anotação" : `${lesson.noteCount} anotações`}
+        >
+          <StickyNote className="size-3.5" />
+          {lesson.noteCount}
+        </span>
+      ) : null}
       {lesson.markedForReview ? (
         <Badge variant="outline" className="gap-1">
           <RefreshCw className="size-3" /> revisar

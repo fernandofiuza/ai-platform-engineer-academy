@@ -1,4 +1,4 @@
-// AI Platform Engineer Academy — Prisma schema
+// Apex (produto original "AI Platform Engineer Academy") — Prisma schema
 // Fase 1: identidade/acesso. Fase 2: currículo (Program..Lesson) + importação de Curso.md.
 // Track/Module, Technology/Skill, Activity/Checkpoint ficam para quando houver conteúdo real
 // para popular esses níveis (ver docs/DECISIONS.md — "Fase 2: schema mínimo por entrega vertical").
@@ -433,10 +433,57 @@ model Note {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topics      NoteTopic[]
+  attachments NoteAttachment[]
 
   @@index([userId])
   @@map("notes")
+}
+
+/** Arquivo anexado a uma anotação (imagem, PDF, texto/markdown de referência). `storageKey` é
+ * opaco (gerado, nunca derivado do nome original) — quem resolve `storageKey` em bytes é o
+ * `FileStorageProvider` (`src/lib/storage`), nunca o código de domínio diretamente. Servido só
+ * via `/api/notes/attachments/[id]`, autenticado e dono-only — nunca em `public/`. */
+model NoteAttachment {
+  id           String   @id @default(cuid())
+  noteId       String
+  originalName String
+  storageKey   String
+  mimeType     String
+  size         Int
+  createdAt    DateTime @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@map("note_attachments")
+}
+
+/** Tema/subtema derivado do nome de módulo das semanas (ex.: "Linux", "Redes") — ver
+ * `extractModuleName()` em `src/modules/curriculum/module-name.ts`. Populada automaticamente a
+ * cada importação de currículo (`syncTopicsFromWeeks`), nunca editada manualmente. Vínculo de
+ * `Note` com tema é independente do vínculo de semana/aula — uma anotação pode ter só um tema,
+ * só uma semana, ambos, ou nenhum. */
+model Topic {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  notes NoteTopic[]
+
+  @@map("topics")
+}
+
+model NoteTopic {
+  noteId  String
+  topicId String
+
+  note  Note  @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, topicId])
+  @@map("note_topics")
 }
 
 enum QuestionType {

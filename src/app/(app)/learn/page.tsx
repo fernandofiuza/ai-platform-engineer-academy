@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, CheckCircle2, Clock } from "lucide-react";
+import { ArrowRight, BookOpen, CheckCircle2, Clock, StickyNote } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { getLessonsForLearnPage } from "@/modules/curriculum/queries";
+import { getNoteCountsByScope } from "@/modules/notes/queries";
 import { formatDayNumber, formatScheduleDate, stripWeekDayPrefix } from "@/modules/planning/format";
 import { getLessonSchedule } from "@/modules/planning/queries";
 
@@ -15,13 +16,16 @@ export const metadata: Metadata = { title: "Aprender" };
 export default async function LearnPage() {
   const [session, lessons] = await Promise.all([auth(), getLessonsForLearnPage()]);
 
-  const [completions, schedule] = await Promise.all([
+  const [completions, schedule, noteCounts] = await Promise.all([
     session?.user
       ? db.lessonCompletion.findMany({
           where: { userId: session.user.id, lessonId: { in: lessons.map((l) => l.id) } },
         })
       : Promise.resolve([]),
     session?.user ? getLessonSchedule(session.user.id) : Promise.resolve(null),
+    session?.user
+      ? getNoteCountsByScope(session.user.id, "LESSON", lessons.map((l) => l.id))
+      : Promise.resolve({} as Record<string, number>),
   ]);
   const completedIds = new Set(completions.map((c) => c.lessonId));
 
@@ -52,6 +56,7 @@ export default async function LearnPage() {
               key={lesson.id}
               lesson={lesson}
               isCompleted={completedIds.has(lesson.id)}
+              noteCount={noteCounts[lesson.id]}
             />
           ))}
         </div>
@@ -81,7 +86,7 @@ export default async function LearnPage() {
             <div key={group.date.toDateString()}>
               <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 {allCompleted ? (
-                  <CheckCircle2 className="size-4 text-primary" />
+                  <CheckCircle2 className="size-4 text-sage-strong" />
                 ) : (
                   <Clock className="size-4" />
                 )}
@@ -94,6 +99,7 @@ export default async function LearnPage() {
                     lesson={lesson}
                     isCompleted={completedIds.has(lesson.id)}
                     curriculumIndex={scheduleByLessonId.get(lesson.id)?.curriculumIndex}
+                    noteCount={noteCounts[lesson.id]}
                   />
                 ))}
               </div>
@@ -145,10 +151,12 @@ function LessonCard({
   lesson,
   isCompleted,
   curriculumIndex,
+  noteCount,
 }: {
   lesson: LessonSummary;
   isCompleted: boolean;
   curriculumIndex?: number;
+  noteCount?: number;
 }) {
   return (
     <Link href={`/learn/${lesson.id}`}>
@@ -172,16 +180,24 @@ function LessonCard({
           </div>
         </CardHeader>
         <CardContent className="flex items-center justify-between text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-3">
             {lesson.durationMinutes ? (
-              <>
+              <span className="flex items-center gap-1">
                 <Clock className="size-3.5" /> {lesson.durationMinutes} min
-              </>
+              </span>
+            ) : null}
+            {noteCount ? (
+              <span
+                className="flex items-center gap-1"
+                title={noteCount === 1 ? "1 anotação" : `${noteCount} anotações`}
+              >
+                <StickyNote className="size-3.5" /> {noteCount}
+              </span>
             ) : null}
           </span>
           <span className="flex items-center gap-2">
-            {lesson.isDemo ? <Badge variant="secondary">demonstrativa</Badge> : null}
-            {isCompleted ? <Badge>concluída</Badge> : <ArrowRight className="size-4" />}
+            {lesson.isDemo ? <Badge variant="neutral">demonstrativa</Badge> : null}
+            {isCompleted ? <Badge variant="sage">concluída</Badge> : <ArrowRight className="size-4" />}
           </span>
         </CardContent>
       </Card>

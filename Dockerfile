@@ -25,6 +25,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
+# Named volume (docker-compose.yml) mounts here for anexos de anotação (src/lib/storage) — o
+# Docker cria o ponto de montagem como root por padrão, o que quebraria o `mkdir`/`writeFile` do
+# LocalFileStorageProvider rodando como `nextjs` (USER abaixo, não-root) sem isto.
+RUN mkdir -p /app/storage/note-attachments && chown -R nextjs:nodejs /app/storage
+
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000

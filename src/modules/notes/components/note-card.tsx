@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Star, Trash2 } from "lucide-react";
+import { Star, Tag, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { Markdown } from "@/components/markdown";
 import { cn } from "@/lib/utils";
 import { deleteNoteAction, toggleFavoriteAction } from "@/modules/notes/actions";
 import { NOTE_TEMPLATE_LABELS } from "@/modules/notes/labels";
+import { AttachmentList, type Attachment } from "./attachment-list";
 import { NoteFormDialog } from "./note-form-dialog";
 
 type Note = {
@@ -23,16 +24,24 @@ type Note = {
   isFavorite: boolean;
   scopeId: string | null;
   updatedAt: Date;
+  topics?: { topic: { id: string; name: string } }[];
+  attachments?: Attachment[];
 };
 
 export function NoteCard({
   note,
   fixedLessonId,
   fixedExternalLessonId,
+  fixedWeekId,
+  availableTopics,
+  weekOptions,
 }: {
   note: Note;
   fixedLessonId?: string;
   fixedExternalLessonId?: string;
+  fixedWeekId?: string;
+  availableTopics?: { id: string; name: string }[];
+  weekOptions?: { id: string; number: number; title: string }[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
@@ -76,9 +85,22 @@ export function NoteCard({
             <Star className={cn("size-4", note.isFavorite && "fill-primary text-primary")} />
           </Button>
           <NoteFormDialog
-            existingNote={note}
+            // O Dialog não remonta sozinho entre abrir/fechar, então os `useState` internos do
+            // formulário só capturariam `existingNote` na primeira renderização — sem essa key,
+            // anexos/temas adicionados numa sessão anterior do form (que dispara
+            // `router.refresh()`) não apareceriam ao reabrir editar a mesma nota. Trocar a key
+            // força remontar com os dados mais recentes sempre que eles mudam de verdade.
+            key={`${note.id}:${note.attachments?.length ?? 0}:${note.topics?.length ?? 0}`}
+            existingNote={{
+              ...note,
+              topicIds: note.topics?.map((t) => t.topic.id) ?? [],
+              attachments: note.attachments ?? [],
+            }}
             fixedLessonId={fixedLessonId}
             fixedExternalLessonId={fixedExternalLessonId}
+            fixedWeekId={fixedWeekId}
+            availableTopics={availableTopics}
+            weekOptions={weekOptions}
             trigger={
               <Button variant="ghost" size="sm">
                 Editar
@@ -92,13 +114,27 @@ export function NoteCard({
       </CardHeader>
       <CardContent>
         <Markdown content={note.contentMarkdown} />
-        {note.tags.length > 0 ? (
+        {note.topics && note.topics.length > 0 ? (
           <div className="mt-3 flex flex-wrap gap-1.5">
+            {note.topics.map(({ topic }) => (
+              <Badge key={topic.id}>
+                <Tag className="size-3" /> {topic.name}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
+        {note.tags.length > 0 ? (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
             {note.tags.map((tag) => (
               <Badge key={tag} variant="outline">
                 {tag}
               </Badge>
             ))}
+          </div>
+        ) : null}
+        {note.attachments && note.attachments.length > 0 ? (
+          <div className="mt-3">
+            <AttachmentList attachments={note.attachments} />
           </div>
         ) : null}
       </CardContent>

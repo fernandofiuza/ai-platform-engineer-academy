@@ -6,6 +6,7 @@ import { parseCursoMarkdown, type ParsedPhase } from "./parser";
 import { parseGradeCurricular } from "./grade-parser";
 import { distributeWeeksAcrossModules } from "./grade-distribution";
 import { buildWeekLessons, buildDailyLessons } from "./grade-lessons";
+import { syncTopicsFromWeeks } from "@/modules/topics/service";
 
 export const PROGRAM_SLUG = "ai-platform-engineer-academy";
 
@@ -288,6 +289,9 @@ export async function importCurriculum(options: {
   });
 
   logger.info("curriculum import finished", report);
+
+  const { createdCount: topicsCreated } = await syncTopicsFromWeeks();
+  if (topicsCreated > 0) logger.info("topics synced from weeks", { topicsCreated });
 
   return {
     skipped: false,

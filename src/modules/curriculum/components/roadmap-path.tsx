@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, MapPin } from "lucide-react";
+import { CheckCircle2, MapPin, StickyNote } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { extractModuleName } from "@/modules/curriculum/module-name";
@@ -83,13 +83,13 @@ function finalizeModule(
 }
 
 const STATUS_DOT: Record<ModuleNode["status"], string> = {
-  completed: "bg-primary border-primary",
+  completed: "bg-sage border-sage",
   "in-progress": "bg-primary/40 border-primary",
   planned: "bg-background border-border",
 };
 
 const STATUS_CARD: Record<ModuleNode["status"], string> = {
-  completed: "border-primary/40 bg-primary/5",
+  completed: "border-sage/40 bg-sage/5",
   "in-progress": "border-primary/40",
   planned: "",
 };
@@ -97,9 +97,13 @@ const STATUS_CARD: Record<ModuleNode["status"], string> = {
 export function RoadmapPath({
   phases,
   scheduleItems,
+  topicNoteCounts = {},
 }: {
   phases: PhaseSummary[];
   scheduleItems?: ScheduleItem[];
+  /** Contagem de anotações do aluno por nome de tema/módulo — mostra um indicador discreto
+   * ("N anotações") ao lado do módulo quando houver pelo menos uma anotação vinculada. */
+  topicNoteCounts?: Record<string, { topicId: string; count: number }>;
 }) {
   const scheduleByWeek = scheduleItems
     ? scheduleItems.reduce((map, item) => {
@@ -125,14 +129,14 @@ export function RoadmapPath({
         return (
           <div key={phase.id}>
             <div className="relative flex items-center gap-4 py-3">
-              <div className="relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground ring-4 ring-background">
+              <div className="relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground ring-4 ring-background">
                 {phase.order}
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {phase.label}
                 </p>
-                <p className="font-semibold">{phase.name}</p>
+                <p className="font-medium">{phase.name}</p>
               </div>
             </div>
 
@@ -154,12 +158,21 @@ export function RoadmapPath({
                   >
                     <div className="flex items-center gap-2">
                       {module.status === "completed" ? (
-                        <CheckCircle2 className="size-4 shrink-0 text-primary" />
+                        <CheckCircle2 className="size-4 shrink-0 text-sage-strong" />
                       ) : null}
                       <p className="font-medium">{module.name}</p>
+                      {topicNoteCounts[module.name] ? (
+                        <span
+                          className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
+                          title={`${topicNoteCounts[module.name].count} anotação(ões) sobre ${module.name}`}
+                        >
+                          <StickyNote className="size-3.5" />
+                          {topicNoteCounts[module.name].count}
+                        </span>
+                      ) : null}
                     </div>
                     {module.isCurrent ? (
-                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+                      <span className="flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2 py-0.5 text-xs font-medium text-white">
                         <MapPin className="size-3" /> Você está aqui
                       </span>
                     ) : null}

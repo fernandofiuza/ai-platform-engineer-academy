@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, RefreshCw, StickyNote, Trash2 } from "lucide-react";
+import { ChevronRight, Loader2, Plus, RefreshCw, StickyNote, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -136,6 +136,9 @@ function ModuleNode({
   const [newLessonTitle, setNewLessonTitle] = React.useState("");
   const [newSubmoduleTitle, setNewSubmoduleTitle] = React.useState("");
   const [showSubmoduleForm, setShowSubmoduleForm] = React.useState(false);
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  const completedCount = courseModule.lessons.filter((lesson) => lesson.completed).length;
 
   function addLesson(e: React.FormEvent) {
     e.preventDefault();
@@ -187,7 +190,22 @@ function ModuleNode({
   return (
     <div style={depth > 0 ? { marginLeft: 20 } : undefined} className={depth > 0 ? "border-l pl-4" : undefined}>
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">{courseModule.title}</h3>
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-expanded={isOpen}
+        >
+          <ChevronRight
+            className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-90")}
+          />
+          <h3 className="truncate text-sm font-medium">{courseModule.title}</h3>
+          {courseModule.lessons.length > 0 ? (
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {completedCount}/{courseModule.lessons.length}
+            </span>
+          ) : null}
+        </button>
         <Button
           type="button"
           variant="ghost"
@@ -199,57 +217,61 @@ function ModuleNode({
         </Button>
       </div>
 
-      {courseModule.lessons.length > 0 ? (
-        <div className="mt-2 divide-y rounded-lg border">
-          {courseModule.lessons.map((lesson) => (
-            <LessonRow key={lesson.id} courseId={courseId} lesson={lesson} />
-          ))}
-        </div>
+      {isOpen ? (
+        <>
+          {courseModule.lessons.length > 0 ? (
+            <div className="mt-2 divide-y rounded-lg border">
+              {courseModule.lessons.map((lesson) => (
+                <LessonRow key={lesson.id} courseId={courseId} lesson={lesson} />
+              ))}
+            </div>
+          ) : null}
+
+          <form className="mt-2 flex gap-2" onSubmit={addLesson}>
+            <Input
+              value={newLessonTitle}
+              onChange={(e) => setNewLessonTitle(e.target.value)}
+              placeholder="Nova aula..."
+              className="h-8 text-sm"
+            />
+            <Button type="submit" size="sm" variant="outline" disabled={isPending}>
+              <Plus className="size-3.5" /> Aula
+            </Button>
+          </form>
+
+          {courseModule.modules.length > 0 ? (
+            <div className="mt-4 space-y-4">
+              {courseModule.modules.map((child) => (
+                <ModuleNode key={child.id} courseId={courseId} courseModule={child} depth={depth + 1} />
+              ))}
+            </div>
+          ) : null}
+
+          {showSubmoduleForm ? (
+            <form className="mt-2 flex gap-2" style={{ marginLeft: 20 }} onSubmit={addSubmodule}>
+              <Input
+                value={newSubmoduleTitle}
+                onChange={(e) => setNewSubmoduleTitle(e.target.value)}
+                placeholder="Novo submódulo..."
+                className="h-8 text-sm"
+                autoFocus
+              />
+              <Button type="submit" size="sm" variant="outline" disabled={isPending}>
+                <Plus className="size-3.5" /> Submódulo
+              </Button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              className="mt-2 text-xs text-muted-foreground hover:text-foreground hover:underline"
+              style={{ marginLeft: 20 }}
+              onClick={() => setShowSubmoduleForm(true)}
+            >
+              + Adicionar submódulo
+            </button>
+          )}
+        </>
       ) : null}
-
-      <form className="mt-2 flex gap-2" onSubmit={addLesson}>
-        <Input
-          value={newLessonTitle}
-          onChange={(e) => setNewLessonTitle(e.target.value)}
-          placeholder="Nova aula..."
-          className="h-8 text-sm"
-        />
-        <Button type="submit" size="sm" variant="outline" disabled={isPending}>
-          <Plus className="size-3.5" /> Aula
-        </Button>
-      </form>
-
-      {courseModule.modules.length > 0 ? (
-        <div className="mt-4 space-y-4">
-          {courseModule.modules.map((child) => (
-            <ModuleNode key={child.id} courseId={courseId} courseModule={child} depth={depth + 1} />
-          ))}
-        </div>
-      ) : null}
-
-      {showSubmoduleForm ? (
-        <form className="mt-2 flex gap-2" style={{ marginLeft: 20 }} onSubmit={addSubmodule}>
-          <Input
-            value={newSubmoduleTitle}
-            onChange={(e) => setNewSubmoduleTitle(e.target.value)}
-            placeholder="Novo submódulo..."
-            className="h-8 text-sm"
-            autoFocus
-          />
-          <Button type="submit" size="sm" variant="outline" disabled={isPending}>
-            <Plus className="size-3.5" /> Submódulo
-          </Button>
-        </form>
-      ) : (
-        <button
-          type="button"
-          className="mt-2 text-xs text-muted-foreground hover:text-foreground hover:underline"
-          style={{ marginLeft: 20 }}
-          onClick={() => setShowSubmoduleForm(true)}
-        >
-          + Adicionar submódulo
-        </button>
-      )}
     </div>
   );
 }

@@ -577,4 +577,50 @@ produto foram entregues.
   `/learn/*`. Verificado ao vivo (incluindo teste real contra a API do GitHub). Ver
   `docs/DECISIONS.md`.
 
+- **2026-09-11 — Auditoria de funcionalidades + sincronização da documentação.** Varredura do
+  código a pedido do usuário encontrou o módulo **Study Hub** (cursos externos — import por
+  pasta local/texto/JSON, progresso, fila de revisão unificada, estatísticas, histórico de
+  atividade) totalmente ausente de `PRODUCT_SPEC.md`/`ARCHITECTURE.md`/`DATA_MODEL.md`/
+  `README.md`/deste arquivo, apesar de implementado por completo. `README.md`,
+  `docs/ARCHITECTURE.md` e `docs/DATA_MODEL.md` atualizados para descrevê-lo, junto com as 5
+  personas de IA, o Gateway multi-provider completo (mock/openai/claude/gemini), a IA de
+  Arquitetura, a certificação interna e o sync real com GitHub — todos já implementados em
+  etapas anteriores mas sub-documentados. `docs/PRODUCT_SPEC.md` e `docs/CURRICULUM_IMPORT.md`
+  não foram tocados (âmbito diferente — ver `docs/DECISIONS.md`). Também produzida, a pedido do
+  usuário, uma lista de funcionalidades candidatas a adicionar (fila de revisão diária unificada,
+  gamificação para o Study Hub, contexto de IA incluindo as próprias anotações, resumo periódico
+  automático, consolidar os métodos de importação do Study Hub) e a remover/simplificar
+  (roteamento multi-provider do AI Gateway, página `/architecture` dedicada, scripts de
+  importação de uso único já aplicados) — registrada em `README.md` ("Sugestões avaliadas em
+  2026-09-11") e em `docs/DECISIONS.md`, **sem nenhuma implementada ainda**: é material para
+  decisão posterior do usuário, não uma etapa concluída.
+
+### 2026-09-21/22 — Redesign visual (2 rodadas) + Anotações com tema/anexo + revisão pré-produção
+
+- **Redesign visual completo**, em duas rodadas — a primeira ("editorial-tecnológico") foi
+  aplicada e depois **descartada pelo próprio usuário**, substituída pela segunda ("conforto de
+  leitura prolongada": canvas bege, sombras leves, laranja só em 1-2 CTAs por tela). Cobre
+  Dashboard, Roadmap, Aprender, Planejador, Projetos, AI Labs, Admin, landing pública e
+  autenticação. Corrigido no processo um bug real de contraste em blocos de código (texto
+  ilegível sobre fundo escuro) e um bug lateral de overflow em diálogos sem scroll. Ver
+  `docs/DECISIONS.md`.
+- **Anotações vinculadas a tema/subtema** (`Topic`, entidade nova — não `Technology`/`Skill`,
+  ver decisão registrada) + **indicador visual de anotação** em toda listagem de aula/semana que
+  não tinha (Study Hub, Roadmap, Aprender) + **anexos de arquivo** (`NoteAttachment` +
+  `FileStorageProvider`, implementação local hoje, trocável por S3 depois). Corrigido no processo
+  um bug real de estado obsoleto no diálogo de edição de anotação. Ver `docs/DECISIONS.md`.
+- **Revisão geral pré-produção**: lint/typecheck/testes (unitários + e2e) rodados limpos; dois
+  bugs reais encontrados e corrigidos — teste e2e quebrado desde o rebranding para "Apex" (string
+  desatualizada mascarava verificação real do fluxo crítico) e `docker-compose.yml` com nomes de
+  variável de IA que não batiam com o código, fazendo o deploy via Docker Compose sempre cair no
+  provider mock mesmo com chave real configurada (ver `docs/DECISIONS.md`). Auditoria de
+  segurança (upload de arquivo, segredos, `.env`, credenciais de demo) sem achados adicionais além
+  desses dois. Toda a documentação (`README.md`, `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`,
+  `docs/IMPLEMENTATION_PLAN.md`, `docs/DECISIONS.md`) sincronizada com o estado real do código.
+
+## Próximos passos sugeridos (fora do escopo original do MVP)
+
+Ver a seção "Roadmap" e "Sugestões avaliadas em 2026-09-11" do `README.md` para a lista completa
+e atualizada — mantida lá para não duplicar em dois arquivos.
+
 O relatório final de entrega está no encerramento desta conversa (fora deste arquivo).

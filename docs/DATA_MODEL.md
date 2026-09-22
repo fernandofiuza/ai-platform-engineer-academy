@@ -74,7 +74,9 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 > `Curso.md`.
 
 - ~~Technology~~ — não implementado; tecnologias aparecem só como texto (ex.: nome da
-  competência), sem entidade própria ainda.
+  competência), sem entidade própria ainda. Não confundir com **`Topic`** (seção 7,
+  2026-09-22): entidade diferente, criada especificamente para vínculo de anotações com o nome
+  de módulo do Roadmap ("Linux", "Redes"...) — granularidade e propósito diferentes de `Skill`.
 - **Skill**(name, category, description?, status) — `name` único
 - **LessonSkill**(lessonId, skillId) — N:N, chave primária composta
 - **UserSkillProgress**(userId, skillId, level: `NOT_STARTED|INTRO|PRACTICING|COMPETENT|
@@ -137,10 +139,14 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
   disponíveis — também sem tabela de agendamento própria, recalculado a cada requisição a partir
   de `LessonCompletion`. Ver `docs/DECISIONS.md`.
 - **StudyGoal**(userId, title, targetDate?, relatedWeekId?, status: `OPEN|DONE|CANCELLED`)
-- **StudySession**(userId, lessonId?, startedAt, pausedAt?, totalPausedSeconds, endedAt?,
-  durationMinutes?, focusRating?, difficultyRating?, notes?, completedContent) — o cronômetro
-  sobrevive a refresh porque todo o estado (`startedAt`/`pausedAt`/`totalPausedSeconds`) vive no
-  banco; o cliente só recalcula `elapsed = now - startedAt - totalPausedSeconds`.
+- **StudySession**(userId, lessonId?, externalLessonId?, startedAt, pausedAt?,
+  totalPausedSeconds, endedAt?, durationMinutes?, focusRating?, difficultyRating?, notes?,
+  completedContent) — o cronômetro sobrevive a refresh porque todo o estado
+  (`startedAt`/`pausedAt`/`totalPausedSeconds`) vive no banco; o cliente só recalcula
+  `elapsed = now - startedAt - totalPausedSeconds`. `externalLessonId` (seção 13, Study Hub) foi
+  adicionado à mesma tabela em vez de criar uma tabela paralela — o cronômetro, o modo Pomodoro e
+  o cálculo de sequência de dias/horas totais funcionam idênticos para aula nativa ou externa,
+  cada `StudySession` referenciando no máximo um dos dois (nunca os dois ao mesmo tempo).
 - ~~Progress~~ — não implementado (ver acima).
 - **LessonCompletion**(userId, lessonId, completedAt, confidence 1–5, whatLearned?, whatUnclear?)
   — já existia desde a Fase 2; `reviewRequested` não foi adicionado (não há para onde essa
@@ -168,14 +174,38 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 
 ## 7. Anotações
 
-> **Implementado na Fase 3** com escopo reduzido: a UI só oferece vínculo com **aula**
-> (`LESSON`); `WEEK`/`MODULE`/`PROJECT`/`LAB`/`TECHNOLOGY`/`SKILL` existem no enum `NoteScope`
-> mas sem seletor correspondente ainda (`Project`/`Technology`/`Skill` nem existem como
-> entidades). Sem `status` (anotação não é conteúdo publicável). Ver `docs/DECISIONS.md`.
+> **Implementado na Fase 3, estendido em 2026-09-22.** `scopeType`/`scopeId` continuam sendo o
+> vínculo *primário* (mutuamente exclusivo) de uma anotação — `LESSON`, `EXTERNAL_LESSON`
+> (aula de curso externo do Study Hub), `WEEK` (semana do Roadmap, ativado em 2026-09-22 — o
+> enum já existia desde a Fase 3, mas nenhuma tela oferecia o seletor até agora) ou `GENERAL`
+> (anotação solta, tela `/notes`). Sem `status` (anotação não é conteúdo publicável).
+>
+> **Tema/subtema (`Topic`) é um vínculo adicional, independente do escopo primário** — uma
+> anotação pode ter zero, um ou vários temas ao mesmo tempo, combinados com qualquer escopo
+> (ex.: vinculada à semana 12 *e* ao tema "Linux"). Ver `docs/DECISIONS.md` (2026-09-22) para por
+> que `Topic` foi criado como entidade nova em vez de reaproveitar `Skill` (a única entidade de
+> "competência" que já existia): `Skill` usa uma taxonomia de categorias amplas
+> ("Infraestrutura", "Backend"...) para o mapa de competências, enquanto os temas visíveis na
+> timeline do Roadmap são nomes de módulo granulares ("Linux", "Redes", "Docker") derivados de
+> `Week.title` via `extractModuleName()` — as duas taxonomias não coincidem, e forçar o vínculo
+> em `Skill` teria misturado dois conceitos de produto diferentes.
+>
+> **Anexos (`NoteAttachment`)**, também 2026-09-22: uma anotação pode ter múltiplos arquivos
+> (imagem jpg/png/webp, PDF, texto/markdown; até 10MB cada). Armazenados via `FileStorageProvider`
+> (`src/lib/storage/`) — hoje só `LocalFileStorageProvider` (disco local/volume Docker, fora de
+> `public/`), trocável por S3 depois sem mudar a lógica de domínio. Servidos só por
+> `GET /api/notes/attachments/[id]`, autenticado e dono-only, nunca por caminho estático.
 
-- **Note**(userId, scopeType: `LESSON|WEEK|GENERAL`, scopeId?,
+- **Note**(userId, scopeType: `LESSON|EXTERNAL_LESSON|WEEK|GENERAL`, scopeId?,
   template: `SUMMARY|QUESTION|DECISION|TROUBLESHOOTING|RETROSPECTIVE|CONCEPT|COMMAND`,
   title, contentMarkdown, tags[], isFavorite)
+- **Topic**(name único) — derivado e populado automaticamente por `syncTopicsFromWeeks()`
+  (roda a cada importação de currículo); nunca editado manualmente, nunca removido mesmo se o
+  módulo de origem desaparecer do currículo (para não quebrar vínculos já criados pelo aluno).
+- **NoteTopic**(noteId, topicId) — tabela de junção N:N entre `Note` e `Topic`.
+- **NoteAttachment**(noteId, originalName, storageKey, mimeType, size, createdAt) — `storageKey`
+  é opaco (gerado, nunca derivado do nome enviado), resolvido em bytes só pelo
+  `FileStorageProvider`.
 
 ## 8. Portfólio e gamificação
 
@@ -184,7 +214,13 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 > `docs/DECISIONS.md`.
 
 - **PortfolioItem**(userId, projectId?, repoUrl, qualityChecklist Json /* 14 chaves booleanas —
-  ver `src/modules/portfolio/checklist.ts` */, status)
+  ver `src/modules/portfolio/checklist.ts` */, status, githubSyncedAt?, githubDescription?,
+  githubOpenIssues?, githubLatestRelease?) — os 4 últimos campos (migration
+  `20260725042615_portfolio_github_sync`) guardam a última sincronização real com a API REST
+  pública do GitHub (`RestGitHubProvider`, sem OAuth — só leitura pública, token opcional só para
+  levantar o limite de requisições). Sincroniza objetivamente README/licença/CI/release/
+  descrição; os outros itens do checklist continuam manuais (exigem julgamento de conteúdo).
+  `GitHubProvider` deixou de ser uma interface nunca chamada — ver `docs/DECISIONS.md`.
 - **Badge**(code, name, description, icon) — catálogo de 9, seedado por
   `seedBadgeCatalog()`
 - **UserBadge**(userId, badgeId, earnedAt) — `@@unique([userId, badgeId])`
@@ -219,21 +255,27 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 
 ## 10. IA
 
-> **Implementado na Fase 5.** `context` fica `null` na prática (o contexto é montado sob
-> demanda por `buildContextForUser()`, não persistido na conversa); o campo continua no schema
-> para permitir persistir contexto estruturado no futuro sem migration. Ver
-> `docs/ARCHITECTURE.md` e `docs/DECISIONS.md` para a interface `AIProvider` e as decisões de
-> escopo (mock heurístico, fallback automático, rate limit em memória).
+> **Implementado na Fase 5, expandido em Etapas pós-Fase 6** (multi-provider + personas — ver
+> `docs/ARCHITECTURE.md` §6 e `docs/DECISIONS.md`). `context` fica `null` na prática (o contexto
+> é montado sob demanda por `buildContextForUser()`, não persistido na conversa); o campo
+> continua no schema para permitir persistir contexto estruturado no futuro sem migration.
 
 - **AIConversation**(userId, context Json?, createdAt) — uma conversa "contínua" por usuário
   (todas as interações do tutor acumulam nela)
 - **AIMessage**(conversationId, role: `USER|ASSISTANT`, content, provider, tokensApprox?,
-  createdAt) — `provider` grava qual provider respondeu (`mock` ou `openai`)
+  createdAt) — `provider` grava qual provider realmente respondeu: `mock`, `openai`, `claude` ou
+  `gemini` (Gateway multi-provider, roteado por tipo de tarefa/persona — ver
+  `docs/ARCHITECTURE.md` §6). Não há tabela própria para "qual persona" foi usada em cada
+  mensagem — a persona escolhida na aba "Conversar com uma persona" fica só no prompt de sistema
+  daquela chamada, não persistida por mensagem.
 - **LessonQuestion**(lessonId, userId, question, answer, provider, createdAt) — cada pergunta
-  feita no diálogo "Pergunte ao Professor" de uma aula, com a resposta da IA. Diferente de
+  feita no diálogo "Pergunte ao Professor" de uma aula, com a resposta da IA (sempre via um
+  Gemini fixo, `getGeminiProvider()` — não passa pelo roteamento por tarefa). Diferente de
   `AIConversation`/`AIMessage` (histórico privado do usuário no `/ai-tutor`), esta tabela é
   exibida publicamente na página da aula para **todos** os alunos, não só quem perguntou — é o
   mecanismo de "outra pessoa com a mesma dúvida já vê a resposta pronta". Ver `docs/DECISIONS.md`.
+- **CodeReview** (seção 4) reaproveita o mesmo `provider: string` livre (não uma FK) — sempre a
+  persona Tech Lead, roteada para Claude/mock.
 
 ## 11. Importação
 
@@ -250,8 +292,48 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 > final da fase (`Phase.finalAssessment`) com ao menos um `AssessmentAttempt` enviado.
 
 - **Certification**(userId, phaseId, code único, issuedAt) — `@@unique([userId, phaseId])`,
-  emitido uma única vez por usuário/fase; `code` gerado como `APEA-S{order}-{uuid curto}` (prefixo
+  emitido uma única vez por usuário/fase; `code` gerado como `APEX-S{order}-{uuid curto}`
+  (prefixo trocado de `APEA` para `APEX` no rebranding, `src/modules/certifications/actions.ts`;
   `S` mantido por estabilidade do formato — não está ligado ao rótulo "Fase" exibido na UI).
+
+## 13. Study Hub (cursos externos)
+
+> **Não documentado em versões anteriores deste arquivo** — adicionado nesta auditoria
+> (2026-09-11) para refletir o código real. Módulo independente do currículo nativo (seção 2);
+> ver `docs/ARCHITECTURE.md` §9 para as 3 formas de importar um curso.
+
+- **ExternalCourse**(userId, title, description?, platform?, instructor?, url?, imageUrl?,
+  category?, startDate?, targetDate?, status: `NOT_STARTED|IN_PROGRESS|PAUSED|COMPLETED`)
+- **ExternalModule**(courseId, parentModuleId? — auto-referenciada via relação nomeada
+  `ModuleChildren`, title, order) — módulos podem se aninhar em qualquer profundidade, para
+  espelhar a hierarquia real de pastas de um curso importado; `courseId` fica presente em todo
+  módulo (raiz ou aninhado), então contagens/queries não precisam atravessar a árvore inteira. A
+  árvore completa é remontada em memória a partir de listas achatadas (Prisma não suporta
+  `include` recursivo de profundidade arbitrária) — ver `buildModuleTree` em
+  `src/modules/study-hub/queries.ts`.
+- **ExternalLesson**(moduleId, title, order, completed, completedAt?, markedForReview,
+  lastAccessedAt?) — `@@unique([moduleId, order])`. `markedForReview` alimenta a mesma fila de
+  revisão do currículo nativo (função `getReviewItems`, ao lado de `LessonReviewMark` abaixo);
+  `lastAccessedAt` decide "continuar estudando" no Study Hub, junto com `StudySession`/
+  `LessonCompletion` para o currículo nativo (`getContinueStudying`).
+- **LessonReviewMark**(userId, lessonId) — `@@unique([userId, lessonId])`. Equivalente, para
+  aulas do currículo **nativo**, ao campo `ExternalLesson.markedForReview` — implementado como
+  tabela separada em vez de um campo em `Lesson` porque a marcação é por usuário (a mesma aula
+  pode estar marcada para revisão por um estudante e não por outro), diferente de
+  `ExternalLesson`, que já é 1:1 de um usuário (todo curso externo pertence a um usuário só).
+- **ActivityLogEntry**(userId, type: `LESSON_COMPLETED|LESSON_REOPENED|SESSION_FINISHED|
+  LESSON_MARKED_REVIEW|LESSON_UNMARKED_REVIEW|COURSE_STARTED|COURSE_COMPLETED`, title, href?,
+  metadata Json?) — histórico de atividade do Study Hub (`/study-hub/historico`); `title`/`href`
+  ficam denormalizados na própria linha (em vez de FK polimórfica para `Lesson`/`ExternalLesson`/
+  `ExternalCourse`) porque o registro deve continuar legível mesmo que a aula/curso referenciado
+  seja depois excluído.
+- Estatísticas (`/study-hub/estatisticas`) e fila de revisão são **calculadas sob demanda** a
+  partir de `StudySession`/`LessonCompletion`/`ExternalLesson`/`ExternalCourse` já existentes —
+  sem tabela agregada própria, mesmo padrão já usado no dashboard principal (seção 5).
+- **Não integrado**: gamificação (XP/badges, seção 8) considera só `LessonCompletion`/
+  `LaboratoryCompletion`/`ProjectSubmission`/`AssessmentAttempt`/`ChecklistItemProgress` —
+  nenhum evento do Study Hub concede XP ou badge hoje. Ver `docs/DECISIONS.md` e a seção de
+  sugestões do README.
 
 ## Índices e constraints (mínimo)
 
@@ -261,6 +343,9 @@ Program 1—N Phase 1—N Track 1—N Module 1—N Week 1—N Lesson 1—N Activ
 - `ChecklistItemProgress` único por `(userId, checklistItemId)`.
 - `UserSkillProgress` único por `(userId, skillId)` — **ainda não implementado** (Fase 4).
 - `FlashcardReview` indexado por `(userId, nextReviewAt)` (fila de revisão) — implementado.
+- `ExternalModule` indexado por `(courseId, parentModuleId)`; `ExternalLesson` único por
+  `(moduleId, order)`; `LessonReviewMark` único por `(userId, lessonId)`; `ActivityLogEntry`
+  indexado por `(userId, createdAt)`.
 - `Note` indexado por `userId`; busca por texto via `contains`/`insensitive` do Prisma (≈ `ILIKE`),
   não `tsvector` — ver `docs/DECISIONS.md` ("Busca de anotações").
 - Exclusão: soft delete (`archivedAt`/`status = ARCHIVED`) para conteúdo acadêmico e projetos;

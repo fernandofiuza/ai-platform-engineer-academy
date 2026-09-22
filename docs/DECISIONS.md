@@ -1414,5 +1414,202 @@ de minutos aparecem só com sessão ativa. Botão "Modo foco" testado em `/learn
 o processo antigo não pegou o `PortfolioItem` regenerado pelo Prisma após a migration; não é um
 bug do código, é o comportamento normal de `prisma generate` + processo Node já em execução.)
 
+## 2026-09-11 — Auditoria de funcionalidades + sincronização da documentação com o código real
+
+**O que aconteceu**: o usuário pediu (1) uma varredura do app para apontar funções que
+ajudariam mais os estudos e funções que valeria remover, e (2) que a documentação fosse
+atualizada para refletir o estado real do código. A leitura do código (módulos, `schema.prisma`,
+`docs/*.md`, `README.md`) encontrou um desvio real entre documentação e implementação: o módulo
+**Study Hub** (`src/modules/study-hub/`, rotas `/study-hub/*`) — acompanhamento de cursos
+externos (Udemy/YouTube/qualquer plataforma) com importação por leitura de pasta local (File
+System Access API), texto ou JSON, progresso por módulo/aula em árvore de profundidade
+arbitrária (`ExternalCourse`/`ExternalModule`/`ExternalLesson`), fila de revisão unificada
+(`LessonReviewMark` + `ExternalLesson.markedForReview`), estatísticas e histórico de atividade
+(`ActivityLogEntry`) — **não aparecia em nenhum documento** (`PRODUCT_SPEC.md`,
+`ARCHITECTURE.md`, `DATA_MODEL.md`, `IMPLEMENTATION_PLAN.md`, `README.md`), apesar de ser uma
+funcionalidade completa e do tamanho comparável ao currículo nativo. Outros pontos também
+estavam parcialmente desatualizados: `ARCHITECTURE.md`/`README.md` não citavam as personas do
+Mentor de IA nem a IA de Arquitetura; `DATA_MODEL.md` ainda descrevia o provider de IA como
+"mock ou openai" (já são 4: mock/openai/claude/gemini); `README.md` afirmava a grade semanal
+"vazia" e o `GitHubProvider` como "nunca chamado", ambos já superados por decisões posteriores
+registradas mais acima neste mesmo arquivo.
+
+**Decisão (documentação)**: `README.md`, `docs/ARCHITECTURE.md` e `docs/DATA_MODEL.md`
+atualizados para descrever o Study Hub, o Gateway multi-provider completo, as 5 personas, a IA de
+Arquitetura, a certificação interna, o sync real com GitHub e as correções acima. `docs/
+PRODUCT_SPEC.md` **não foi tocado** — continua descrevendo fielmente o texto de origem de
+`Curso.md` (mesmo racional já registrado na decisão "Semestre → Fase" acima); tudo que é evolução
+pós-MVP fica em `README.md`/`ARCHITECTURE.md`/`DATA_MODEL.md`/`DECISIONS.md`, nunca em
+`PRODUCT_SPEC.md`. `docs/CURRICULUM_IMPORT.md` também não foi tocado — é escopado aos dois
+importadores de currículo **nativo** (`Curso.md`/`Grade_Curricular.md`); a importação de cursos
+externos do Study Hub é um recurso diferente, já descrita em `ARCHITECTURE.md` §9.
+
+**Decisão (funcionalidades — registradas como sugestão, não implementadas)**: a pedido do
+usuário, a varredura também produziu uma lista do que adicionar/remover, sem implementar nada
+ainda (registrada em detalhe na seção "Sugestões avaliadas em 2026-09-11" do `README.md`, aqui
+resumida):
+
+- *Adicionar*: fila de revisão diária unificada (hoje flashcards vencidos, aulas/cursos
+  marcados para revisão e aulas com `LessonCompletion.confidence` baixa vivem em telas/critérios
+  separados, este último nem é usado hoje); gamificação (XP/badges) também para o Study Hub, que
+  hoje fica de fora inteiramente; contexto da IA incluir as próprias anotações do usuário
+  (`buildContextForUser` nunca lê `Note`); resumo periódico automático do que foi estudado;
+  consolidar os 3 métodos de importação do Study Hub em torno da leitura de pasta.
+- *Remover/simplificar*: o roteamento fixo do AI Gateway entre 3 providers reais + uma rota extra
+  fixa em Gemini fora do roteamento — já causou 3 bugs reais documentados acima (modelo do Claude
+  desatualizado, modelo do Gemini desatualizado, cota diária do Gemini esgotada); a página
+  `/architecture` dedicada, por ser um wrapper fino sobre a persona Arquiteto que já existe
+  dentro do Tutor de IA; os scripts de importação/geração de conteúdo de uso único já aplicados
+  (`import-grade`, `import-lessons`, `generate-lessons-gemini`, `generate-labs-gemini`,
+  `export-real-content`, `import-real-content`, `import-daily-lessons`), hoje ainda no
+  `package.json` como se fossem parte do fluxo normal.
+
+**Motivo**: instrução explícita do usuário (varredura + atualização de documentação). Nenhuma
+mudança de comportamento do produto foi feita nesta sessão — só documentação e o registro das
+sugestões, para decisão posterior sobre o que implementar.
+
+**Verificado**: `grep` por "study.hub"/"external.?course" confirmou ausência total nos 6
+documentos de `docs/` e no `README.md` antes desta sessão; após a edição, os três documentos
+atualizados foram relidos por completo para checar consistência com o schema real
+(`prisma/schema.prisma`) e com o código lido (`gateway.ts`, `personas.ts`, `queries.ts`,
+`actions.ts`, `folder-scan.ts`, `statistics.ts`, `badges.ts`, `service.ts` do módulo
+`gamification`).
+
+## 2026-09-21/22 — Redesign visual completo (duas rodadas) + correção de contraste
+
+**Decisão**: substituição completa do tema visual, a pedido do usuário, em duas rodadas
+sucessivas. A primeira ("editorial-tecnológico", inspirada em Linear/Vercel/Retool: fundo branco
+puro, paleta ink-teal/laranja/azul, botões 100% pílula, sem sombra nenhuma) foi aplicada em todo
+o app (tokens, componentes base shadcn, todas as páginas listadas pelo usuário) e **depois
+descartada inteiramente pelo próprio usuário**, uma mensagem depois de aprovada — trocada por uma
+segunda paleta "conforto de leitura prolongada" (canvas bege claro nunca branco puro, sombras
+leves permitidas, radius 10-12px não mais pílula, verde sálvia para progresso/conclusão, azul
+profundo para estrutura/navegação, laranja **só** para 1-2 CTAs de ação por tela — nunca decoração
+ou badge de status). Confirmado via busca global que nenhum token da primeira paleta (`ink-teal`,
+`signal-blue`, `ember-orange` etc.) sobrou no código.
+
+**Motivo**: o usuário julgou a primeira paleta estilisticamente correta mas emocionalmente errada
+para uma plataforma de estudo de longa duração — "impacto visual agressivo" não é a prioridade
+quando o aluno passa horas por dia na tela; conforto/baixa fadiga visual é. Ver memória de sessão
+`ui_design_preferences` para o racional completo — vale para qualquer redesign futuro deste app.
+
+**Bug real encontrado durante o redesign**: `prose-code:text-foreground`, adicionado ao
+componente `Markdown` (`src/components/markdown.tsx`) na primeira rodada "para consistência",
+tinha especificidade CSS maior que a regra própria do `@tailwindcss/typography` para código
+(`pre code { color: inherit }`), vazando a cor do texto do corpo para dentro dos blocos de
+código — em modo claro isso produzia texto escuro sobre fundo escuro do bloco, quase ilegível.
+Corrigido removendo a classe; o plugin de tipografia já tem esquema de cores próprio e completo
+para blocos de código (fundo escuro fixo + texto claro fixo), desacoplado dos tokens do app, em
+ambos os temas — não foi necessário nenhum highlighter de sintaxe novo (nunca existiu um).
+
+**Bug lateral encontrado e corrigido**: `DialogContent` (`src/components/ui/dialog.tsx`) não
+tinha `max-height`/`overflow`, então qualquer diálogo com conteúdo mais alto que a viewport
+(o formulário de anotação, depois de ganhar o seletor de temas) ficava com topo/rodapé
+inacessíveis, sem scroll algum. Adicionado `max-h-[85vh] overflow-y-auto` — corrige todos os
+diálogos do app, não só o de anotação.
+
+**Verificado**: lint, typecheck, testes unitários e e2e passando; conferido ao vivo no navegador
+(Dashboard, Roadmap, Aprender, Planejador, Projetos, AI Labs, Admin, landing pública,
+autenticação) em claro e escuro.
+
+## 2026-09-22 — Anotações vinculadas a tema/subtema (`Topic`, não `Skill`)
+
+**Contexto**: pedido para permitir vincular uma anotação a um tema/subtema (ex.: "Linux",
+"Redes") que aparece repetido em várias semanas/fases da timeline do Roadmap, independente de
+semana/aula específica. O prompt original do pedido presumia que `Technology` já existia no
+schema (não existe — o comentário no topo de `schema.prisma` diz literalmente que foi cogitado e
+descartado) e sugeria `Skill` como alternativa mais próxima.
+
+**Decisão**: nem `Technology` nem `Skill` foram usados — criada uma entidade nova, `Topic`,
+depois de confirmado com o usuário (as duas taxonomias existentes não bateriam com o pedido):
+`Skill` (`docs/DATA_MODEL.md` §3) é uma lista curada de 14 categorias **amplas**
+("Infraestrutura", "Backend", "Cloud (AWS)") usada pelo mapa de competências — não tem "Linux"
+nem "Redes" cadastrados, granularidade incompatível com o que a timeline do Roadmap mostra. Os
+nomes que aparecem na timeline nem sequer são uma entidade — são strings calculadas on-the-fly a
+partir de `Week.title` via `extractModuleName()` (regex sobre o título, ex. "Semana 61 — Docker"
+→ "Docker"), sem tabela própria, sem id estável. `Topic` fecha essa lacuna: tabela leve
+(`id`, `name` único), populada automaticamente (`syncTopicsFromWeeks()`, roda a cada importação
+de currículo, idempotente, nunca remove um tema já vinculado a uma anotação mesmo que o módulo
+de origem desapareça) a partir do mesmo `extractModuleName()` já usado pela timeline — garante
+que o nome do tema bate exatamente com o que o aluno vê na tela.
+
+Vínculo é N:N via `NoteTopic` e **independente** do escopo primário da anotação
+(`scopeType`/`scopeId` — semana/aula/curso externo/geral): uma nota pode ter só um tema, só uma
+semana, os dois, ou nenhum. Isso também expôs que `NoteScope.WEEK` existia no enum desde a Fase 3
+mas nunca tinha sido ativado em nenhuma tela — ativado agora (schema não mudou, só as
+actions/queries/formulário passaram a aceitar `weekId`).
+
+**Motivo**: decisão do usuário via pergunta direta (`AskUserQuestion`) depois de eu expor a
+incompatibilidade de taxonomias — as outras opções eram usar `Skill` mesmo (perderia a
+correspondência exata com a timeline) ou não separar semana/tema (perderia o caso de uso central
+do pedido: anotar sobre um tema sem prender a uma semana).
+
+**Verificado**: criada uma anotação vinculada só ao tema "Linux" (sem semana) — apareceu
+corretamente em `/notes`, no filtro por tema, no indicador da timeline do Roadmap e na página da
+semana correspondente. Lint, typecheck e testes passando.
+
+## 2026-09-22 — Indicador de anotação em listagens + anexos de arquivo (`NoteAttachment`)
+
+**Decisão**: duas melhorias de UX em `Note`, sem alterar a arquitetura de escopo:
+
+1. Indicador visual (ícone + contagem) em qualquer lugar que já lista aulas/semanas sem sinalizar
+   anotação existente — árvore de módulos do Study Hub (`ExternalLessonChecklist`), lista de
+   aulas da página de semana do Roadmap e cards de aula em `/learn`. Contagem vem de uma única
+   query `groupBy` por tela (`getNoteCountsByScope`), nunca N+1 por aula.
+2. Anexos de arquivo (`NoteAttachment`, N por `Note`) via `FileStorageProvider` — ver
+   `docs/ARCHITECTURE.md` §3 e `docs/DATA_MODEL.md` §7 para a interface/schema. Tipos permitidos
+   (imagem jpg/png/webp, PDF, texto/markdown) e limite de 10MB validados no cliente (feedback
+   imediato) **e** no servidor (única fonte de verdade — `src/modules/notes/attachments.ts`);
+   nome sanitizado antes de salvar; `Content-Type` servido nunca vem do que o cliente mandou no
+   upload, sempre de um mapa fixo extensão→mimetype resolvido no servidor.
+
+**Bug real encontrado e corrigido durante o teste manual**: `NoteFormDialog` mantém o mesmo
+`useState` inicializado com `existingNote` entre aberturas do diálogo (o Radix `Dialog` não
+remonta o conteúdo ao fechar) — reabrir "Editar" numa nota editada anteriormente (ex.: logo
+depois de anexar um arquivo, que dispara `router.refresh()` com o diálogo já fechado) mostrava a
+lista de anexos desatualizada, mesmo com o dado certo salvo no banco e exibido corretamente no
+card por trás do diálogo. Corrigido trocando a `key` do `NoteFormDialog` (em `note-card.tsx`)
+para incluir a contagem de anexos/temas da nota — força remontar com dados frescos quando eles
+mudam de verdade, em vez de sincronizar estado dentro de um `useEffect` (o lint do projeto
+bloqueia esse padrão via `react-hooks/set-state-in-effect`, com razão: é a causa clássica de
+cascata de renders desnecessária).
+
+**Verificado**: upload de uma imagem e um PDF reais, abertura inline confirmada (visualizador
+nativo do Chrome reconheceu ambos), remoção confirmada. Indicador confirmado com dado real (aula
+"Boas vindas" com 2 anotações existentes, aula "Ementa" sem nenhuma). Lint, typecheck e testes
+passando.
+
+## 2026-09-22 — Revisão pré-produção: teste e2e desatualizado pelo rebranding
+
+**Contexto**: revisão geral antes de produção rodou a suite completa de testes; o e2e
+(`tests/e2e/critical-flow.spec.ts`) falhava esperando o texto "Bem-vindo à AI Platform Engineer
+Academy" na primeira aula, com timeout de 30s.
+
+**Causa raiz**: o commit `6400f86` ("Rebranding: renomeia para Apex") trocou o nome do produto em
+toda a UI, mas o título da aula de boas-vindas (`prisma/seed.ts`, criado por `upsert` com
+`update: {}` — só aplica em banco vazio) e a string hardcoded no teste e2e nunca foram
+atualizados junto. O banco de desenvolvimento real já tinha o título correto ("Bem-vindo à
+Apex", confirmado por query direta), só o seed script e o teste ficaram presos no nome antigo.
+
+**Decisão**: `prisma/seed.ts` e `tests/e2e/critical-flow.spec.ts` atualizados para "Bem-vindo à
+Apex". Teste e2e voltou a passar.
+
+**Motivo**: o teste e2e é o único que exercita o fluxo crítico completo de ponta a ponta
+(registro → aula → sessão de estudo → conclusão → progresso) — deixá-lo quebrado por uma string
+desatualizada mascarava silenciosamente qualquer regressão real nesse fluxo desde o rebranding.
+
+**Verificado**: `npx playwright test` passa limpo depois da correção.
+
+**Segundo achado real, mesma revisão — `docker-compose.yml` nunca repassava chave de IA real**:
+o serviço `app` declarava `AI_PROVIDER`/`AI_API_KEY`/`AI_MODEL` (nomes genéricos, singular),
+mas o Gateway (`src/modules/artificial-intelligence/gateway.ts`) e cada provider real leem
+variáveis por provider (`AI_TEACHING_PROVIDER`, `AI_OPENAI_API_KEY`/`AI_OPENAI_MODEL`,
+`AI_CLAUDE_API_KEY`/`AI_CLAUDE_MODEL`, `AI_GEMINI_API_KEY`/`AI_GEMINI_MODEL` — exatamente como já
+documentado em `.env.example`). Rodando via `docker compose --profile app up`, isso faria o
+container cair sempre no `MockAIProvider`, mesmo com uma chave real configurada no `.env` do
+host — silenciosamente, sem erro. Corrigido alinhando `docker-compose.yml` aos mesmos nomes de
+`.env.example`. Não afeta `npm run dev` (lê `.env` diretamente, fora do Compose), só o caminho de
+deploy via Docker Compose.
+
 <!-- Novas decisões devem ser adicionadas acima desta linha, em ordem cronológica reversa não é
 necessária — apenas anexe no final da fase correspondente. -->

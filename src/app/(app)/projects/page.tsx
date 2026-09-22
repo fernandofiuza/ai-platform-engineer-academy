@@ -63,7 +63,7 @@ export default async function ProjectsPage() {
                 </CardHeader>
                 <CardContent className="flex items-center justify-between">
                   {submission ? (
-                    <Badge variant={submission.status === "DONE" ? "default" : "secondary"}>
+                    <Badge variant={submission.status === "DONE" ? "sage" : "secondary"}>
                       {STATUS_LABELS[submission.status]}
                     </Badge>
                   ) : (

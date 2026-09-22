@@ -149,7 +149,7 @@ export default async function DashboardPage() {
             <CardDescription className="flex items-center gap-2">
               <Timer className="size-4" /> Horas estudadas
             </CardDescription>
-            <CardTitle className="text-3xl">{(totalMinutes / 60).toFixed(1)}h</CardTitle>
+            <CardTitle className="text-stat font-medium">{(totalMinutes / 60).toFixed(1)}h</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
             {totalMinutes} minutos registrados em{" "}
@@ -164,7 +164,7 @@ export default async function DashboardPage() {
             <CardDescription className="flex items-center gap-2">
               <CalendarCheck className="size-4" /> Sequência de estudo
             </CardDescription>
-            <CardTitle className="text-3xl">{streak} {streak === 1 ? "dia" : "dias"}</CardTitle>
+            <CardTitle className="text-stat font-medium">{streak} {streak === 1 ? "dia" : "dias"}</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
             {openGoals > 0 ? (
@@ -181,7 +181,7 @@ export default async function DashboardPage() {
             <CardDescription className="flex items-center gap-2">
               <ListChecks className="size-4" /> Aulas concluídas
             </CardDescription>
-            <CardTitle className="text-3xl">{progressPercent}%</CardTitle>
+            <CardTitle className="text-stat font-medium">{progressPercent}%</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
             {completedLessons} de {totalLessons} aulas disponíveis concluídas.
@@ -192,7 +192,7 @@ export default async function DashboardPage() {
             <CardDescription className="flex items-center gap-2">
               <FolderCheck className="size-4" /> Projetos concluídos
             </CardDescription>
-            <CardTitle className="text-3xl">{completedProjects}</CardTitle>
+            <CardTitle className="text-stat font-medium">{completedProjects}</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
             <Link href="/projects" className="underline">
@@ -205,7 +205,7 @@ export default async function DashboardPage() {
             <CardDescription className="flex items-center gap-2">
               <GitCommit className="size-4" /> Commits registrados
             </CardDescription>
-            <CardTitle className="text-3xl">{profile?.manualCommitCount ?? 0}</CardTitle>
+            <CardTitle className="text-stat font-medium">{profile?.manualCommitCount ?? 0}</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
             <div className="flex items-center justify-between gap-2">
@@ -219,7 +219,7 @@ export default async function DashboardPage() {
             <CardDescription className="flex items-center gap-2">
               <Target className="size-4" /> Domínio por tecnologia
             </CardDescription>
-            <CardTitle className="text-3xl">{avgTechDominance}%</CardTitle>
+            <CardTitle className="text-stat font-medium">{avgTechDominance}%</CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
             {skillsStarted} de {skills.length} competências iniciadas —{" "}
@@ -256,7 +256,7 @@ export default async function DashboardPage() {
                   <p className="text-sm font-medium">{step.title}</p>
                   <p className="text-xs text-muted-foreground">{step.description}</p>
                 </div>
-                <Badge variant="secondary" className="shrink-0">
+                <Badge variant="neutral" className="shrink-0">
                   {step.phase}
                 </Badge>
               </li>

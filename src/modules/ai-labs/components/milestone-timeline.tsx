@@ -38,11 +38,11 @@ export function MilestoneTimeline({
             key={milestone.id}
             className={cn(
               "flex items-center gap-3 rounded-md border px-3 py-2",
-              achieved ? "border-primary/40 bg-primary/5" : "border-border"
+              achieved ? "border-sage/40 bg-sage/5" : "border-border"
             )}
           >
             {achieved ? (
-              <CheckCircle2 className="size-4 shrink-0 text-primary" />
+              <CheckCircle2 className="size-4 shrink-0 text-sage-strong" />
             ) : (
               <Circle className="size-4 shrink-0 text-muted-foreground" />
             )}

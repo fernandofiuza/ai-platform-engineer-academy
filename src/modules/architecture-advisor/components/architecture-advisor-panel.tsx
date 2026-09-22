@@ -64,7 +64,7 @@ export function ArchitectureAdvisorPanel() {
                   <React.Fragment key={component.name}>
                     <Card>
                       <CardContent className="py-3">
-                        <p className="text-sm font-semibold">{component.name}</p>
+                        <p className="text-sm font-medium">{component.name}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{component.justification}</p>
                       </CardContent>
                     </Card>

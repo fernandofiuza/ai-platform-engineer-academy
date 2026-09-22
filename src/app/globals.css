@@ -47,76 +47,150 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-  --shadow-soft: 0 10px 30px -10px rgb(0 0 0 / 8%);
+
+  /* Warm reading-comfort palette — mapped to Tailwind utilities */
+  --color-canvas: var(--color-canvas);
+  --color-surface: var(--color-surface);
+  --color-surface-alt: var(--color-surface-alt);
+  --color-primary-soft: var(--color-primary-soft);
+  --color-sage: var(--color-sage);
+  --color-sage-soft: var(--color-sage-soft);
+  --color-sage-strong: var(--color-sage-strong);
+  --color-tertiary: var(--color-text-muted);
+  /* CTA accent — deliberately NOT named --accent to avoid colliding with shadcn's own
+     --accent/--accent-foreground hover-state tokens (mapped separately below). Use sparingly:
+     1-2 primary-action buttons per screen (ver DECISIONS.md do redesign). */
+  --color-cta: var(--color-cta);
+  --color-cta-hover: var(--color-cta-hover);
+  --color-cta-soft: var(--color-cta-soft);
+
+  --shadow-card: var(--shadow-card);
+
+  --text-stat: 2.5rem;
+  --text-stat--line-height: 1.1;
+  --text-display: 3.5rem;
+  --text-display--line-height: 1.05;
+  /* Slightly generous body line-height app-wide for reading comfort */
+  --text-sm--line-height: 1.6;
+  --text-base--line-height: 1.65;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.52 0.25 262);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.94 0.04 262);
-  --accent-foreground: oklch(0.32 0.15 262);
+  /* Base neutra quente — evita branco puro para reduzir fadiga visual */
+  --color-canvas: #faf8f4;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f2ede4;
+  --color-border: #e5ddd0;
+
+  /* Azul profundo — cor principal para foco, navegação, texto de ênfase */
+  --color-primary: #2c5f7c;
+  --color-primary-soft: #dfeaf0;
+
+  /* Verde sálvia — progresso, conclusão */
+  --color-sage: #7a9b7e;
+  --color-sage-soft: #e6ede6;
+  --color-sage-strong: #3f6146;
+
+  /* Texto */
+  --color-text-primary: #2b2620;
+  --color-text-secondary: #6b6255;
+  --color-text-muted: #9a9184;
+
+  /* Destaque vibrante — usar SÓ em 1-2 CTAs por tela */
+  --color-cta: #e8873f;
+  --color-cta-hover: #d97730;
+  --color-cta-soft: #fbe8d6;
+
+  --background: var(--color-canvas);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-surface-alt);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-surface-alt);
+  --muted-foreground: var(--color-text-secondary);
+  --accent: var(--color-primary-soft);
+  --accent-foreground: var(--color-primary);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.6 0.2 262);
-  --chart-1: oklch(0.6 0.2 262);
-  --chart-2: oklch(0.65 0.15 200);
-  --chart-3: oklch(0.7 0.16 150);
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-primary);
+  --chart-1: var(--color-primary);
+  --chart-2: var(--color-sage);
+  --chart-3: var(--color-cta);
   --chart-4: oklch(0.65 0.18 60);
   --chart-5: oklch(0.6 0.2 340);
   --radius: 0.75rem;
-  --sidebar: oklch(0.16 0.02 262);
-  --sidebar-foreground: oklch(0.94 0.01 262);
-  --sidebar-primary: oklch(0.6 0.2 262);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.24 0.03 262);
-  --sidebar-accent-foreground: oklch(0.94 0.01 262);
-  --sidebar-border: oklch(0.26 0.02 262 / 40%);
-  --sidebar-ring: oklch(0.6 0.2 262);
+  --sidebar: var(--color-surface-alt);
+  --sidebar-foreground: var(--color-text-primary);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--color-primary-soft);
+  --sidebar-accent-foreground: var(--color-primary);
+  --sidebar-border: var(--color-border);
+  --sidebar-ring: var(--color-primary);
+
+  --shadow-card: 0 1px 3px rgba(43, 38, 32, 0.06);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.68 0.21 262);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.28 0.06 262);
-  --accent-foreground: oklch(0.9 0.04 262);
+  --color-canvas: #1c1a17;
+  --color-surface: #252220;
+  --color-surface-alt: #2c2925;
+  --color-border: #3a352f;
+
+  --color-primary: #4a8bb0;
+  --color-primary-soft: color-mix(in oklch, var(--color-primary), var(--color-surface) 70%);
+
+  --color-sage: #8fb093;
+  --color-sage-soft: color-mix(in oklch, var(--color-sage), var(--color-surface) 75%);
+  --color-sage-strong: #bcd6bd;
+
+  --color-text-primary: #f0ece5;
+  --color-text-secondary: #b9ae9d;
+  --color-text-muted: #8a8072;
+
+  --color-cta: #e8873f;
+  --color-cta-hover: #f0954f;
+  --color-cta-soft: color-mix(in oklch, var(--color-cta), var(--color-surface) 78%);
+
+  --background: var(--color-canvas);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-surface-alt);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-surface-alt);
+  --muted-foreground: var(--color-text-secondary);
+  --accent: var(--color-primary-soft);
+  --accent-foreground: var(--color-text-primary);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.68 0.21 262);
-  --chart-1: oklch(0.7 0.2 262);
-  --chart-2: oklch(0.7 0.15 200);
-  --chart-3: oklch(0.75 0.15 150);
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-primary);
+  --chart-1: var(--color-primary);
+  --chart-2: var(--color-sage);
+  --chart-3: var(--color-cta);
   --chart-4: oklch(0.75 0.18 60);
   --chart-5: oklch(0.7 0.2 340);
-  --sidebar: oklch(0.13 0.02 262);
-  --sidebar-foreground: oklch(0.94 0.01 262);
-  --sidebar-primary: oklch(0.68 0.21 262);
-  --sidebar-primary-foreground: oklch(0.145 0 0);
-  --sidebar-accent: oklch(0.22 0.03 262);
-  --sidebar-accent-foreground: oklch(0.94 0.01 262);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.68 0.21 262);
+  --sidebar: var(--color-surface);
+  --sidebar-foreground: var(--color-text-primary);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--color-primary-soft);
+  --sidebar-accent-foreground: var(--color-text-primary);
+  --sidebar-border: var(--color-border);
+  --sidebar-ring: var(--color-primary);
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.24);
 }
 
 @layer base {
@@ -132,15 +206,11 @@
 }
 
 @layer utilities {
-  .shadow-soft {
-    box-shadow: var(--shadow-soft);
-  }
-
   .bg-mesh-hero {
-    background-color: oklch(0.145 0 0);
+    background-color: var(--color-text-primary);
     background-image:
-      radial-gradient(ellipse 60% 55% at 18% 15%, oklch(0.5 0.24 262 / 55%), transparent 60%),
-      radial-gradient(ellipse 55% 50% at 85% 20%, oklch(0.55 0.25 340 / 45%), transparent 60%),
-      radial-gradient(ellipse 60% 60% at 50% 100%, oklch(0.6 0.2 45 / 35%), transparent 65%);
+      radial-gradient(ellipse 60% 55% at 18% 15%, color-mix(in oklch, var(--color-primary), transparent 40%), transparent 60%),
+      radial-gradient(ellipse 55% 50% at 85% 20%, color-mix(in oklch, var(--color-sage), transparent 55%), transparent 60%),
+      radial-gradient(ellipse 60% 60% at 50% 100%, color-mix(in oklch, var(--color-cta), transparent 70%), transparent 65%);
   }
 }

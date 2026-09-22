@@ -39,7 +39,7 @@ export default function LandingPage() {
           >
             Formação em construção · conteúdo aberto e vivo
           </Badge>
-          <h1 className="text-balance text-4xl font-extrabold tracking-tighter text-white sm:text-6xl">
+          <h1 className="text-balance text-4xl font-semibold tracking-tighter text-white sm:text-6xl">
             Apex
           </h1>
           <p className="mt-3 text-lg text-white/70">
@@ -52,11 +52,7 @@ export default function LandingPage() {
             infraestrutura até agentes de inteligência artificial.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button
-              size="lg"
-              className="rounded-full bg-white px-6 text-black hover:bg-white/90"
-              asChild
-            >
+            <Button size="lg" variant="cta" asChild>
               <Link href="/register">
                 Começar agora <ArrowRight className="size-4" />
               </Link>
@@ -64,7 +60,7 @@ export default function LandingPage() {
             <Button
               size="lg"
               variant="outline"
-              className="rounded-full border-white/30 bg-transparent px-6 text-white hover:bg-white/10 hover:text-white"
+              className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
               asChild
             >
               <Link href="/login">Já tenho conta</Link>
@@ -76,7 +72,7 @@ export default function LandingPage() {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {areas.map(({ icon: Icon, label }) => (
-            <Card key={label} className="rounded-2xl shadow-soft">
+            <Card key={label}>
               <CardContent className="flex items-center gap-3 pt-6">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
                   <Icon className="size-4.5" />
@@ -88,7 +84,7 @@ export default function LandingPage() {
         </section>
 
         <section className="mt-20 grid gap-6 lg:grid-cols-3">
-          <Card className="rounded-2xl shadow-soft">
+          <Card>
             <CardHeader>
               <CalendarClock className="size-5 text-primary" />
               <CardTitle className="mt-2">Para quem é</CardTitle>
@@ -99,7 +95,7 @@ export default function LandingPage() {
               dados e inteligência artificial em um único perfil profissional coerente.
             </CardContent>
           </Card>
-          <Card className="rounded-2xl shadow-soft">
+          <Card>
             <CardHeader>
               <Sparkles className="size-5 text-primary" />
               <CardTitle className="mt-2">Metodologia</CardTitle>
@@ -114,7 +110,7 @@ export default function LandingPage() {
               </p>
             </CardContent>
           </Card>
-          <Card className="rounded-2xl shadow-soft">
+          <Card>
             <CardHeader>
               <Building2 className="size-5 text-primary" />
               <CardTitle className="mt-2">AI Labs</CardTitle>
@@ -128,7 +124,7 @@ export default function LandingPage() {
           </Card>
         </section>
 
-        <section className="mt-20 rounded-3xl bg-primary p-8 text-center text-primary-foreground shadow-soft sm:p-12">
+        <section className="mt-20 rounded-3xl bg-primary p-8 text-center text-primary-foreground sm:p-12">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Resultado esperado
           </h2>
@@ -137,11 +133,7 @@ export default function LandingPage() {
             confiança: &ldquo;eu consigo projetar, desenvolver, implantar e operar essa
             solução.&rdquo;
           </p>
-          <Button
-            size="lg"
-            className="mt-6 rounded-full bg-white px-6 text-black hover:bg-white/90"
-            asChild
-          >
+          <Button size="lg" variant="cta" className="mt-6" asChild>
             <Link href="/register">
               Criar minha conta <ArrowRight className="size-4" />
             </Link>

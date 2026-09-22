@@ -20,7 +20,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { archiveProjectAction, saveProjectAction } from "@/modules/projects/actions";
-import { STATUS_LABELS } from "@/modules/curriculum/status";
+import { STATUS_BADGE_VARIANT, STATUS_LABELS } from "@/modules/curriculum/status";
 import type { ContentStatus } from "@/generated/prisma/enums";
 
 const STATUSES: ContentStatus[] = ["DRAFT", "PLANNED", "AVAILABLE", "IN_PROGRESS", "COMPLETED", "ARCHIVED"];
@@ -100,7 +100,11 @@ export function AdminProjectForm({ project }: { project?: Project }) {
       >
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{project ? project.title : "Novo projeto"}</span>
-          {project ? <Badge variant="secondary">{STATUS_LABELS[project.status]}</Badge> : null}
+          {project ? (
+            <Badge variant={STATUS_BADGE_VARIANT[project.status]}>
+              {STATUS_LABELS[project.status]}
+            </Badge>
+          ) : null}
         </div>
         <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} />
       </CardHeader>

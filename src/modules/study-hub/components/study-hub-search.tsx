@@ -40,7 +40,7 @@ export function StudyHubSearch() {
         className="pl-8"
       />
       {showDropdown && results ? (
-        <div className="absolute z-10 mt-1 w-full rounded-lg border bg-popover shadow-md">
+        <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-popover shadow-md">
           {!hasResults ? (
             <p className="px-3 py-2.5 text-sm text-muted-foreground">Nada encontrado.</p>
           ) : (

@@ -33,7 +33,7 @@ export function MobileNav() {
             <Link
               href="/dashboard"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 font-semibold tracking-tight text-sidebar-foreground"
+              className="flex items-center gap-2 font-medium tracking-tight text-sidebar-foreground"
             >
               <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                 <Mountain className="size-4.5" />

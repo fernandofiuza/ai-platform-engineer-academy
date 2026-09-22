@@ -51,7 +51,7 @@ export function ContinueStudyingCard({ item }: { item: ContinueStudying }) {
           <Progress value={item.progressPercent} className="h-2" />
           <span className="shrink-0 text-sm text-muted-foreground">{item.progressPercent}%</span>
         </div>
-        <Button asChild>
+        <Button asChild variant="cta">
           <Link href={item.href}>
             Continuar <ArrowRight className="size-4" />
           </Link>

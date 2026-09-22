@@ -151,7 +151,7 @@ export function StudyGoals({ goals, weekOptions }: { goals: Goal[]; weekOptions:
                     ) : null}
                     {goal.relatedWeek ? <span>· Semana {goal.relatedWeek.number}</span> : null}
                     {isOverdue ? <Badge variant="outline">atrasada</Badge> : null}
-                    {goal.status === "DONE" ? <Badge>concluída</Badge> : null}
+                    {goal.status === "DONE" ? <Badge variant="sage">concluída</Badge> : null}
                     {goal.status === "CANCELLED" ? <Badge variant="secondary">cancelada</Badge> : null}
                   </div>
                 </div>

@@ -228,12 +228,12 @@ export function SessionTimer({
             {active.lesson?.title ?? active.externalLesson?.title ?? "Estudo livre"}
           </p>
         ) : null}
-        <div className="font-mono text-4xl font-semibold tabular-nums">
+        <div className="font-mono text-4xl font-medium tabular-nums">
           {formatElapsed(elapsed)}
         </div>
 
         {!active ? (
-          <Button onClick={onStart} disabled={isPending}>
+          <Button onClick={onStart} disabled={isPending} variant="cta">
             {isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
             Iniciar sessão
           </Button>

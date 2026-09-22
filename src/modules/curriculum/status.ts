@@ -11,12 +11,12 @@ export const STATUS_LABELS: Record<ContentStatus, string> = {
 
 export const STATUS_BADGE_VARIANT: Record<
   ContentStatus,
-  "default" | "secondary" | "outline" | "destructive"
+  "default" | "secondary" | "outline" | "destructive" | "sage" | "neutral"
 > = {
-  DRAFT: "outline",
-  PLANNED: "secondary",
-  AVAILABLE: "default",
-  IN_PROGRESS: "default",
-  COMPLETED: "default",
+  DRAFT: "neutral",
+  PLANNED: "neutral",
+  AVAILABLE: "sage",
+  IN_PROGRESS: "sage",
+  COMPLETED: "sage",
   ARCHIVED: "outline",
 };

@@ -122,7 +122,7 @@ export function LessonCompleteForm({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending} variant={isCompleted ? "default" : "cta"}>
           {isPending ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (

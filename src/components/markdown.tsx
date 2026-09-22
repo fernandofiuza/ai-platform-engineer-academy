@@ -18,7 +18,7 @@ const SIZE_CLASS: Record<MarkdownSize, string> = {
 export function Markdown({ content, size = "sm" }: { content: string; size?: MarkdownSize }) {
   return (
     <div
-      className={`prose ${SIZE_CLASS[size]} dark:prose-invert max-w-none prose-headings:font-semibold prose-a:text-primary`}
+      className={`prose ${SIZE_CLASS[size]} dark:prose-invert max-w-none leading-relaxed prose-headings:font-semibold prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-strong:text-foreground`}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
     </div>

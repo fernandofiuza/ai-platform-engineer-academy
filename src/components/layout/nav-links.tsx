@@ -27,8 +27,8 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={onNavigate}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                    isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+                    "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm font-normal text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    isActive && "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
                   )}
                 >
                   <Icon className="size-4 shrink-0" />

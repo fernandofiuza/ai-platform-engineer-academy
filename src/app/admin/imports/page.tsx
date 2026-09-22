@@ -53,15 +53,15 @@ export default async function AdminImportsPage() {
             </CardHeader>
             <CardContent className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-2xl font-semibold">{job.createdCount}</p>
+                <p className="text-stat font-medium">{job.createdCount}</p>
                 <p className="text-xs text-muted-foreground">criados</p>
               </div>
               <div>
-                <p className="text-2xl font-semibold">{job.updatedCount}</p>
+                <p className="text-stat font-medium">{job.updatedCount}</p>
                 <p className="text-xs text-muted-foreground">atualizados</p>
               </div>
               <div>
-                <p className="text-2xl font-semibold">{job.skippedCount}</p>
+                <p className="text-stat font-medium">{job.skippedCount}</p>
                 <p className="text-xs text-muted-foreground">sem alteração</p>
               </div>
             </CardContent>
